@@ -31,6 +31,28 @@ def make_homogeneous(points):
 
     return output
 
+def rotate_vectors(mat, vectors):
+    """
+    TODO: Elaborate.
+
+    If trasform is (3, 4) or (4, 4), then mat[:3, :3] must 
+    contain the rotation matrix. TODO: Cleanup.
+    """
+    check_1 = mat.shape == (3, 3)
+    check_2 = mat.shape == (3, 4)
+    check_3 = mat.shape == (4, 4)
+
+    assert np.any([check_1, check_2, check_3]), (
+        "Shape of mat is invalid. Must be "
+        "either (3, 3), (3, 4) or (4, 4)"
+    )
+    assert points.shape[1] == 3
+
+    transform = mat[:3, :3]
+    output = (transform @ vectors.T).T
+
+    return output
+
 def transform_points(RT, points):
     """
     Applies the transformation to the given points.

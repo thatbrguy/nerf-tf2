@@ -1,6 +1,6 @@
-import os
-os.environ["CUDA_VISIBLE_DEVICES"] = "-1"
-os.environ["TF_CPP_MIN_LOG_LEVEL"] = "2"
+# import os
+# os.environ["CUDA_VISIBLE_DEVICES"] = "-1"
+# os.environ["TF_CPP_MIN_LOG_LEVEL"] = "2"
 
 import numpy as np
 import tensorflow as tf
@@ -59,12 +59,12 @@ def get_nerf_model(num_units = 256):
         if i == 4:
             value = Concatenate()([value, enc_rays_o])
 
-    sigma = Dense(1, activation = None)(value)
+    sigma = Dense(1, activation = None, name = "sigma")(value)
     bottleneck = Dense(num_units, activation = None)(value)
     
     value = Concatenate()([bottleneck, enc_rays_d])
     value = Dense(num_units // 2, activation = "relu")(value)
-    rgb = Dense(3, activation = "sigmoid")(value)
+    rgb = Dense(3, activation = "sigmoid", name = "rgb")(value)
 
     inputs = [rays_o, rays_d]
     outputs = [rgb, sigma]
@@ -76,5 +76,4 @@ def get_nerf_model(num_units = 256):
 if __name__ == '__main__':
 
     model = get_nerf_model()
-    import pdb; pdb.set_trace()  # breakpoint 4c653578 //
 

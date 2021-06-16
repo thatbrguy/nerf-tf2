@@ -66,7 +66,7 @@ def get_nerf_model(num_units = 256):
     value = Dense(num_units // 2, activation = "relu")(value)
     rgb = Dense(3, activation = "sigmoid")(value)
 
-    inputs = [enc_rays_o, enc_rays_d]
+    inputs = [rays_o, rays_d]
     outputs = [rgb, sigma]
 
     model = Model(inputs = inputs, outputs = outputs)

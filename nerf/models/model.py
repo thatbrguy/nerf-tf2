@@ -1,8 +1,13 @@
+import os
+os.environ["CUDA_VISIBLE_DEVICES"] = "-1"
+os.environ["TF_CPP_MIN_LOG_LEVEL"] = "2"
+
 import numpy as np
 import tensorflow as tf
 
-from tensorflow.keras.layers import Layer
 from tensorflow.keras.models import Model
+from tensorflow.keras.layers import Layer, Dense, Flatten
+from tensorflow.keras.layers import Input, Concatenate
 
 class PositionalEncoder(Layer):
     """
@@ -29,20 +34,47 @@ class PositionalEncoder(Layer):
         sin_ = tf.math.sin(expanded)
 
         intermediate = tf.stack([sin_, cos_], axis = -1)
-        output = tf.reshape(intermediate, (x.shape[0], -1))
+
+        ## TODO: Check if using Flatten is correct.
+        # output = tf.reshape(intermediate, (x.shape[0], -1))
+        output = Flatten()(intermediate)
 
         return output
 
-class NeRF(Model):
+def get_nerf_model(num_units = 256):
     """
-    TODO: Docstring
+    Creates and returns a NeRF model.
     """
-    def __init__(self):
-        super().__init__()
+    rays_o = Input(shape = (3,), name = "pos_vec")
+    rays_d = Input(shape = (3,), name = "dir_vec")
 
-    def call(self, inputs):
-        pass
+    enc_rays_o = PositionalEncoder(L = 10, name = "enc_rays_o")(rays_o)
+    enc_rays_d = PositionalEncoder(L = 4, name = "enc_rays_d")(rays_d)
+
+    value = enc_rays_o
+
+    for i in range(8):
+        value = Dense(num_units, activation = "relu")(value)
+
+        if i == 4:
+            value = Concatenate()([value, enc_rays_o])
+
+    sigma = Dense(1, activation = None)(value)
+    bottleneck = Dense(num_units, activation = None)(value)
+    
+    value = Concatenate()([bottleneck, enc_rays_d])
+    value = Dense(num_units // 2, activation = "relu")(value)
+    rgb = Dense(3, activation = "sigmoid")(value)
+
+    inputs = [enc_rays_o, enc_rays_d]
+    outputs = [rgb, sigma]
+
+    model = Model(inputs = inputs, outputs = outputs)
+
+    return model
 
 if __name__ == '__main__':
 
-    PE = PositionalEncoder(2)
+    model = get_nerf_model()
+    import pdb; pdb.set_trace()  # breakpoint 4c653578 //
+

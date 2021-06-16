@@ -24,9 +24,11 @@ def get_rays_tf(H, W, focal, c2w):
 
     directions = tf.stack([x_vals, y_vals, z_vals], axis = -1)
 
+    ## TODO: Separate rotation function for tensorflow?
     rays_d = pose_utils.rotate_vectors(c2w, directions)
     ## rays_o = tf.broadcast_to something! TODO: Finish!
-    pass
+    
+    return rays_o, rays_d
 
 def get_rays_np():
     """
@@ -34,7 +36,21 @@ def get_rays_np():
 
     TODO: Elaborate.
     """
-    pass
+    H_vals = np.arange(H, dtype = np.float64)
+    W_vals = np.arange(W, dtype = np.float64)
+
+    x, y = np.meshgrid(W_vals, H_vals, indexing = "xy")
+
+    x_vals = x - (W / 2)
+    y_vals = y - (H / 2)
+    z_vals = np.full(x_vals.shape, focal, dtype = np.float64)
+
+    directions = np.stack([x_vals, y_vals, z_vals], axis = -1)
+
+    rays_d = pose_utils.rotate_vectors(c2w, directions)
+    ## rays_o = np.broadcast_to something! TODO: Finish!
+    
+    return rays_o, rays_d
 
 if __name__ == '__main__':
 

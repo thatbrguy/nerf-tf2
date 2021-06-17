@@ -1,6 +1,6 @@
-# import os
-# os.environ["CUDA_VISIBLE_DEVICES"] = "-1"
-# os.environ["TF_CPP_MIN_LOG_LEVEL"] = "2"
+import os
+os.environ["CUDA_VISIBLE_DEVICES"] = "-1"
+os.environ["TF_CPP_MIN_LOG_LEVEL"] = "2"
 
 import numpy as np
 import tensorflow as tf
@@ -41,32 +41,49 @@ class PositionalEncoder(Layer):
 
         return output
 
-def get_nerf_model(num_units = 256):
+def get_nerf_model(model_name, num_units = 256):
     """
     Creates and returns a NeRF model.
+
+    ## TODO: Verify consistency, indices, check for one off errors etc.
     """
-    rays_o = Input(shape = (3,), name = "pos_vec")
-    rays_d = Input(shape = (3,), name = "dir_vec")
+    assert model_name in ["coarse", "fine"]
+    
+    xyz = Input(shape = (3,), name = f"{model_name}/xyz")
+    rays_d = Input(shape = (3,), name = f"{model_name}/rays_d")
 
-    enc_rays_o = PositionalEncoder(L = 10, name = "enc_rays_o")(rays_o)
-    enc_rays_d = PositionalEncoder(L = 4, name = "enc_rays_d")(rays_d)
+    name = f"{model_name}/enc_xyz"
+    enc_xyz = PositionalEncoder(L = 10, name = name)(xyz)
 
-    value = enc_rays_o
+    name = f"{model_name}/enc_rays_d"
+    enc_rays_d = PositionalEncoder(L = 4, name = name)(rays_d)
+
+    value = enc_xyz
 
     for i in range(8):
-        value = Dense(num_units, activation = "relu")(value)
+        name = f"{model_name}/dense_{i}"
+        value = Dense(num_units, name = name, activation = "relu")(value)
 
         if i == 4:
-            value = Concatenate()([value, enc_rays_o])
+            name = f"{model_name}/concat_1"
+            value = Concatenate(name = name)([value, enc_xyz])
 
-    sigma = Dense(1, activation = None, name = "sigma")(value)
-    bottleneck = Dense(num_units, activation = None)(value)
+    name =  f"{model_name}/sigma"
+    sigma = Dense(1, activation = None, name = name)(value)
+
+    name =  f"{model_name}/dense_8"
+    bottleneck = Dense(num_units, activation = None, name = name)(value)
     
-    value = Concatenate()([bottleneck, enc_rays_d])
-    value = Dense(num_units // 2, activation = "relu")(value)
-    rgb = Dense(3, activation = "sigmoid", name = "rgb")(value)
+    name = f"{model_name}/concat_2"
+    value = Concatenate(name = name)([bottleneck, enc_rays_d])
+    
+    name = f"{model_name}/dense_9"
+    value = Dense(num_units // 2, name = name, activation = "relu")(value)
 
-    inputs = [rays_o, rays_d]
+    name = f"{model_name}/rgb"
+    rgb = Dense(3, activation = "sigmoid", name = name)(value)
+
+    inputs = [xyz, rays_d]
     outputs = [rgb, sigma]
 
     model = Model(inputs = inputs, outputs = outputs)
@@ -75,5 +92,6 @@ def get_nerf_model(num_units = 256):
 
 if __name__ == '__main__':
 
-    model = get_nerf_model()
+    coarse_model = get_nerf_model(model_name = "coarse")
+    fine_model = get_nerf_model(model_name = "fine")
 

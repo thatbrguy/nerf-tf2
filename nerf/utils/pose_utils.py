@@ -46,7 +46,7 @@ def rotate_vectors(mat, vectors):
         "Shape of mat is invalid. Must be "
         "either (3, 3), (3, 4) or (4, 4)"
     )
-    assert points.shape[1] == 3
+    assert vectors.shape[1] == 3
 
     transform = mat[:3, :3]
     output = (transform @ vectors.T).T

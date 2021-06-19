@@ -7,11 +7,14 @@ import numpy as np
 
 from nerf.utils import pose_utils
 
-def get_rays():
+def get_rays(H, W, focal, c2w):
     """
     Gets ray origin and ray directions in the world coordinate system.
 
     TODO: Elaborate.
+
+    NOTE, TODO, IMPORTANT: Since we are using only one focal length, 
+    should we make sure that H == W?
     """
     H_vals = np.arange(H, dtype = np.float64)
     W_vals = np.arange(W, dtype = np.float64)
@@ -25,14 +28,12 @@ def get_rays():
     z_vals = np.full(x_vals.shape, focal, dtype = np.float64)
 
     directions = np.stack([x_vals, y_vals, z_vals], axis = -1)
+    ## (H, W, 3) --> (H*W, 3) TODO: Verify
+    directions = directions.reshape(-1, 3)
 
     ## TODO: Check output for correctness!
     rays_d = pose_utils.rotate_vectors(c2w, directions)
-    rays_o = np.broadcast_to(c2w[:, 3], rays_d.shape)
-
-    ## (TODO: Shape) --> (H*W, 3)
-    rays_d = rays_d.reshape(-1, 3)
-    rays_o = rays_o.reshape(-1, 3)
+    rays_o = np.broadcast_to(c2w[:3, 3], rays_d.shape)
     
     return rays_o, rays_d
 
@@ -55,4 +56,5 @@ def create_input_batch_fine_model(params, *args, **kwargs):
 
 if __name__ == '__main__':
 
+    rays_o, rays_d = get_rays(H = 250, W = 500, focal = 250, c2w = np.eye(4))
     pass

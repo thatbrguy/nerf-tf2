@@ -56,5 +56,7 @@ def create_input_batch_fine_model(params, *args, **kwargs):
 
 if __name__ == '__main__':
 
-    rays_o, rays_d = get_rays(H = 250, W = 500, focal = 250, c2w = np.eye(4))
+    # NOTE, TODO, IMPORTANT: Since we are using only one focal length, 
+    # should we make sure that H == W?
+    rays_o, rays_d = get_rays(H = 500, W = 500, focal = 250, c2w = np.eye(4))
     pass

@@ -115,6 +115,13 @@ def create_input_batch_fine_model(params, *args, **kwargs):
 
     TODO: Elaborate!
     """
+
+    ## TODO: Handle weights calculation. Assuming the weights will be stored 
+    ## in a variable called weights. 
+    ## Shape of weights must be --> (N_rays, N_samples)
+
+    # Creating pdf from weights.
+    pdf = weights / tf.sum(weights, axis = 1)
     pass
 
 if __name__ == '__main__':

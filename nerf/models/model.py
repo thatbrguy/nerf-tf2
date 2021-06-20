@@ -46,6 +46,7 @@ def get_nerf_model(model_name, num_units = 256):
     Creates and returns a NeRF model.
 
     ## TODO: Verify consistency, indices, check for one off errors etc.
+    ## Add comments to explain stuff!
     """
     assert model_name in ["coarse", "fine"]
     
@@ -90,8 +91,49 @@ def get_nerf_model(model_name, num_units = 256):
 
     return model
 
+class NeRF(Model):
+    """
+    Model to define custom fit, evaluate and predict operations.
+
+    This class implements both coarse and fine models.
+    """
+    def __init__(self, params = None):
+        super().__init__()
+        self.coarse_model = get_nerf_model(model_name = "coarse")
+        self.fine_model = get_nerf_model(model_name = "fine")
+
+    def train_step(self, data):
+        pass
+
+    def test_step(self, data):
+        pass
+
+    def predict_step(self, data):
+        pass
+
+class NeRFLite(Model):
+    """
+    Model to define custom fit, evaluate and predict operations.
+
+    This class implements only the coarse model.
+    """
+    def __init__(self, params = None):
+        super().__init__()
+        self.coarse_model = get_nerf_model(model_name = "coarse")
+
+    def train_step(self, data):
+        pass
+
+    def test_step(self, data):
+        pass
+
+    def predict_step(self, data):
+        pass
+
 if __name__ == '__main__':
 
     coarse_model = get_nerf_model(model_name = "coarse")
     fine_model = get_nerf_model(model_name = "fine")
 
+    nerf = NeRF()
+    nerf_lite = NeRFLite()

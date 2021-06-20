@@ -97,14 +97,14 @@ def create_input_batch_coarse_model(params, rays_o, rays_d, near, far):
         t_vals = bin_mids
 
     # Getting xyz points using the equation r(t) = o + t * d
-    # Shape of xyz --> (N_rays, N_samples, 3)
+    # Shape of xyz --> (N_rays, N_coarse, 3)
     xyz = rays_o[:, None, :] + t_vals[..., None] * rays_d[:, None, :]
-    # Shape of rays_d_broadcasted --> (N_rays, N_samples, 3)
+    # Shape of rays_d_broadcasted --> (N_rays, N_coarse, 3)
     rays_d_broadcasted = tf.broadcast_to(rays_d, xyz.shape)
     
-    # Shape of rays_d_inputs --> (N_rays * N_samples, 3)
+    # Shape of rays_d_inputs --> (N_rays * N_coarse, 3)
     rays_d_inputs = tf.reshape(rays_d_broadcasted, (-1, 3))
-    # Shape of xyz_inputs --> (N_rays * N_samples, 3)
+    # Shape of xyz_inputs --> (N_rays * N_coarse, 3)
     xyz_inputs =  tf.reshape(xyz, (-1, 3))
     
     return xyz_inputs, rays_d_inputs
@@ -118,10 +118,13 @@ def create_input_batch_fine_model(params, *args, **kwargs):
 
     ## TODO: Handle weights calculation. Assuming the weights will be stored 
     ## in a variable called weights. 
-    ## Shape of weights must be --> (N_rays, N_samples)
+    ## Shape of weights must be --> (N_rays, N_coarse)
 
     # Creating pdf from weights.
+    # Shape of pdf --> (N_rays, N_coarse)
     pdf = weights / tf.sum(weights, axis = 1)
+
+    
     pass
 
 if __name__ == '__main__':

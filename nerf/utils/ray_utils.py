@@ -115,17 +115,52 @@ def create_input_batch_fine_model(params, *args, **kwargs):
 
     TODO: Elaborate!
     """
-
     ## TODO: Handle weights calculation. Assuming the weights will be stored 
     ## in a variable called weights. 
     ## Shape of weights must be --> (N_rays, N_coarse)
 
-    # Creating pdf from weights.
-    # Shape of pdf --> (N_rays, N_coarse)
-    pdf = weights / tf.sum(weights, axis = 1)
+    ## Creating pdf from weights.
 
-    
-    pass
+    # Shape of weights --> (N_rays, N_coarse)
+    weights = weights + 1e-5 ## To prevent nans ## TODO: Review.
+    # Shape of pdf --> (N_rays, N_coarse)
+    pdf = weights / tf.sum(weights * bin_widths, axis = 1, keepdims = True)
+
+    # Shape of agg --> (N_rays, N_coarse)
+    agg = tf.cumsum(pdf, axis = 1)
+    # Shape of agg --> (N_rays, N_coarse + 1) ## TODO: Cleaner way?
+    agg = tf.concat([tf.zeros_like(agg[:, :1]), agg], axis = -1)
+
+    ## TODO: Use det from params and give it a different name!
+    # Shape of u --> (N_rays, N_fine)
+    if det:
+        u = tf.linspace(0, 1, params.sampling.N_fine)
+        u = tf.broadcast_to(u, (agg.shape[0], params.sampling.N_fine))
+    else:
+        u = tf.random.uniform(shape = (agg.shape[0], params.sampling.N_fine))
+
+    # Shape of piece_idxs --> (N_rays, N_fine)
+    piece_idxs = tf.searchsorted(agg, u, side = 'right')
+
+    ## TODO: Undestand working of tf.gather in the below config better. I think 
+    ## this code would work but need to check! Do not use without testing!
+    ## Shape of the below 3 variables would be (N_rays, N_fine)
+    agg_ = tf.gather(agg, piece_idxs, axis = 1, batch_dims = 1)
+    pdf_ = tf.gather(pdf, piece_idxs, axis = 1, batch_dims = 1)
+    left_edges_ = tf.gather(left_edges, piece_idxs, axis = 1, batch_dims = 1)
+
+    ## TODO: Consider briefly explaining logic. Detailed explanation can be 
+    ## done separately elsewhere.
+    ## Instead of setting denom to 1, trying new logic!
+    mask = tf.where(pdf_ < 1e-8, tf.zeros_like(pdf_), tf.ones_like(pdf_))
+    pdf_ = tf.maximum(pdf_, 1e-8)
+
+    ## TODO: Consider briefly explaining logic. Detailed explanation can be 
+    ## done separately elsewhere.
+    ## Getting samples!
+    samples = (((u - agg_) / pdf_) * mask) + left_edges_
+
+    return samples
 
 if __name__ == '__main__':
 

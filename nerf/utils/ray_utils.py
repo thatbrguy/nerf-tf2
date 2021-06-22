@@ -109,11 +109,14 @@ def create_input_batch_coarse_model(params, rays_o, rays_d, near, far):
     
     return xyz_inputs, rays_d_inputs
 
-def create_input_batch_fine_model(params, *args, **kwargs):
+def create_input_batch_fine_model(params, rays_o, rays_d, *args, **kwargs):
     """
     Creates batch of inputs for the fine model.
 
     TODO: Elaborate!
+
+    TODO: Consider explaining concepts briefly over certain 
+    lines. Detailed description can be provided elsewhere.
     """
     ## TODO: Handle weights calculation. Assuming the weights will be stored 
     ## in a variable called weights. 
@@ -131,36 +134,77 @@ def create_input_batch_fine_model(params, *args, **kwargs):
     # Shape of agg --> (N_rays, N_coarse + 1) ## TODO: Cleaner way?
     agg = tf.concat([tf.zeros_like(agg[:, :1]), agg], axis = -1)
 
+    N_rays = agg.shape[0]
+
     ## TODO: Use det from params and give it a different name!
     # Shape of u --> (N_rays, N_fine)
     if det:
         u = tf.linspace(0, 1, params.sampling.N_fine)
-        u = tf.broadcast_to(u, (agg.shape[0], params.sampling.N_fine))
+        u = tf.broadcast_to(u, (N_rays, params.sampling.N_fine))
     else:
-        u = tf.random.uniform(shape = (agg.shape[0], params.sampling.N_fine))
+        u = tf.random.uniform(shape = (N_rays, params.sampling.N_fine))
 
     # Shape of piece_idxs --> (N_rays, N_fine)
     piece_idxs = tf.searchsorted(agg, u, side = 'right')
 
-    ## TODO: Undestand working of tf.gather in the below config better. I think 
-    ## this code would work but need to check! Do not use without testing!
+    #################################################################
+    ## TODO: Choose tf.gather or tf.gather_nd
+
+    #################################################################
+    ## Using tf.gather
+    #################################################################
+
+    ## TODO: I think this code would work but need to check! 
+    ## Do not use without testing!
+    
     ## Shape of the below 3 variables would be (N_rays, N_fine)
     agg_ = tf.gather(agg, piece_idxs, axis = 1, batch_dims = 1)
     pdf_ = tf.gather(pdf, piece_idxs, axis = 1, batch_dims = 1)
     left_edges_ = tf.gather(left_edges, piece_idxs, axis = 1, batch_dims = 1)
 
-    ## TODO: Consider briefly explaining logic. Detailed explanation can be 
-    ## done separately elsewhere.
+    #################################################################
+    ## Using tf.gather_nd
+    #################################################################
+
+    # row_idxs = tf.reshape(tf.range(0, N_rays), (N_rays, 1))
+    # row_idxs = tf.broadcast_to(row_idxs, (N_rays, params.sampling.N_fine))
+    # idxs = tf.stack([row_idxs, piece_idxs], axis = -1)
+
+    # agg_ = tf.gather_nd(agg, idxs)
+    # pdf_ = tf.gather_nd(pdf, idxs)
+    # left_edges_ = tf.gather_nd(left_edges, idxs)
+
+    #################################################################
+
     ## Instead of setting denom to 1, trying new logic!
     mask = tf.where(pdf_ < 1e-8, tf.zeros_like(pdf_), tf.ones_like(pdf_))
     pdf_ = tf.maximum(pdf_, 1e-8)
 
-    ## TODO: Consider briefly explaining logic. Detailed explanation can be 
-    ## done separately elsewhere.
-    ## Getting samples!
-    samples = (((u - agg_) / pdf_) * mask) + left_edges_
+    # Getting samples. TODO: Elaborate.
+    # Shape of t_vals_importance --> (N_rays, N_coarse)
+    t_vals_fine = (((u - agg_) / pdf_) * mask) + left_edges_
+    # TODO: Maybe analyze below line?
+    t_vals_fine = tf.stop_gradient(t_vals_fine)
 
-    return samples
+    # Shape of t_vals is (N_rays, N_coarse + N_fine) 
+    t_vals = tf.concat([t_vals_coarse, t_vals_fine], axis = 1)
+    ## TODO: Why sorting? Is it for alpha compositing or something?
+    t_vals = tf.sort(t_vals, axis = 1)
+
+    # Getting xyz points using the equation r(t) = o + t * d
+    # Shape of xyz --> (N_rays, N_coarse + N_fine, 3)
+    xyz = rays_o[:, None, :] + t_vals[..., None] * rays_d[:, None, :]
+    
+    # Shape of rays_d_broadcasted --> (N_rays, N_coarse + N_fine, 3)
+    rays_d_broadcasted = tf.broadcast_to(rays_d, xyz.shape)
+    
+    # Shape of rays_d_inputs --> (N_rays * (N_coarse + N_fine), 3)
+    rays_d_inputs = tf.reshape(rays_d_broadcasted, (-1, 3))
+    
+    # Shape of xyz_inputs --> (N_rays * (N_coarse + N_fine), 3)
+    xyz_inputs =  tf.reshape(xyz, (-1, 3))
+
+    return xyz_inputs, rays_d_inputs
 
 if __name__ == '__main__':
 

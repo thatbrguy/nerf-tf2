@@ -9,6 +9,8 @@ from tensorflow.keras.models import Model
 from tensorflow.keras.layers import Layer, Dense, Flatten
 from tensorflow.keras.layers import Input, Concatenate
 
+from nerf.utils import ray_utils
+
 class PositionalEncoder(Layer):
     """
     TODO: Docstring and verify code!
@@ -98,11 +100,51 @@ class NeRF(Model):
     This class implements both coarse and fine models.
     """
     def __init__(self, params = None):
+
         super().__init__()
+        self.params = params
+
         self.coarse_model = get_nerf_model(model_name = "coarse")
         self.fine_model = get_nerf_model(model_name = "fine")
 
     def train_step(self, data):
+        """
+        TODO: Docstring!
+        """
+        (rays_o, rays_d, near, far), (rgb,) = data
+
+        # Getting data ready for the coarse model.
+        (
+            xyz_inputs, dir_inputs, 
+            bin_data, t_vals_coarse,
+        ) = ray_utils.create_input_batch_coarse_model(
+            params = self.params, rays_o = rays_o, 
+            rays_d = rays_d, near = near, far = far
+        )
+
+        # Performing a forward pass through the coarse model.
+        with tf.GradientTape() as tape:
+            rgb, sigma = self.coarse_model(xyz_inputs, dir_inputs)
+
+            ## TODO: Handle loss.
+            # coarse_loss == ???
+
+        # Getting data ready for the fine model.
+        xyz_inputs, dir_inputs = ray_utils.create_input_batch_fine_model(
+            params = self.params, rays_o = rays_o, 
+            rays_d = rays_d, weights = weight, 
+            t_vals_coarse = t_vals_coarse,
+            bin_data = bin_data,
+        )
+
+        # Performing a forward pass through the fine model.
+        with tf.GradientTape() as tape:
+            rgb, sigma = self.fine_model(xyz_inputs, dir_inputs)
+
+            ## TODO: Handle loss.
+            # fine_loss == ???
+
+        ## TODO: optimizer, grads, metrics etc.!
         pass
 
     def test_step(self, data):
@@ -118,10 +160,34 @@ class NeRFLite(Model):
     This class implements only the coarse model.
     """
     def __init__(self, params = None):
+        
         super().__init__()
+        self.params = params
         self.coarse_model = get_nerf_model(model_name = "coarse")
 
     def train_step(self, data):
+        """
+        TODO: Docstring
+        """
+        (rays_o, rays_d, near, far), (rgb,) = data
+
+        # Getting data ready for the coarse model.
+        (
+            xyz_inputs, dir_inputs, 
+            bin_data, t_vals_coarse,
+        ) = ray_utils.create_input_batch_coarse_model(
+            params = self.params, rays_o = rays_o, 
+            rays_d = rays_d, near = near, far = far
+        )
+
+        # Performing a forward pass through the coarse model.
+        with tf.GradientTape() as tape:
+            rgb, sigma = self.coarse_model(xyz_inputs, dir_inputs)
+
+            ## TODO: Handle loss.
+            # coarse_loss == ???
+
+        ## TODO: optimizer, grads, metrics etc.!
         pass
 
     def test_step(self, data):

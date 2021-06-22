@@ -55,7 +55,7 @@ def create_input_batch_coarse_model(params, rays_o, rays_d, near, far):
 
     Returns:
         xyz_inputs      : TODO: Explain
-        rays_d_inputs   : TODO: Explain
+        dir_inputs   : TODO: Explain
 
     TODO: Elaborate!
 
@@ -109,8 +109,8 @@ def create_input_batch_coarse_model(params, rays_o, rays_d, near, far):
     # Shape of rays_d_broadcasted --> (N_rays, N_coarse, 3)
     rays_d_broadcasted = tf.broadcast_to(rays_d, xyz.shape)
     
-    # Shape of rays_d_inputs --> (N_rays * N_coarse, 3)
-    rays_d_inputs = tf.reshape(rays_d_broadcasted, (-1, 3))
+    # Shape of dir_inputs --> (N_rays * N_coarse, 3)
+    dir_inputs = tf.reshape(rays_d_broadcasted, (-1, 3))
     # Shape of xyz_inputs --> (N_rays * N_coarse, 3)
     xyz_inputs =  tf.reshape(xyz, (-1, 3))
 
@@ -120,7 +120,7 @@ def create_input_batch_coarse_model(params, rays_o, rays_d, near, far):
         "right_edges": right_edges, "bin_widths": bin_widths,
     }
     
-    return xyz_inputs, rays_d_inputs, bin_data, t_vals
+    return xyz_inputs, dir_inputs, bin_data, t_vals
 
 def create_input_batch_fine_model(params, rays_o, rays_d, weights, bin_data, t_vals_coarse):
     """
@@ -223,13 +223,13 @@ def create_input_batch_fine_model(params, rays_o, rays_d, weights, bin_data, t_v
     # Shape of rays_d_broadcasted --> (N_rays, N_coarse + N_fine, 3)
     rays_d_broadcasted = tf.broadcast_to(rays_d, xyz.shape)
     
-    # Shape of rays_d_inputs --> (N_rays * (N_coarse + N_fine), 3)
-    rays_d_inputs = tf.reshape(rays_d_broadcasted, (-1, 3))
+    # Shape of dir_inputs --> (N_rays * (N_coarse + N_fine), 3)
+    dir_inputs = tf.reshape(rays_d_broadcasted, (-1, 3))
     
     # Shape of xyz_inputs --> (N_rays * (N_coarse + N_fine), 3)
     xyz_inputs =  tf.reshape(xyz, (-1, 3))
 
-    return xyz_inputs, rays_d_inputs
+    return xyz_inputs, dir_inputs
 
 if __name__ == '__main__':
 

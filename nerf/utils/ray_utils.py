@@ -7,7 +7,7 @@ import numpy as np
 
 from nerf.utils import pose_utils
 
-def get_rays(H, W, focal, c2w):
+def get_rays(H, W, intrinsic, c2w):
     """
     Gets ray origin and ray directions in the world coordinate system.
 
@@ -23,6 +23,7 @@ def get_rays(H, W, focal, c2w):
         "with fu, fv, cu, cv will be supported."
     ) 
 
+    focal = intrinsic[0, 0]
     H_vals = np.arange(H, dtype = np.float64)
     W_vals = np.arange(W, dtype = np.float64)
 

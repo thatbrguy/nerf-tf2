@@ -33,6 +33,8 @@ class Dataset(ABC):
 
         TODO: Elaborate.
 
+        N --> Number of images in the dataset.
+
         Args:
             imgs        :   A NumPy array of shape (N, H, W, 3)
             poses       :   A NumPy array of shape (N, 4, 4)
@@ -40,12 +42,54 @@ class Dataset(ABC):
             intrinsic   :   A NumPy array of shape (3, 3)
 
         Returns:
-            rays_o
-            rays_d
-            near
-            far
-            rgb
+            rays_o      :   A NumPy array of shape (N, H * W, 3)
+            rays_d      :   A NumPy array of shape (N, H * W, 3)    
+            near        : 
+            far         :
+            rgb         :   A NumPy array of shape (N, H * W, 2)
+
         """
+        rays_o, rays_d, rgb = [], [], []
+        K = intrinsic
+
+        # Code currently only supports intrinsic matrices that are of the form:
+        # intrinsic = np.array([
+        #     [f, 0, 0],
+        #     [0, f, 0],
+        #     [0, 0, 1],
+        # ])
+        # In the above, f is the focal length.
+        ## TODO: Support intrinsic matrices which has fu, fv, cu, cv.
+
+        zero_check = np.array([
+            K[0, 1], K[0, 2], K[1, 0], 
+            K[1, 2], K[2, 0], K[2, 1],
+        ])
+        assert K[0, 0] == K[1, 1]
+        assert K[2, 2] == 1
+        assert np.all(zero_check == 0)
+
+        # Code currently only works for H == W. TODO: Support H != W.
+        assert self.params.H == self.params.W
+
+        for idx, img in enumerate(imgs):
+            rays_o_, rays_d_ = ray_utils.get_rays(
+                H = self.params.H, W = self.params.W, 
+                intrinsic = K, c2w = poses[idx],
+            )
+            rgb_ = img.reshape(-1, 3)
+
+            rgb.append(rgb_)
+            rays_o.append(rays_o)
+            rays_d.append(rays_d)
+
+        rgb = np.array(rgb)
+        rays_o = np.array(rays_o)
+        rays_d = np.array(rays_d)
+
+        near = np.broadcast_to(bounds[:, None, 0], ray_d.shape)
+        far = np.broadcast_to(bounds[:, None, 1], ray_d.shape)
+
         return rays_o, rays_d, near, far, rgb
 
     def create_tf_dataset(self, rays_o, rays_d, near, far, rgb):
@@ -79,7 +123,7 @@ def CustomDataset(Dataset):
     def _load_full_dataset(self):
         """
         TODO: Elaborate.
-        
+
         Loads the images, poses, bounds, 
         intrinsics to memory.
         
@@ -117,3 +161,8 @@ def CustomDataset(Dataset):
         )
 
         return dataset
+
+if __name__ ==  "__main__":
+
+    loader = CustomDataset(params)
+    dataset = loader.get_dataset()

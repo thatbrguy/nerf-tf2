@@ -102,17 +102,24 @@ class Dataset(ABC):
         Returns a tf.data.Dataset object.
 
         Args:
-            rays_o
-            rays_d
-            near
-            far
-            rgb
+            rays_o      :   A NumPy array of shape (N, H * W, 3)
+            rays_d      :   A NumPy array of shape (N, H * W, 3)    
+            near        :   A NumPy array of shape (N, H * W, 1) 
+            far         :   A NumPy array of shape (N, H * W, 1)
+            rgb         :   A NumPy array of shape (N, H * W, 3)
 
         Returns: 
             dataset
 
         TODO: Elaborate
         """
+        # Here, x has the input data, y had the target data.
+        x = (rays_o, rays_d, near, far)
+        y = (rgb,)
+        dataset = tf.data.Dataset.from_tensor_slices((x, y))
+
+        ## TODO: Think about what dataset operations to add here.
+
         return dataset
 
 def CustomDataset(Dataset):

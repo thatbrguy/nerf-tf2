@@ -44,9 +44,9 @@ class Dataset(ABC):
         Returns:
             rays_o      :   A NumPy array of shape (N, H * W, 3)
             rays_d      :   A NumPy array of shape (N, H * W, 3)    
-            near        : 
-            far         :
-            rgb         :   A NumPy array of shape (N, H * W, 2)
+            near        :   A NumPy array of shape (N, H * W, 1) 
+            far         :   A NumPy array of shape (N, H * W, 1)
+            rgb         :   A NumPy array of shape (N, H * W, 3)
 
         """
         rays_o, rays_d, rgb = [], [], []
@@ -87,8 +87,11 @@ class Dataset(ABC):
         rays_o = np.array(rays_o)
         rays_d = np.array(rays_d)
 
-        near = np.broadcast_to(bounds[:, None, 0], ray_d.shape)
-        far = np.broadcast_to(bounds[:, None, 1], ray_d.shape)
+        # (N, 2) --> (N, H*W, 2). TODO: Elaborate.
+        bounds_ = np.broadcast_to(
+            bounds[:, None, :], shape = (*rays_d.shape[:-1], 2)
+        )
+        near, far = bounds_[..., 0:1], bounds[..., 1:2]
 
         return rays_o, rays_d, near, far, rgb
 

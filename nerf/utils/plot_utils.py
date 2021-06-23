@@ -2,7 +2,7 @@ import numpy as np
 import matplotlib.pyplot as plt
 
 from mpl_toolkits import mplot3d
-from nerf.utils import pose_utils as PoseUtils
+from nerf.utils import pose_utils
 
 def create_eye_frustum_for_plots(length, width, height):
     """
@@ -56,13 +56,13 @@ def plot_scene(c2w_matrices, plot_eye_frustums = True, plot_cam_axes = True):
 
     # Moving the lines that constitute the eye frustum for each 
     # camera to the world frame.
-    eyes_world_frame = PoseUtils.batched_transform_line_segments(
+    eyes_world_frame = pose_utils.batched_transform_line_segments(
         c2w_matrices, eye_frustum
     )
 
     # Moving the lines that constitute the XYZ axes for each 
     # camera to the world frame.
-    cam_axes_world_frame = PoseUtils.batched_transform_line_segments(
+    cam_axes_world_frame = pose_utils.batched_transform_line_segments(
         c2w_matrices, camera_axes
     )
 

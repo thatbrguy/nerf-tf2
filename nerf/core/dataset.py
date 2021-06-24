@@ -36,6 +36,8 @@ class Dataset(ABC):
         TODO: Mention that it is also assumed that all images 
         have the same H, W.
 
+        TODO: Do we normalize rgb range?
+
         N --> Number of images in the dataset.
 
         Args:
@@ -94,7 +96,7 @@ class Dataset(ABC):
         bounds_ = np.broadcast_to(
             bounds[:, None, :], shape = (*rays_d.shape[:-1], 2)
         )
-        near, far = bounds_[..., 0:1], bounds[..., 1:2]
+        near, far = bounds_[..., 0:1], bounds_[..., 1:2]
 
         # After reshaping, rays_o, rays_d and rgb will 
         # have shape (N * H * W, 3)
@@ -128,14 +130,14 @@ class Dataset(ABC):
         """
         # Here, x has the input data, y had the target data.
         x = (rays_o, rays_d, near, far)
-        y = (rgb,)
+        y = (rgb,)        
         dataset = tf.data.Dataset.from_tensor_slices((x, y))
 
         ## TODO: Think about what dataset operations to add here.
 
         return dataset
 
-def CustomDataset(Dataset):
+class CustomDataset(Dataset):
     """
     Custom Dataset
     """
@@ -163,6 +165,20 @@ def CustomDataset(Dataset):
             bounds      :   A NumPy array of shape (N, 2)
             intrinsic   :   A NumPy array of shape (3, 3)
         """
+
+        ########################################################
+        ## Using mock data for testing!
+        N, H, W = 10, 500, 500
+        focal = 250
+
+        intrinsics = np.eye(3)
+        intrinsics[0, 0], intrinsics[1, 1] = focal, focal
+
+        imgs = np.ones((N, H, W, 3))
+        poses = np.ones((N, 4, 4))
+        bounds = np.ones((N, 2))
+        ########################################################
+
         return imgs, poses, bounds, intrinsics
 
     def get_dataset(self):
@@ -187,5 +203,9 @@ def CustomDataset(Dataset):
 
 if __name__ ==  "__main__":
 
-    loader = CustomDataset(params)
+    from box import Box
+    params = {"H": 500, "W": 500}
+    params = Box(params)
+
+    loader = CustomDataset(params = params)
     dataset = loader.get_dataset()

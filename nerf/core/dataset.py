@@ -32,6 +32,9 @@ class Dataset(ABC):
         Method that can be used by the subclasses.
 
         TODO: Elaborate.
+        
+        TODO: Mention that it is also assumed that all images 
+        have the same H, W.
 
         N --> Number of images in the dataset.
 
@@ -42,11 +45,11 @@ class Dataset(ABC):
             intrinsic   :   A NumPy array of shape (3, 3)
 
         Returns:
-            rays_o      :   A NumPy array of shape (N, H * W, 3)
-            rays_d      :   A NumPy array of shape (N, H * W, 3)    
-            near        :   A NumPy array of shape (N, H * W, 1) 
-            far         :   A NumPy array of shape (N, H * W, 1)
-            rgb         :   A NumPy array of shape (N, H * W, 3)
+            rays_o      :   A NumPy array of shape (N * H * W, 3)
+            rays_d      :   A NumPy array of shape (N * H * W, 3)    
+            near        :   A NumPy array of shape (N * H * W, 1) 
+            far         :   A NumPy array of shape (N * H * W, 1)
+            rgb         :   A NumPy array of shape (N * H * W, 3)
 
         """
         rays_o, rays_d, rgb = [], [], []
@@ -80,8 +83,8 @@ class Dataset(ABC):
             rgb_ = img.reshape(-1, 3)
 
             rgb.append(rgb_)
-            rays_o.append(rays_o)
-            rays_d.append(rays_d)
+            rays_o.append(rays_o_)
+            rays_d.append(rays_d_)
 
         rgb = np.array(rgb)
         rays_o = np.array(rays_o)
@@ -93,6 +96,13 @@ class Dataset(ABC):
         )
         near, far = bounds_[..., 0:1], bounds[..., 1:2]
 
+        rays_o = rays_o.reshape(-1, 3)
+        rays_d = rays_d.reshape(-1, 3)
+        rgb = rgb.reshape(-1, 3)
+        
+        near = near.reshape(-1, 1)
+        far = far.reshape(-1, 1)
+
         return rays_o, rays_d, near, far, rgb
 
     def create_tf_dataset(self, rays_o, rays_d, near, far, rgb):
@@ -102,11 +112,11 @@ class Dataset(ABC):
         Returns a tf.data.Dataset object.
 
         Args:
-            rays_o      :   A NumPy array of shape (N, H * W, 3)
-            rays_d      :   A NumPy array of shape (N, H * W, 3)    
-            near        :   A NumPy array of shape (N, H * W, 1) 
-            far         :   A NumPy array of shape (N, H * W, 1)
-            rgb         :   A NumPy array of shape (N, H * W, 3)
+            rays_o      :   A NumPy array of shape (N * H * W, 3)
+            rays_d      :   A NumPy array of shape (N * H * W, 3)    
+            near        :   A NumPy array of shape (N * H * W, 1) 
+            far         :   A NumPy array of shape (N * H * W, 1)
+            rgb         :   A NumPy array of shape (N * H * W, 3)
 
         Returns: 
             dataset

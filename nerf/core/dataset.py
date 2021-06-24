@@ -96,10 +96,13 @@ class Dataset(ABC):
         )
         near, far = bounds_[..., 0:1], bounds[..., 1:2]
 
+        # After reshaping, rays_o, rays_d and rgb will 
+        # have shape (N * H * W, 3)
         rays_o = rays_o.reshape(-1, 3)
         rays_d = rays_d.reshape(-1, 3)
         rgb = rgb.reshape(-1, 3)
         
+        # After reshaping, near and far will have shape (N * H * W, 1)
         near = near.reshape(-1, 1)
         far = far.reshape(-1, 1)
 

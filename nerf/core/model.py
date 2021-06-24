@@ -129,10 +129,15 @@ class NeRF(Model):
             ## TODO: Handle loss.
             # coarse_loss == ???
 
+        # Computing weights for each bin along each ray.
+        weights = rays_utils.compute_bin_weights(
+            bin_data, t_vals_coarse, sigma
+        )
+
         # Getting data ready for the fine model.
         xyz_inputs, dir_inputs = ray_utils.create_input_batch_fine_model(
             params = self.params, rays_o = rays_o, 
-            rays_d = rays_d, weights = weight, 
+            rays_d = rays_d, weights = weights, 
             t_vals_coarse = t_vals_coarse,
             bin_data = bin_data,
         )

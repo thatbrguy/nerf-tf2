@@ -232,6 +232,14 @@ def create_input_batch_fine_model(params, rays_o, rays_d, weights, bin_data, t_v
 
     return xyz_inputs, dir_inputs
 
+def compute_bin_weights(bin_data, t_vals_coarse, sigma):
+    """
+    Computes weights for each bin along each ray.
+    """
+
+    # Shape of weights --> (N_rays, N_coarse)
+    return weights
+
 if __name__ == '__main__':
 
     rays_o, rays_d = get_rays(H = 500, W = 500, focal = 250, c2w = np.eye(4))

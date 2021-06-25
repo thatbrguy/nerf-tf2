@@ -203,9 +203,10 @@ class CustomDataset(Dataset):
 
 if __name__ ==  "__main__":
 
-    from box import Box
-    params = {"H": 500, "W": 500}
-    params = Box(params)
+    from nerf.utils.params_utils import load_params
+
+    path = "./nerf/params/config.yaml"
+    params = load_params(path)
 
     loader = CustomDataset(params = params)
     dataset = loader.get_dataset()

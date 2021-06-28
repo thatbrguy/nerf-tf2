@@ -15,6 +15,9 @@ def get_rays(H, W, intrinsic, c2w):
 
     TODO: Support using fu, fv, cu, cv (get intrinsic matrix 
     as argument) and H != W.
+
+    TODO: Think about offset by 0.5 so that rays go through 
+    the middle of the pixel.
     """
     assert H == W, (
         "Currently this function is written assuming "
@@ -138,6 +141,7 @@ def create_input_batch_fine_model(params, rays_o, rays_d, weights, bin_data, t_v
     Shape of weights must be --> (N_rays, N_coarse)
     """
     # Extracting useful content from bin_data
+    # Shape of left_edges and bin_widths --> (N_rays, N_coarse)
     left_edges = bin_data["left_edges"]
     bin_widths = bin_data["bin_widths"]
 
@@ -236,9 +240,34 @@ def compute_bin_weights(bin_data, t_vals_coarse, sigma):
     """
     Computes weights for each bin along each ray.
     """
-
+    ## TODO: Complete!
     # Shape of weights --> (N_rays, N_coarse)
     return weights
+
+def get_pixel_rgb(bin_data, bin_rgb, sigma, N_samples):
+    """
+    Computes the RGB value of a pixel given the RGB values 
+    for each bin along the ray that is drawn through the pixel.
+    
+    N_samples --> (N_coarse) or (N_coarse + N_fine)
+
+    Args:
+        bin_data    : Dictionary. TODO: Explain.
+        bin_rgb     : TODO (type, explain) with shape (N_rays * N_samples, 3).
+        sigma       : TODO (type, explain) with shape (N_rays * N_samples, 1).
+        N_samples   : Integer. TODO: Explain.
+
+    Returns:
+        TODO
+    """
+
+    # Shape of bin_widths --> (N_rays, N_coarse)
+    bin_widths = bin_data["bin_widths"]
+    
+    ## TODO: Complete! Btw, consider calling compute_bin_weights here?
+    # Ti = 
+    
+    return pred_rgb
 
 if __name__ == '__main__':
 

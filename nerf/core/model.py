@@ -22,6 +22,10 @@ class NeRF(Model):
         super().__init__()
         self.params = params
 
+        self.N_fine = self.params.sampling.N_fine
+        self.N_coarse = self.params.sampling.N_coarse
+        self.N_coarse_fine = self.N_coarse + self.N_fine
+
         self.coarse_model = get_nerf_model(model_name = "coarse")
         self.fine_model = get_nerf_model(model_name = "fine")
 
@@ -42,7 +46,12 @@ class NeRF(Model):
 
         # Performing a forward pass through the coarse model.
         with tf.GradientTape() as tape:
-            rgb, sigma = self.coarse_model(xyz_inputs, dir_inputs)
+            bin_rgb, sigma = self.coarse_model(xyz_inputs, dir_inputs)
+            
+            pred_rgb = ray_utils.get_pixel_rgb(
+                bin_data, bin_rgb, sigma, 
+                N_samples = self.N_coarse
+            )
 
             ## TODO: Handle loss.
             # coarse_loss == ???
@@ -62,7 +71,17 @@ class NeRF(Model):
 
         # Performing a forward pass through the fine model.
         with tf.GradientTape() as tape:
-            rgb, sigma = self.fine_model(xyz_inputs, dir_inputs)
+            bin_rgb, sigma = self.fine_model(xyz_inputs, dir_inputs)
+
+            pred_rgb = ray_utils.get_pixel_rgb(
+                bin_data, bin_rgb, sigma, 
+                N_samples = self.params.sampling.N_coarse + 
+            )
+
+            pred_rgb = ray_utils.get_pixel_rgb(
+                bin_data, bin_rgb, sigma, 
+                N_samples = self.N_coarse_fine
+            )
 
             ## TODO: Handle loss.
             # fine_loss == ???
@@ -86,6 +105,11 @@ class NeRFLite(Model):
         
         super().__init__()
         self.params = params
+
+        self.N_fine = self.params.sampling.N_fine
+        self.N_coarse = self.params.sampling.N_coarse
+        self.N_coarse_fine = self.N_coarse + self.N_fine
+
         self.coarse_model = get_nerf_model(model_name = "coarse")
 
     def train_step(self, data):
@@ -105,7 +129,12 @@ class NeRFLite(Model):
 
         # Performing a forward pass through the coarse model.
         with tf.GradientTape() as tape:
-            rgb, sigma = self.coarse_model(xyz_inputs, dir_inputs)
+            bin_rgb, sigma = self.coarse_model(xyz_inputs, dir_inputs)
+
+            pred_rgb = ray_utils.get_pixel_rgb(
+                bin_data, bin_rgb, sigma, 
+                N_samples = self.N_coarse
+            )
 
             ## TODO: Handle loss.
             # coarse_loss == ???

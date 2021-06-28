@@ -1,3 +1,8 @@
-## Currently putting just these values temporarily!
+## TODO: Complete this file and add comments.
+
 H: 400
 W: 400
+
+sampling:
+  N_coarse: 64
+  N_fine: 64

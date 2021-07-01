@@ -48,27 +48,20 @@ class NeRF(Model):
         with tf.GradientTape() as tape:
             bin_rgb, sigma = self.coarse_model(xyz_inputs, dir_inputs)
             
-            pred_rgb = ray_utils.get_pixel_rgb(
+            pred_rgb, bin_weights = ray_utils.get_pixel_rgb(
                 bin_data, bin_rgb, sigma,
                 t_vals = t_vals_coarse,
-                N_samples = self.N_coarse
+                N_samples = self.N_coarse,
+                return_weights = True,
             )
 
             ## TODO: Handle loss.
             # coarse_loss == ???
 
-        # Computing weights for each bin along each ray.
-        ## TODO: Consider returning weights from get_pixel_rgb and 
-        ## reusing that itself instead of recomputing?
-        # weights = rays_utils.compute_bin_weights(
-        #     bin_data = bin_data, t_vals = t_vals_coarse, 
-        #     sigma = sigma
-        # )
-
         # Getting data ready for the fine model.
         xyz_inputs, dir_inputs = ray_utils.create_input_batch_fine_model(
             params = self.params, rays_o = rays_o, 
-            rays_d = rays_d, weights = weights, 
+            rays_d = rays_d, weights = bin_weights, 
             t_vals_coarse = t_vals_coarse,
             bin_data = bin_data,
         )

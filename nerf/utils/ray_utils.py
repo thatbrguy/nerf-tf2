@@ -126,7 +126,7 @@ def create_input_batch_coarse_model(params, rays_o, rays_d, near, far):
     
     return xyz_inputs, dir_inputs, bin_data, t_vals
 
-def create_input_batch_fine_model(params, rays_o, rays_d, weights, bin_data, t_vals_coarse):
+def create_input_batch_fine_model(params, rays_o, rays_d, bin_weights, bin_data, t_vals_coarse):
     """
     Creates batch of inputs for the fine model.
 
@@ -147,10 +147,10 @@ def create_input_batch_fine_model(params, rays_o, rays_d, weights, bin_data, t_v
 
     # Creating pdf from weights.
     # Shape of weights --> (N_rays, N_coarse)
-    weights = weights + 1e-5 ## To prevent nans ## TODO: Review.
+    bin_weights = bin_weights + 1e-5 ## To prevent nans ## TODO: Review.
     
     # Shape of pdf --> (N_rays, N_coarse). TODO: Review keepdims
-    pdf = weights / tf.sum(weights * bin_widths, axis = 1, keepdims = True)
+    pdf = bin_weights / tf.sum(bin_weights * bin_widths, axis = 1, keepdims = True)
     N_rays = pdf.shape[0]
 
     # Shape of agg --> (N_rays, N_coarse)
@@ -236,17 +236,23 @@ def create_input_batch_fine_model(params, rays_o, rays_d, weights, bin_data, t_v
 
     return xyz_inputs, dir_inputs
 
-def compute_bin_weights(bin_data, t_vals, sigma):
+def compute_weights(bin_data, sigma, t_vals, N_samples):
     """
-    Computes weights for each bin along each ray.
+    Computes weights. TODO: Elaborate.
+    
+    This function can be used for both the coarse and fine 
+    models. TODO: Elaborate and refactor this.
 
-    Can be used for both coarse and fine models. TODO: Elaborate.
+    A weight value w_i is the product of T_i and alpha_i. TODO: Elaborate.
+
+    If used for the coarse model, these weight values also serve as 
+    the weight of each bin. TODO: Elaborate.
     """
     ## TODO: Complete!
-    # Shape of weights --> (N_rays, N_coarse)
+    # Shape of weights --> (N_rays, N_samples).
     return weights
 
-def get_pixel_rgb(bin_data, bin_rgb, sigma, N_samples):
+def get_pixel_rgb(bin_data, bin_rgb, sigma, t_vals, N_samples, return_weights):
     """
     Computes the RGB value of a pixel given the RGB values 
     for each bin along the ray that is drawn through the pixel.
@@ -254,22 +260,30 @@ def get_pixel_rgb(bin_data, bin_rgb, sigma, N_samples):
     N_samples --> (N_coarse) or (N_coarse + N_fine)
 
     Args:
-        bin_data    : Dictionary. TODO: Explain.
-        bin_rgb     : TODO (type, explain) with shape (N_rays * N_samples, 3).
-        sigma       : TODO (type, explain) with shape (N_rays * N_samples, 1).
-        N_samples   : Integer. TODO: Explain.
+        bin_data        : Dictionary. TODO: Explain.
+        bin_rgb         : TODO (type, explain) with shape (N_rays * N_samples, 3).
+        sigma           : TODO (type, explain) with shape (N_rays * N_samples, 1).
+        t_vals          : TODO (type, explain) with shape (N_rays, N_samples)
+        N_samples       : Integer. TODO: Explain.
+        return_weights  : TODO: Explain.
 
     Returns:
         TODO
+
+    NOTE: Correct and refactor this function.
     """
 
     # Shape of bin_widths --> (N_rays, N_coarse)
     bin_widths = bin_data["bin_widths"]
     
-    ## TODO: Complete! Btw, consider calling compute_bin_weights here?
-    # Ti = 
+    ## TODO: Complete! 
+    ## TODO: Use compute_weights somewhere in this function.
     
-    return pred_rgb
+    if return_weights:
+        return pred_rgb, weights
+
+    elif not return_weights:
+        return pred_rgb
 
 if __name__ == '__main__':
 

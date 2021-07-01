@@ -236,9 +236,11 @@ def create_input_batch_fine_model(params, rays_o, rays_d, weights, bin_data, t_v
 
     return xyz_inputs, dir_inputs
 
-def compute_bin_weights(bin_data, t_vals_coarse, sigma):
+def compute_bin_weights(bin_data, t_vals, sigma):
     """
     Computes weights for each bin along each ray.
+
+    Can be used for both coarse and fine models. TODO: Elaborate.
     """
     ## TODO: Complete!
     # Shape of weights --> (N_rays, N_coarse)

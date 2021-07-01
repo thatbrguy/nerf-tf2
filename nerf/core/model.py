@@ -49,7 +49,8 @@ class NeRF(Model):
             bin_rgb, sigma = self.coarse_model(xyz_inputs, dir_inputs)
             
             pred_rgb = ray_utils.get_pixel_rgb(
-                bin_data, bin_rgb, sigma, 
+                bin_data, bin_rgb, sigma,
+                t_vals = t_vals_coarse,
                 N_samples = self.N_coarse
             )
 
@@ -57,9 +58,12 @@ class NeRF(Model):
             # coarse_loss == ???
 
         # Computing weights for each bin along each ray.
-        weights = rays_utils.compute_bin_weights(
-            bin_data, t_vals_coarse, sigma
-        )
+        ## TODO: Consider returning weights from get_pixel_rgb and 
+        ## reusing that itself instead of recomputing?
+        # weights = rays_utils.compute_bin_weights(
+        #     bin_data = bin_data, t_vals = t_vals_coarse, 
+        #     sigma = sigma
+        # )
 
         # Getting data ready for the fine model.
         xyz_inputs, dir_inputs = ray_utils.create_input_batch_fine_model(
@@ -73,14 +77,11 @@ class NeRF(Model):
         with tf.GradientTape() as tape:
             bin_rgb, sigma = self.fine_model(xyz_inputs, dir_inputs)
 
+            ## TODO: Get t_vals_all from ray_utils.create_input_batch_fine_model
             pred_rgb = ray_utils.get_pixel_rgb(
                 bin_data, bin_rgb, sigma, 
-                N_samples = self.params.sampling.N_coarse + 
-            )
-
-            pred_rgb = ray_utils.get_pixel_rgb(
-                bin_data, bin_rgb, sigma, 
-                N_samples = self.N_coarse_fine
+                t_vals = t_vals_all,
+                N_samples = self.N_coarse_fine, 
             )
 
             ## TODO: Handle loss.
@@ -133,6 +134,7 @@ class NeRFLite(Model):
 
             pred_rgb = ray_utils.get_pixel_rgb(
                 bin_data, bin_rgb, sigma, 
+                t_vals = t_vals_coarse,
                 N_samples = self.N_coarse
             )
 

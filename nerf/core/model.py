@@ -106,10 +106,7 @@ class NeRFLite(Model):
         
         super().__init__()
         self.params = params
-
-        self.N_fine = self.params.sampling.N_fine
         self.N_coarse = self.params.sampling.N_coarse
-        self.N_coarse_fine = self.N_coarse + self.N_fine
 
         self.coarse_model = get_nerf_model(model_name = "coarse")
 

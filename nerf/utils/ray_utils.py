@@ -52,14 +52,14 @@ def create_input_batch_coarse_model(params, rays_o, rays_d, near, far):
     can be fed to the coarse model.
 
     Args:
-        rays_o  : TODO (type, explain) with shape (N_rays, 3).
-        rays_d  : TODO (type, explain) with shape (N_rays, 3).
-        near    : TODO (type, explain) with shape (N_rays, 1).
-        far     : TODO (type, explain) with shape (N_rays, 1).
+        rays_o      : TODO (type, explain) with shape (N_rays, 3).
+        rays_d      : TODO (type, explain) with shape (N_rays, 3).
+        near        : TODO (type, explain) with shape (N_rays, 1).
+        far         : TODO (type, explain) with shape (N_rays, 1).
 
     Returns:
-        xyz_inputs      : TODO: Explain
-        dir_inputs   : TODO: Explain
+        xyz_inputs  : TODO: Explain
+        dir_inputs  : TODO: Explain
 
     TODO: Elaborate!
 
@@ -236,20 +236,60 @@ def create_input_batch_fine_model(params, rays_o, rays_d, bin_weights, bin_data,
 
     return xyz_inputs, dir_inputs
 
-def compute_weights(bin_data, sigma, t_vals, N_samples):
+def sigma_to_alpha(sigma, diffs):
     """
-    Computes weights. TODO: Elaborate.
+    Computes alpha.
+    TODO: Elaborate.
+    
+    Args:
+        sigma   : TODO (type, explain) with shape (N_rays, N_samples)
+        diffs   : TODO (type, explain) with shape (N_rays, N_samples)
+
+    Returns:
+        alpha   : TODO (type, explain) with shape (N_rays, N_samples)
+
+    """
+    alpha = 1 - tf.exp(-sigma * diffs)
+    return alpha
+
+def compute_weights(sigma, t_vals, N_samples):
+    """
+    Computes weights. A weight value w_i is the product of T_i 
+    and alpha_i. TODO: Elaborate.
     
     This function can be used for both the coarse and fine 
-    models. TODO: Elaborate and refactor this.
+    models. If used for the coarse model, these weight values also serve as 
+    the weight of each bin. TODO: Elaborate and refactor this.
 
-    A weight value w_i is the product of T_i and alpha_i. TODO: Elaborate.
+    Args:
+        sigma       : TODO (type, explain) with shape (N_rays * N_samples, 1)
+        t_vals      : TODO (type, explain) with shape (N_rays, N_samples)
+        N_samples   : Integer. TODO: Explain.
 
-    If used for the coarse model, these weight values also serve as 
-    the weight of each bin. TODO: Elaborate.
+    Returns:
+        weights     : TODO (type, explain) with shape (N_rays, N_samples)
     """
-    ## TODO: Complete!
+    EPS = 1e-10
+    INF = 1e10
+    
+    # Shape of diffs --> (N_rays, N_samples - 1)
+    diffs = t_vals[:, 1:] - t_vals[:, :-1]
+
+    ## TODO: Should it be INF or can we just provide the far bound value?
+    last_val_array = tf.fill((diffs.shape[0], 1), INF)
+
+    # Shape of diffs_ --> (N_rays, N_samples)
+    diffs_ = tf.concat([diffs, last_val_array], axis = -1)
+
+    # Shape of sigma_ --> (N_rays, N_samples)
+    sigma_ = tf.reshape(tf.squeeze(sigma), (-1, N_samples))
+    # Shape of alpha --> (N_rays, N_samples)
+    alpha = sigma_to_alpha(sigma_, diffs_)
+
+    # TODO: Provide explanation to the following somewhere if possible.
     # Shape of weights --> (N_rays, N_samples).
+    weights = alpha * tf.cumprod(1 - alpha + EPS, axis = 1, exclusive = True)
+    
     return weights
 
 def get_pixel_rgb(bin_data, bin_rgb, sigma, t_vals, N_samples, return_weights):
@@ -261,8 +301,8 @@ def get_pixel_rgb(bin_data, bin_rgb, sigma, t_vals, N_samples, return_weights):
 
     Args:
         bin_data        : Dictionary. TODO: Explain.
-        bin_rgb         : TODO (type, explain) with shape (N_rays * N_samples, 3).
-        sigma           : TODO (type, explain) with shape (N_rays * N_samples, 1).
+        bin_rgb         : TODO (type, explain) with shape (N_rays * N_samples, 3)
+        sigma           : TODO (type, explain) with shape (N_rays * N_samples, 1)
         t_vals          : TODO (type, explain) with shape (N_rays, N_samples)
         N_samples       : Integer. TODO: Explain.
         return_weights  : TODO: Explain.

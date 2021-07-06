@@ -249,6 +249,7 @@ def sigma_to_alpha(sigma, diffs):
         alpha   : TODO (type, explain) with shape (N_rays, N_samples)
 
     """
+    ## TODO: Add noise to sigma based on parameter setting?
     alpha = 1 - tf.exp(-sigma * diffs)
     return alpha
 
@@ -288,42 +289,45 @@ def compute_weights(sigma, t_vals, N_samples):
 
     # TODO: Provide explanation to the following somewhere if possible.
     # Shape of weights --> (N_rays, N_samples).
-    weights = alpha * tf.cumprod(1 - alpha + EPS, axis = 1, exclusive = True)
+    weights = alpha * tf.math.cumprod(1 - alpha + EPS, axis = 1, exclusive = True)
     
     return weights
 
-def get_pixel_rgb(bin_data, bin_rgb, sigma, t_vals, N_samples, return_weights):
+def get_pixel_rgb(sample_rgb, sigma, t_vals, N_samples):
     """
     Computes the RGB value of a pixel given the RGB values 
-    for each bin along the ray that is drawn through the pixel.
+    for each sample along the ray that is drawn through the pixel.
     
     N_samples --> (N_coarse) or (N_coarse + N_fine)
 
     Args:
-        bin_data        : Dictionary. TODO: Explain.
-        bin_rgb         : TODO (type, explain) with shape (N_rays * N_samples, 3)
+        sample_rgb      : TODO (type, explain) with shape (N_rays * N_samples, 3)
         sigma           : TODO (type, explain) with shape (N_rays * N_samples, 1)
         t_vals          : TODO (type, explain) with shape (N_rays, N_samples)
         N_samples       : Integer. TODO: Explain.
-        return_weights  : TODO: Explain.
 
     Returns:
         TODO
 
-    NOTE: Correct and refactor this function.
+    TODO: Refactor this function. Also check nomenclature (Ex: when to 
+    use "bin" and when to use "sample".)
+
+    TODO: Correct the usage of the function wherever it is referenced. Rename 
+    this function as well.
     """
+    # Shape of weights --> (N_rays, N_samples).
+    weights = compute_weights(sigma, t_vals, N_samples)
 
-    # Shape of bin_widths --> (N_rays, N_coarse)
-    bin_widths = bin_data["bin_widths"]
-    
-    ## TODO: Complete! 
-    ## TODO: Use compute_weights somewhere in this function.
-    
-    if return_weights:
-        return pred_rgb, weights
+    # Shape of sample_rgb_ --> (N_rays, N_samples, 3).
+    sample_rgb_ = tf.reshape(sample_rgb, (-1, N_samples, 3))
 
-    elif not return_weights:
-        return pred_rgb
+    # Shape of pred_rgb --> (N_rays, 3)
+    pred_rgb = tf.reduce_sum(weights[..., None] * sample_rgb_, axis = 1)
+    
+    ## TODO: Compute depth, inv_depth, composite white background if needed.
+    ## Btw is acc_map needed?
+    
+    return pred_rgb, pred_depth, pred_inv_depth, weights
 
 if __name__ == '__main__':
 

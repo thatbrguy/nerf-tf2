@@ -282,6 +282,9 @@ def compute_weights(sigma, t_vals, N_samples):
 
     Returns:
         weights     : TODO (type, explain) with shape (N_rays, N_samples)
+
+    TODO, IMPORTANT: Should we multiply diffs by norm? Or 
+    should we just make rays_d unit vectors ? 
     """
     EPS = 1e-10
     INF = 1e10
@@ -295,6 +298,15 @@ def compute_weights(sigma, t_vals, N_samples):
     # Shape of diffs_ --> (N_rays, N_samples)
     diffs_ = tf.concat([diffs, last_val_array], axis = -1)
 
+    ## TODO, IMPORTANT: Should we multiply diffs by norm? Or 
+    ## should we just make rays_d unit vectors ? 
+    raise NotImplementedError(
+        "Need to decide about multiplying diffs by norm or "
+        "making rays_d unit vectors. This exception is placed "
+        "to strongly remind myself to decide before using "
+        "the function."
+    )
+
     # Shape of sigma_ --> (N_rays, N_samples)
     sigma_ = tf.reshape(tf.squeeze(sigma), (-1, N_samples))
     # Shape of alpha --> (N_rays, N_samples)
@@ -306,7 +318,7 @@ def compute_weights(sigma, t_vals, N_samples):
     
     return weights
 
-def post_process_model_output(sample_rgb, sigma, t_vals):
+def post_process_model_output(sample_rgb, sigma, t_vals, white_bg = False):
     """
     TODO: Docstring.
     
@@ -334,13 +346,28 @@ def post_process_model_output(sample_rgb, sigma, t_vals):
 
     # Shape of pred_rgb --> (N_rays, 3)
     pred_rgb = tf.reduce_sum(weights[..., None] * sample_rgb_, axis = 1)
-    
-    ## TODO: Compute depth, inv_depth, composite white background if needed.
-    ## Btw is acc_map needed?
 
-    ## Setting pred_depth, pred_inv_depth to None temporarily until 
-    ## their implmentation is complete.
-    pred_depth, pred_inv_depth = None, None
+    ## Setting pred_inv_depth to None temporarily until its 
+    ## implmentation is complete. 
+    ## TODO: Check https://github.com/bmild/nerf/issues/28 and decide 
+    ## on what to do for this implmentation.
+    pred_inv_depth = None
+
+    # Shape of pred_depth --> (N_rays,); TODO: Verify shape.
+    pred_depth = tf.reduce_sum(t_vals * weights, axis = 1)
+
+    # Shape of acc_map --> (N_rays,); TODO: Verify shape.
+    acc_map = tf.reduce_sum(weights, axis = 1)
+
+    if white_bg:
+        # RGB colors are between [0, 1] in pred_rgb. I think the 
+        # below equation assumes that pred_rgb is "pre-multiplied" 
+        # (i.e. multiplied with a "mask" already). White background 
+        # has color value of 1 in all three channels and so
+        # (1 - acc_map[:, None]) * 1 = (1 - acc_map[:, None]).
+        ## TODO: Verify, clarify, elaborate, move explanation 
+        ## to somewhere else maybe etc.
+        pred_rgb = pred_rgb + (1 - acc_map[:, None]) 
 
     post_proc_model_outputs["pred_rgb"] = pred_rgb
     post_proc_model_outputs["pred_depth"] = pred_depth

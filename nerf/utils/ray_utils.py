@@ -123,8 +123,15 @@ def create_input_batch_coarse_model(params, rays_o, rays_d, near, far):
         "bin_edges": bin_edges, "left_edges": left_edges,
         "right_edges": right_edges, "bin_widths": bin_widths,
     }
+
+    data = {
+        "xyz_inputs": xyz_inputs,
+        "dir_inputs": dir_inputs,
+        "bin_data": bin_data,
+        "t_vals": t_vals,
+    }
     
-    return xyz_inputs, dir_inputs, bin_data, t_vals
+    return data
 
 def create_input_batch_fine_model(params, rays_o, rays_d, bin_weights, bin_data, t_vals_coarse):
     """
@@ -234,7 +241,13 @@ def create_input_batch_fine_model(params, rays_o, rays_d, bin_weights, bin_data,
     # Shape of xyz_inputs --> (N_rays * (N_coarse + N_fine), 3)
     xyz_inputs =  tf.reshape(xyz, (-1, 3))
 
-    return xyz_inputs, dir_inputs
+    data = {
+        "xyz_inputs": xyz_inputs,
+        "dir_inputs": dir_inputs,
+        "t_vals": t_vals,
+    }
+
+    return data
 
 def sigma_to_alpha(sigma, diffs):
     """
@@ -293,10 +306,9 @@ def compute_weights(sigma, t_vals, N_samples):
     
     return weights
 
-def get_pixel_rgb(sample_rgb, sigma, t_vals, N_samples):
+def post_process_model_output(sample_rgb, sigma, t_vals):
     """
-    Computes the RGB value of a pixel given the RGB values 
-    for each sample along the ray that is drawn through the pixel.
+    TODO: Docstring.
     
     N_samples --> (N_coarse) or (N_coarse + N_fine)
 
@@ -304,17 +316,16 @@ def get_pixel_rgb(sample_rgb, sigma, t_vals, N_samples):
         sample_rgb      : TODO (type, explain) with shape (N_rays * N_samples, 3)
         sigma           : TODO (type, explain) with shape (N_rays * N_samples, 1)
         t_vals          : TODO (type, explain) with shape (N_rays, N_samples)
-        N_samples       : Integer. TODO: Explain.
 
     Returns:
         TODO
 
-    TODO: Refactor this function. Also check nomenclature (Ex: when to 
+    TODO: Check consistent nomenclature usage across the codebase (Ex: when to 
     use "bin" and when to use "sample".)
-
-    TODO: Correct the usage of the function wherever it is referenced. Rename 
-    this function as well.
     """
+    post_proc_model_outputs = dict()
+    N_samples = t_vals.shape[1]
+
     # Shape of weights --> (N_rays, N_samples).
     weights = compute_weights(sigma, t_vals, N_samples)
 
@@ -326,8 +337,17 @@ def get_pixel_rgb(sample_rgb, sigma, t_vals, N_samples):
     
     ## TODO: Compute depth, inv_depth, composite white background if needed.
     ## Btw is acc_map needed?
+
+    ## Setting pred_depth, pred_inv_depth to None temporarily until 
+    ## their implmentation is complete.
+    pred_depth, pred_inv_depth = None, None
+
+    post_proc_model_outputs["pred_rgb"] = pred_rgb
+    post_proc_model_outputs["pred_depth"] = pred_depth
+    post_proc_model_outputs["pred_inv_depth"] = pred_inv_depth
+    post_proc_model_outputs["weights"] = weights
     
-    return pred_rgb, pred_depth, pred_inv_depth, weights
+    return post_proc_model_outputs
 
 if __name__ == '__main__':
 

@@ -2,7 +2,9 @@ import os
 os.environ["CUDA_VISIBLE_DEVICES"] = "-1"
 os.environ["TF_CPP_MIN_LOG_LEVEL"] = "2"
 
+import cv2
 import numpy as np
+import pandas as pd
 import tensorflow as tf
 
 from abc import ABC, abstractmethod
@@ -27,14 +29,33 @@ class Dataset(ABC):
         """
         pass
 
+    def _validate_intrinsic_matrix(self, K):
+        """
+        Code currently only supports intrinsic matrices that are of the form:
+        intrinsic = np.array([
+            [f, 0, c],
+            [0, f, c],
+            [0, 0, 1],
+        ])
+        In the above, f is the focal length and c is the principal offset. 
+        
+        TODO: Support intrinsic matrices which have distinct fu, fv, cu, cv.
+        """
+        zero_check = np.array([
+            K[0, 1], K[1, 0], K[2, 0], K[2, 1],
+        ])
+        assert (K[0, 0] == K[1, 1]) and (K[0, 2] == K[1, 2])
+        assert K[2, 2] == 1
+        assert np.all(zero_check == 0)
+
     def prepare_data(self, imgs, poses, bounds, intrinsic):
         """
         Method that can be used by the subclasses.
 
         TODO: Elaborate.
         
-        TODO: Mention that it is also assumed that all images 
-        have the same H, W.
+        IMPORTANT: The current codebase requires all images MUST 
+        have the same height and all images MUST have the same width.
 
         TODO: Do we normalize rgb range?
 
@@ -44,7 +65,7 @@ class Dataset(ABC):
             imgs        :   A NumPy array of shape (N, H, W, 3)
             poses       :   A NumPy array of shape (N, 4, 4)
             bounds      :   A NumPy array of shape (N, 2)
-            intrinsic   :   A NumPy array of shape (3, 3)
+            intrinsics  :   A NumPy array of shape (N, 3, 3)
 
         Returns:
             rays_o      :   A NumPy array of shape (N * H * W, 3)
@@ -55,31 +76,36 @@ class Dataset(ABC):
 
         """
         rays_o, rays_d, rgb = [], [], []
-        K = intrinsic
-
-        # Code currently only supports intrinsic matrices that are of the form:
-        # intrinsic = np.array([
-        #     [f, 0, c],
-        #     [0, f, c],
-        #     [0, 0, 1],
-        # ])
-        # In the above, f is the focal length and c is the principal offset. 
-        ## TODO: Support intrinsic matrices which have distinct fu, fv, cu, cv.
-
-        zero_check = np.array([
-            K[0, 1], K[1, 0], K[2, 0], K[2, 1],
-        ])
-        assert (K[0, 0] == K[1, 1]) and (K[0, 2] == K[1, 2])
-        assert K[2, 2] == 1
-        assert np.all(zero_check == 0)
-
-        # Code currently only works for H == W. TODO: Support H != W.
-        assert self.params.H == self.params.W
+        height_check, width_check = None, None
 
         for idx, img in enumerate(imgs):
+            H, W = img.shape[:2]
+            K = intrinsics[idx]
+
+            ## TODO: Allow images to have different heights and 
+            ## widths in the future. 
+            if height_check is None:
+                height_check = H
+            else:
+                assert height_check == H, (
+                    "The current codebase requires all images "
+                    "to have the same height."
+                )
+
+            if width_check is None:
+                width_check = H
+            else:
+                assert width_check == W, (
+                    "The current codebase requires all images "
+                    "to have the same width."
+                )
+
+            ## TODO: Support H != W.
+            assert H == W, "The current codebase requries H == W"
+            self._validate_intrinsic_matrix(K = K)
+            
             rays_o_, rays_d_ = ray_utils.get_rays(
-                H = self.params.H, W = self.params.W, 
-                intrinsic = K, c2w = poses[idx],
+                H = H, W = W, intrinsic = K, c2w = poses[idx],
             )
             rgb_ = img.reshape(-1, 3)
 
@@ -140,7 +166,7 @@ class CustomDataset(Dataset):
     """
     Custom Dataset
     """
-    ## Defining some camera model related class variables which will 
+    ## Defining some camera model related class attributes which will 
     ## be useful for some functions.
 
     # Camera models are as defined in
@@ -162,7 +188,7 @@ class CustomDataset(Dataset):
         self.params = params
 
     @classmethod
-    def camera_model_params_to_intrinsics(cls, cam_model, model_params):
+    def camera_model_params_to_intrinsics(cls, camera_model, model_params):
         """
         Given camera model name and camera model params, this function 
         creates and returns an intrinsic matrix.
@@ -185,14 +211,14 @@ class CustomDataset(Dataset):
 
         TODO: Args and Returns.
         """
-        assert cam_model in cls.SUPPORTED_CAMERA_MODELS, \
-            f"Camera model {cam_model} is not supported."
+        assert camera_model in cls.SUPPORTED_CAMERA_MODELS, \
+            f"Camera model {camera_model} is not supported."
 
-        if cam_model in cls.SAME_FOCAL:
+        if camera_model in cls.SAME_FOCAL:
             f, cx, cy = model_params[:3]
             fx, fy = f, f
 
-        elif cam_model in cls.DIFF_FOCAL:
+        elif camera_model in cls.DIFF_FOCAL:
             fx, fy, cx, cy = model_params[:4]
 
         else:
@@ -215,8 +241,7 @@ class CustomDataset(Dataset):
         """
         TODO: Elaborate.
 
-        Loads the images, poses, bounds, 
-        intrinsics to memory.
+        Loads the images, poses, bounds, intrinsics to memory.
         
         poses are camera to world transform (RT) matrices.
 
@@ -229,21 +254,38 @@ class CustomDataset(Dataset):
             imgs        :   A NumPy array of shape (N, H, W, 3)
             poses       :   A NumPy array of shape (N, 4, 4)
             bounds      :   A NumPy array of shape (N, 2)
-            intrinsic   :   A NumPy array of shape (3, 3)
+            intrinsics  :   A NumPy array of shape (N, 3, 3)
         """
+        imgs, poses, bounds, intrinsics = [], [], [], []
 
-        ########################################################
-        ## Using mock data for testing!
-        N, H, W = 10, 500, 500
-        focal = 250
+        csv_path = pd.read_csv(self.params.data.pose_info_path)
+        img_root = self.params.data.img_root_dir
+        df = pd.read_csv(csv_path)
 
-        intrinsics = np.eye(3)
-        intrinsics[0, 0], intrinsics[1, 1] = focal, focal
+        for row in df.itertuples():
+            filename = row.image_name
+            path = os.path.join(img_root, filename)
 
-        imgs = np.ones((N, H, W, 3))
-        poses = np.ones((N, 4, 4))
-        bounds = np.ones((N, 2))
-        ########################################################
+            img = cv2.imread(path, 1)
+            img = cv2.cvtColor(img, cv2.COLOR_BGR2RGB)
+
+            camera_model = row.camera_model
+            camera_params = np.array(yaml.safe_load(row.camera_params))
+            intrinsic = self.camera_model_params_to_intrinsics(
+                camera_model = camera_model, 
+                model_params = camera_params
+            )
+
+            RT = np.eye(4)
+            values = np.array(yaml.safe_load(row.pose)).reshape(3, 4)
+            RT[:3, :] = values
+
+            bound = [row.near, row.far]
+
+            imgs.append(img)
+            poses.append(RT)
+            bounds.append(bound)
+            intrinsics.append(intrinsic)
 
         return imgs, poses, bounds, intrinsics
 

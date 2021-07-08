@@ -59,18 +59,17 @@ class Dataset(ABC):
 
         # Code currently only supports intrinsic matrices that are of the form:
         # intrinsic = np.array([
-        #     [f, 0, 0],
-        #     [0, f, 0],
+        #     [f, 0, c],
+        #     [0, f, c],
         #     [0, 0, 1],
         # ])
-        # In the above, f is the focal length.
-        ## TODO: Support intrinsic matrices which has fu, fv, cu, cv.
+        # In the above, f is the focal length and c is the principal offset. 
+        ## TODO: Support intrinsic matrices which have distinct fu, fv, cu, cv.
 
         zero_check = np.array([
-            K[0, 1], K[0, 2], K[1, 0], 
-            K[1, 2], K[2, 0], K[2, 1],
+            K[0, 1], K[1, 0], K[2, 0], K[2, 1],
         ])
-        assert K[0, 0] == K[1, 1]
+        assert (K[0, 0] == K[1, 1]) and (K[0, 2] == K[1, 2])
         assert K[2, 2] == 1
         assert np.all(zero_check == 0)
 
@@ -141,9 +140,76 @@ class CustomDataset(Dataset):
     """
     Custom Dataset
     """
+    ## Defining some camera model related class variables which will 
+    ## be useful for some functions.
+
+    # Camera models are as defined in
+    # https://github.com/colmap/colmap/blob/master/src/base/camera_models.h
+    SUPPORTED_CAMERA_MODELS = frozenset([
+        "SIMPLE_PINHOLE", "PINHOLE", "SIMPLE_RADIAL", 
+        "RADIAL", "OPENCV", "FULL_OPENCV",
+    ])
+    
+    # Camera models which only have one focal length (f) in their 
+    # model parameters (in this case the codebase will assume fx == fy == f).
+    SAME_FOCAL = frozenset(["SIMPLE_PINHOLE", "SIMPLE_RADIAL", "RADIAL"])
+    
+    # Camera models which provide both fx and fy.
+    DIFF_FOCAL = frozenset(["PINHOLE", "OPENCV", "FULL_OPENCV"])
+
     def __init__(self, params):
         super().__init__(params)
         self.params = params
+
+    @classmethod
+    def camera_model_params_to_intrinsics(cls, cam_model, model_params):
+        """
+        Given camera model name and camera model params, this function 
+        creates and returns an intrinsic matrix.
+
+        Camera models are used as defined in
+        https://github.com/colmap/colmap/blob/master/src/base/camera_models.h
+
+        The distortion paramters are not used since this function is only 
+        interested in calculating the intrinsic matrix. Only the focal length 
+        values and principal offset values are needed to create the intrinsic
+        matrix.
+
+        The created intrinsic matrix is of the form:
+
+        intrinsic = np.array([
+            [fx, 0., cx],
+            [0., fy, cy],
+            [0., 0., 1.],
+        ], dtype = np.float64)
+
+        TODO: Args and Returns.
+        """
+        assert cam_model in cls.SUPPORTED_CAMERA_MODELS, \
+            f"Camera model {cam_model} is not supported."
+
+        if cam_model in cls.SAME_FOCAL:
+            f, cx, cy = model_params[:3]
+            fx, fy = f, f
+
+        elif cam_model in cls.DIFF_FOCAL:
+            fx, fy, cx, cy = model_params[:4]
+
+        else:
+            raise RuntimeError(
+                "This should not happen. Please check if "
+                "SUPPORTED_CAMERA_MODELS, SAME_FOCAL and DIFF_FOCAL "
+                "class attributes of the class CustomDataset are "
+                "configured correctly."
+            )
+
+        intrinsic = np.array([
+            [fx, 0., cx],
+            [0., fy, cy],
+            [0., 0., 1.],
+        ], dtype = np.float64)
+
+        return intrinsic
     
     def _load_full_dataset(self):
         """
@@ -178,6 +244,28 @@ class CustomDataset(Dataset):
         poses = np.ones((N, 4, 4))
         bounds = np.ones((N, 2))
         ########################################################
+
+        return imgs, poses, bounds, intrinsics
+
+    def _load_mock_data(self):
+        """
+        Loads mock data which can be used for testing functionality.
+
+        Returns:
+            imgs        :   A NumPy array of shape (N, H, W, 3)
+            poses       :   A NumPy array of shape (N, 4, 4)
+            bounds      :   A NumPy array of shape (N, 2)
+            intrinsic   :   A NumPy array of shape (3, 3)
+        """
+        N, H, W = 10, 500, 500
+        focal = 250
+
+        intrinsics = np.eye(3)
+        intrinsics[0, 0], intrinsics[1, 1] = focal, focal
+
+        imgs = np.ones((N, H, W, 3))
+        poses = np.ones((N, 4, 4))
+        bounds = np.ones((N, 2))
 
         return imgs, poses, bounds, intrinsics
 

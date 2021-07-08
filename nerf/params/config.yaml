@@ -2,9 +2,8 @@
 
 data:
   custom_dataset:
-    img_root_dir: TODO
-    pose_info_path: TODO
-
+    img_root_dir: ../data/images
+    pose_info_path: ../data/pose_info.csv
 
 sampling:
   N_coarse: 64

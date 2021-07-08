@@ -3,6 +3,7 @@ os.environ["CUDA_VISIBLE_DEVICES"] = "-1"
 os.environ["TF_CPP_MIN_LOG_LEVEL"] = "2"
 
 import cv2
+import yaml
 import numpy as np
 import pandas as pd
 import tensorflow as tf
@@ -48,7 +49,7 @@ class Dataset(ABC):
         assert K[2, 2] == 1
         assert np.all(zero_check == 0)
 
-    def prepare_data(self, imgs, poses, bounds, intrinsic):
+    def prepare_data(self, imgs, poses, bounds, intrinsics):
         """
         Method that can be used by the subclasses.
 
@@ -186,6 +187,7 @@ class CustomDataset(Dataset):
     def __init__(self, params):
         super().__init__(params)
         self.params = params
+        self.dataset_params = self.params.data.custom_dataset
 
     @classmethod
     def camera_model_params_to_intrinsics(cls, camera_model, model_params):
@@ -258,11 +260,11 @@ class CustomDataset(Dataset):
         """
         imgs, poses, bounds, intrinsics = [], [], [], []
 
-        csv_path = pd.read_csv(self.params.data.pose_info_path)
-        img_root = self.params.data.img_root_dir
+        csv_path = self.dataset_params.pose_info_path
+        img_root = self.dataset_params.img_root_dir
         df = pd.read_csv(csv_path)
 
-        for row in df.itertuples():
+        for idx, row in enumerate(df.itertuples()):
             filename = row.image_name
             path = os.path.join(img_root, filename)
 
@@ -286,6 +288,8 @@ class CustomDataset(Dataset):
             poses.append(RT)
             bounds.append(bound)
             intrinsics.append(intrinsic)
+
+        bounds = np.array(bounds)
 
         return imgs, poses, bounds, intrinsics
 
@@ -340,3 +344,4 @@ if __name__ ==  "__main__":
 
     loader = CustomDataset(params = params)
     dataset = loader.get_dataset()
+    import pdb; pdb.set_trace()  # breakpoint c051f513 //

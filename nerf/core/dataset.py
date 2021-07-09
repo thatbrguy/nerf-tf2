@@ -154,6 +154,19 @@ class Dataset(ABC):
 
         TODO: Elaborate
         """
+        if self.params.data.pre_shuffle:
+
+            rng = np.random.default_rng(
+                seed = self.params.data.pre_shuffle_seed
+            )
+            perm = rng.permutation(len(rays_o))
+
+            rays_o = rays_o[perm]
+            rays_d = rays_d[perm]
+            near = near[perm]
+            far = far[perm]
+            rgb = rgb[perm]
+
         # Here, x has the input data, y had the target data.
         x = (rays_o, rays_d, near, far)
         y = (rgb,)        

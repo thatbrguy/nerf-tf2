@@ -1,6 +1,9 @@
 ## TODO: Complete this file and add comments.
 
 data:
+  pre_shuffle: True
+  pre_shuffle_seed: 93
+
   custom_dataset:
     img_root_dir: ../data/images
     pose_info_path: ../data/pose_info.csv

@@ -113,12 +113,15 @@ class NeRF(Model):
 
             total_loss = coarse_loss + fine_loss
 
-        gradients = tape.gradient(loss, self.trainable_variables)
+        gradients = tape.gradient(total_loss, self.trainable_variables)
         self.optimizer.apply_gradients(zip(gradients, self.trainable_variables))
 
         ## TODO: Make note somewhere. Metric is computed only for the 
-        ## fine model output!
-        self.compiled_metrics.update_state(y_true = rgb, y_pred = post_proc_CM["pred_rgb"])
+        ## fine model output for the class NeRF. Change if required.
+        self.compiled_metrics.update_state(
+            y_true = rgb, 
+            y_pred = post_proc_FM["pred_rgb"]
+        )
 
         return {m.name: m.result() for m in self.metrics}
 
@@ -142,6 +145,7 @@ class NeRFLite(Model):
         super().__init__()
         self.params = params
 
+        self.mse_loss = tf.keras.losses.MeanSquaredError()
         self.coarse_model = get_nerf_model(model_name = "coarse")
 
     def train_step(self, data):
@@ -167,11 +171,23 @@ class NeRFLite(Model):
                 t_vals = data_CM["t_vals"]
             )
 
-            ## TODO: Handle loss.
-            # coarse_loss == ???
+            # Computing coarse loss.
+            coarse_loss = self.mse_loss(
+                y_true = rgb, 
+                y_pred = post_proc_CM["pred_rgb"]
+            )
 
-        ## TODO: optimizer, grads, metrics etc.!
-        pass
+        gradients = tape.gradient(coarse_loss, self.trainable_variables)
+        self.optimizer.apply_gradients(zip(gradients, self.trainable_variables))
+
+        ## TODO: Make note somewhere. Metric is computed for the coarse model 
+        ## output for the class NeRFLite.
+        self.compiled_metrics.update_state(
+            y_true = rgb, 
+            y_pred = post_proc_CM["pred_rgb"]
+        )
+
+        return {m.name: m.result() for m in self.metrics}
 
     def test_step(self, data):
         pass

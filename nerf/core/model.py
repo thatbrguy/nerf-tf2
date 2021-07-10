@@ -39,7 +39,7 @@ class NeRF(Model):
 
     This class implements both coarse and fine models.
     """
-    def __init__(self, params = None):
+    def __init__(self, params):
 
         super().__init__()
         self.params = params
@@ -140,7 +140,7 @@ class NeRFLite(Model):
     Legend:
         CM  : Coarse Model
     """
-    def __init__(self, params = None):
+    def __init__(self, params):
         
         super().__init__()
         self.params = params
@@ -279,8 +279,22 @@ def get_nerf_model(model_name, num_units = 256):
 
 if __name__ == '__main__':
 
+    from nerf.utils.params_utils import load_params
+    from nerf.core.dataset import CustomDataset
+
+    path = "./nerf/params/config.yaml"
+    params = load_params(path)
+
+    loader = CustomDataset(params = params)
+    dataset = loader.get_mock_dataset()
+
     coarse_model = get_nerf_model(model_name = "coarse")
     fine_model = get_nerf_model(model_name = "fine")
 
-    nerf = NeRF()
-    nerf_lite = NeRFLite()
+    nerf = NeRF(params)
+    nerf_lite = NeRFLite(params)
+
+    nerf.compile(optimizer = 'adam', metrics = [PSNRMetric()])
+    nerf.fit(dataset, epochs = 1)
+
+    import pdb; pdb.set_trace()  # breakpoint 510be73f //

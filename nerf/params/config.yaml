@@ -1,6 +1,7 @@
 ## TODO: Complete this file and add comments.
 
 data:
+  batch_size: 5
   pre_shuffle: True
   pre_shuffle_seed: 93
 
@@ -11,3 +12,5 @@ data:
 sampling:
   N_coarse: 64
   N_fine: 64
+  lindisp: False
+  perturb: True

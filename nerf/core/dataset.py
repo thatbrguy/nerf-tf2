@@ -168,10 +168,21 @@ class Dataset(ABC):
             far = far[perm]
             rgb = rgb[perm]
 
+        ## TODO: A more elegant way if possible?
+        rays_o = rays_o.astype(np.float32)
+        rays_d = rays_d.astype(np.float32)
+        near = near.astype(np.float32)
+        far = far.astype(np.float32)
+        rgb = rgb.astype(np.float32)
+
         # Here, x has the input data, y had the target data.
         x = (rays_o, rays_d, near, far)
         y = (rgb,)        
         dataset = tf.data.Dataset.from_tensor_slices((x, y))
+        dataset = dataset.batch(
+            batch_size =  self.params.data.batch_size,
+            drop_remainder = True,
+        )
 
         ## TODO: Think about what dataset operations to add here.
         return dataset
@@ -306,7 +317,7 @@ class CustomDataset(Dataset):
 
         return imgs, poses, bounds, intrinsics
 
-    def _load_mock_data(self):
+    def _load_mock_dataset(self):
         """
         Loads mock data which can be used for testing functionality.
 
@@ -314,13 +325,15 @@ class CustomDataset(Dataset):
             imgs        :   A NumPy array of shape (N, H, W, 3)
             poses       :   A NumPy array of shape (N, 4, 4)
             bounds      :   A NumPy array of shape (N, 2)
-            intrinsic   :   A NumPy array of shape (3, 3)
+            intrinsic   :   A NumPy array of shape (N, 3, 3)
         """
         N, H, W = 10, 500, 500
         focal = 250
 
-        intrinsics = np.eye(3)
-        intrinsics[0, 0], intrinsics[1, 1] = focal, focal
+        K = np.eye(3)
+        K[0, 0], K[1, 1] = focal, focal
+        K[0, 2], K[1, 2] = W/2, H/2
+        intrinsics = np.array([K for _ in range(N)])
 
         imgs = np.ones((N, H, W, 3))
         poses = np.ones((N, 4, 4))
@@ -336,6 +349,26 @@ class CustomDataset(Dataset):
             imgs, poses, 
             bounds, intrinsic
         ) = self._load_full_dataset()
+
+        (
+            rays_o, rays_d, 
+            near, far, rgb
+        ) = super().prepare_data(imgs, poses, bounds, intrinsic)
+
+        dataset = super().create_tf_dataset(
+            rays_o, rays_d, near, far, rgb
+        )
+
+        return dataset
+
+    def get_mock_dataset(self):
+        """
+        TODO: Elaborate.
+        """
+        (
+            imgs, poses, 
+            bounds, intrinsic
+        ) = self._load_mock_dataset()
 
         (
             rays_o, rays_d, 

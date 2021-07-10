@@ -111,7 +111,7 @@ def create_input_batch_coarse_model(params, rays_o, rays_d, near, far):
     # Shape of xyz --> (N_rays, N_coarse, 3)
     xyz = rays_o[:, None, :] + t_vals[..., None] * rays_d[:, None, :]
     # Shape of rays_d_broadcasted --> (N_rays, N_coarse, 3)
-    rays_d_broadcasted = tf.broadcast_to(rays_d, xyz.shape)
+    rays_d_broadcasted = tf.broadcast_to(rays_d[:, None, :], xyz.shape)
     
     # Shape of dir_inputs --> (N_rays * N_coarse, 3)
     dir_inputs = tf.reshape(rays_d_broadcasted, (-1, 3))

@@ -154,6 +154,7 @@ class Dataset(ABC):
 
         TODO: Elaborate
         """
+        ## NOTE: Maybe add a comment on memory?
         if self.params.data.pre_shuffle:
 
             rng = np.random.default_rng(
@@ -173,7 +174,6 @@ class Dataset(ABC):
         dataset = tf.data.Dataset.from_tensor_slices((x, y))
 
         ## TODO: Think about what dataset operations to add here.
-
         return dataset
 
 class CustomDataset(Dataset):

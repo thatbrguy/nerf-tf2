@@ -9,7 +9,29 @@ from tensorflow.keras.models import Model
 from tensorflow.keras.layers import Layer, Dense, Flatten
 from tensorflow.keras.layers import Input, Concatenate
 
+from tensorflow.keras.metrics import Metric
 from nerf.utils import ray_utils
+
+class PSNRMetric(Metric):
+    def __init__(self, name = "psnr_metric", **kwargs):
+        super().__init__(name = name, **kwargs)
+        self.psnr = self.add_weight(name = "psnr", initializer = "zeros")
+
+    def update_state(self, y_true, y_pred, sample_weight = None):
+        """
+        IMPORTANT: sample_weight has not effect. TODO: Elaborate.
+        """
+        mse = tf.reduce_mean(tf.square(y_true - y_pred))
+        psnr = (-10.) * (tf.log(mse)/tf.log(10.))
+        
+        ## TODO: Check if using assign is the right thing to do.
+        self.psnr.assign(psnr)
+
+    def result(self):
+        return self.psnr
+
+    def reset_states(self):
+        self.psnr.assign(0.0)
 
 class NeRF(Model):
     """
@@ -22,6 +44,7 @@ class NeRF(Model):
         super().__init__()
         self.params = params
 
+        self.mse_loss = tf.keras.losses.MeanSquaredError()
         self.coarse_model = get_nerf_model(model_name = "coarse")
         self.fine_model = get_nerf_model(model_name = "fine")
 
@@ -44,44 +67,60 @@ class NeRF(Model):
             rays_d = rays_d, near = near, far = far
         )
 
-        # Performing a forward pass through the coarse model.
         with tf.GradientTape() as tape:
+            
+            # Performing a forward pass through the coarse model.
             rgb_CM, sigma_CM = self.coarse_model(
                 data_CM["xyz_inputs"], data_CM["dir_inputs"]
             )
             
+            # Postprocessing coarse model output.            
             post_proc_CM = ray_utils.post_process_model_output(
                 sample_rgb = rgb_CM, sigma = sigma_CM, 
                 t_vals = data_CM["t_vals"]
             )
 
-            ## TODO: Handle loss.
-            # coarse_loss == ???
+            # Computing coarse loss.
+            coarse_loss = self.mse_loss(
+                y_true = rgb, 
+                y_pred = post_proc_CM["pred_rgb"]
+            )
 
-        # Getting data ready for the fine model.
-        data_FM = ray_utils.create_input_batch_fine_model(
-            params = self.params, rays_o = rays_o, 
-            rays_d = rays_d, weights = post_proc_CM["weights"], 
-            t_vals_coarse = data_CM["t_vals"],
-            bin_data = bin_data,
-        )
+            # Getting data ready for the fine model.
+            data_FM = ray_utils.create_input_batch_fine_model(
+                params = self.params, rays_o = rays_o, 
+                rays_d = rays_d, weights = post_proc_CM["weights"], 
+                t_vals_coarse = data_CM["t_vals"],
+                bin_data = bin_data,
+            )
 
-        # Performing a forward pass through the fine model.
-        with tf.GradientTape() as tape:
+            # Performing a forward pass through the fine model.
             rgb_FM, sigma_FM = self.fine_model(
                 data_FM["xyz_inputs"], data_FM["dir_inputs"]
             )
 
+            # Postprocessing fine model output.
             post_proc_FM = ray_utils.post_process_model_output(
                 sample_rgb = rgb_FM, sigma = sigma_FM, 
                 t_vals = data_FM["t_vals"]
             )
 
-            ## TODO: Handle loss.
-            # fine_loss == ???
+            # Computing fine loss
+            fine_loss = self.mse_loss(
+                y_true = rgb, 
+                y_pred = post_proc_CM["pred_rgb"]
+            )
 
-        ## TODO: optimizer, grads, metrics etc.!
-        pass
+            total_loss = coarse_loss + fine_loss
+
+        gradients = tape.gradient(loss, self.trainable_variables)
+        self.optimizer.apply_gradients(zip(gradients, self.trainable_variables))
+
+        ## TODO: Make note somewhere. Metric is computed only for the 
+        ## fine model output!
+        self.compiled_metrics.update_state(y_true = rgb, y_pred = post_proc_CM["pred_rgb"])
+
+        return {m.name: m.result() for m in self.metrics}
 
     def test_step(self, data):
         pass

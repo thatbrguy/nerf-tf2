@@ -22,7 +22,7 @@ class PSNRMetric(Metric):
         IMPORTANT: sample_weight has not effect. TODO: Elaborate.
         """
         mse = tf.reduce_mean(tf.square(y_true - y_pred))
-        psnr = (-10.) * (tf.log(mse)/tf.log(10.))
+        psnr = (-10.) * (tf.math.log(mse)/tf.math.log(10.))
         
         ## TODO: Check if using assign is the right thing to do.
         self.psnr.assign(psnr)
@@ -71,7 +71,7 @@ class NeRF(Model):
             
             # Performing a forward pass through the coarse model.
             rgb_CM, sigma_CM = self.coarse_model(
-                data_CM["xyz_inputs"], data_CM["dir_inputs"]
+                inputs = (data_CM["xyz_inputs"], data_CM["dir_inputs"])
             )
             
             # Postprocessing coarse model output.            
@@ -88,15 +88,15 @@ class NeRF(Model):
 
             # Getting data ready for the fine model.
             data_FM = ray_utils.create_input_batch_fine_model(
-                params = self.params, rays_o = rays_o, 
-                rays_d = rays_d, weights = post_proc_CM["weights"], 
+                params = self.params, rays_o = rays_o, rays_d = rays_d, 
+                bin_weights = post_proc_CM["weights"], 
                 t_vals_coarse = data_CM["t_vals"],
-                bin_data = bin_data,
+                bin_data = data_CM["bin_data"],
             )
 
             # Performing a forward pass through the fine model.
             rgb_FM, sigma_FM = self.fine_model(
-                data_FM["xyz_inputs"], data_FM["dir_inputs"]
+                inputs = (data_FM["xyz_inputs"], data_FM["dir_inputs"])
             )
 
             # Postprocessing fine model output.
@@ -108,7 +108,7 @@ class NeRF(Model):
             # Computing fine loss
             fine_loss = self.mse_loss(
                 y_true = rgb, 
-                y_pred = post_proc_CM["pred_rgb"]
+                y_pred = post_proc_FM["pred_rgb"]
             )
 
             total_loss = coarse_loss + fine_loss
@@ -163,7 +163,7 @@ class NeRFLite(Model):
         # Performing a forward pass through the coarse model.
         with tf.GradientTape() as tape:
             rgb_CM, sigma_CM = self.coarse_model(
-                data_CM["xyz_inputs"], data_CM["dir_inputs"]
+                inputs = (data_CM["xyz_inputs"], data_CM["dir_inputs"])
             )
             
             post_proc_CM = ray_utils.post_process_model_output(

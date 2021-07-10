@@ -157,7 +157,7 @@ def create_input_batch_fine_model(params, rays_o, rays_d, bin_weights, bin_data,
     bin_weights = bin_weights + 1e-5 ## To prevent nans ## TODO: Review.
     
     # Shape of pdf --> (N_rays, N_coarse). TODO: Review keepdims
-    pdf = bin_weights / tf.sum(bin_weights * bin_widths, axis = 1, keepdims = True)
+    pdf = bin_weights / tf.reduce_sum(bin_weights * bin_widths, axis = 1, keepdims = True)
     N_rays = pdf.shape[0]
 
     # Shape of agg --> (N_rays, N_coarse)
@@ -170,6 +170,7 @@ def create_input_batch_fine_model(params, rays_o, rays_d, bin_weights, bin_data,
     )
 
     ## TODO: Use det from params and give it a different name!
+    det = False
     if det:
         spaced = tf.linspace(0, 1, params.sampling.N_fine)
         u_vals = tf.broadcast_to(spaced, (N_rays, params.sampling.N_fine))
@@ -233,7 +234,7 @@ def create_input_batch_fine_model(params, rays_o, rays_d, bin_weights, bin_data,
     xyz = rays_o[:, None, :] + t_vals[..., None] * rays_d[:, None, :]
     
     # Shape of rays_d_broadcasted --> (N_rays, N_coarse + N_fine, 3)
-    rays_d_broadcasted = tf.broadcast_to(rays_d, xyz.shape)
+    rays_d_broadcasted = tf.broadcast_to(rays_d[:, None, :], xyz.shape)
     
     # Shape of dir_inputs --> (N_rays * (N_coarse + N_fine), 3)
     dir_inputs = tf.reshape(rays_d_broadcasted, (-1, 3))
@@ -300,12 +301,12 @@ def compute_weights(sigma, t_vals, N_samples):
 
     ## TODO, IMPORTANT: Should we multiply diffs by norm? Or 
     ## should we just make rays_d unit vectors ? 
-    raise NotImplementedError(
-        "Need to decide about multiplying diffs by norm or "
-        "making rays_d unit vectors. This exception is placed "
-        "to strongly remind myself to decide before using "
-        "the function."
-    )
+    # raise NotImplementedError(
+    #     "Need to decide about multiplying diffs by norm or "
+    #     "making rays_d unit vectors. This exception is placed "
+    #     "to strongly remind myself to decide before using "
+    #     "the function."
+    # )
 
     # Shape of sigma_ --> (N_rays, N_samples)
     sigma_ = tf.reshape(tf.squeeze(sigma), (-1, N_samples))

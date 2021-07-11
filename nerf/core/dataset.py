@@ -79,8 +79,9 @@ class Dataset(ABC):
         rays_o, rays_d, rgb = [], [], []
         height_check, width_check = None, None
 
-        new_poses = ray_utils.reconfigure_poses(
+        new_poses, new_bounds = ray_utils.reconfigure_poses_and_bounds(
             old_poses = poses, 
+            old_bounds = bounds,
             origin_method = self.params.preprocessing.origin_method,
         )
 
@@ -130,7 +131,7 @@ class Dataset(ABC):
 
         # (N, 2) --> (N, H*W, 2). TODO: Elaborate.
         bounds_ = np.broadcast_to(
-            bounds[:, None, :], shape = (*rays_d.shape[:-1], 2)
+            new_bounds[:, None, :], shape = (*rays_d.shape[:-1], 2)
         )
         near, far = bounds_[..., 0:1], bounds_[..., 1:2]
 

@@ -46,7 +46,7 @@ def get_rays(H, W, intrinsic, c2w):
     
     return rays_o, rays_d
 
-def reconfigure_poses(old_poses, origin_method):
+def reconfigure_poses_and_bounds(old_poses, old_bounds, origin_method):
     """
     Given N pose matrices (old_poses), each of which can transform a 
     point from a camera coordinate system to an arbitrary world 
@@ -61,11 +61,15 @@ def reconfigure_poses(old_poses, origin_method):
 
     Args:
         old_poses       :   A NumPy array of shape (N, 4, 4)
+        old_bounds      :   A NumPy array of shape (N, 2)
         origin_method   :   A string which is either "average" 
                             or "min_dist"
 
     Returns:
         new_poses       :   A NumPy array of shape (N, 4, 4)
+
+    ## TODO: Consider moving this fuction (and other relavent ones) 
+    ## to pose_utils!
     """
     
     # Shape of origin --> (3,)
@@ -84,9 +88,14 @@ def reconfigure_poses(old_poses, origin_method):
     # Hence, the matrix new_poses[i] would take a point from the i-th 
     # camera coordinate system to the new world world coordinate 
     # system (W2). 
-    new_poses = W1_to_W2_pose @ old_poses
+    temp_poses = W1_to_W2_pose @ old_poses
 
-    return new_poses
+    # Scaling poses and bounds so that ... (TODO: Elaborate).
+    new_poses, new_bounds = scale_poses_and_bounds(
+        poses = temp_poses, bounds = old_bounds
+    )
+
+    return new_poses, new_bounds
 
 def compute_new_world_origin(poses, method):
     """
@@ -163,6 +172,43 @@ def compute_new_world_basis(poses):
     x_basis = np.cross(y_basis, z_basis)
 
     return x_basis, y_basis, z_basis
+
+def scale_poses_and_bounds(old_poses, old_bounds):
+    """
+    TODO: Elaborate.
+    
+    Rough idea is that we need to move from the W2 coordinate system to 
+    the SW2 coordinate system. In this coordinate system, the XYZ points 
+    along the central ray for all the cameras will always lie within [-1, 1]. 
+
+    TODO: Should this function ensure this only for the central ray and add 
+    extra scaling, or consider the rays along each camera frustum as well?
+    """
+    raise NotImplementedError("Need to implement.")
+
+    return new_poses, new_bounds
+
+def scale_imgs_and_intrinsics(old_imgs, old_intrinsics, scale_factor):
+    """
+    Scales images and intrinsics by the given scaling factor.
+
+    The scale factor can be a single float or a tuple of two floats.
+
+    TODO: Elaborate.
+    """
+    if type(scale_factor) is tuple:
+        sx, sy = scale_factor
+        assert (type(sx) is float) and (type(sy) is float)
+    
+    elif type(scale_factor) is float:
+        sx, sy = scale_factor, scale_factor
+
+    else:
+        raise ValueError("Invalid type of scale_factor.")
+
+    raise NotImplementedError("Need to implement.")
+
+    return new_imgs, new_intrinsics
 
 def create_input_batch_coarse_model(params, rays_o, rays_d, near, far):
     """

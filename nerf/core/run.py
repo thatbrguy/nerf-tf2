@@ -20,5 +20,9 @@ if __name__ ==  "__main__":
     nerf = NeRF(params = params)
     # nerf_lite = NeRFLite(params)
 
-    nerf.compile(optimizer = 'adam', metrics = [PSNRMetric()])
+    ## Enabling eager mode for ease of debugging. 
+    ## NOTE: The current mock data is not suitable for debugging. 
+    ## Have to use real data to debug. This code is only kept as 
+    ## a placeholder until the real data is ready to use.
+    nerf.compile(optimizer = 'adam', metrics = [PSNRMetric()], run_eagerly = True)
     nerf.fit(dataset, epochs = 1)

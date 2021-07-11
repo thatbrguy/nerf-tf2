@@ -46,6 +46,124 @@ def get_rays(H, W, intrinsic, c2w):
     
     return rays_o, rays_d
 
+def reconfigure_poses(old_poses, origin_method):
+    """
+    Given N pose matrices (old_poses), each of which can transform a 
+    point from a camera coordinate system to an arbitrary world 
+    coordinate system (W1), this function does the following operations:
+        
+        1. Configures a new world coordinate system (W2) based based on 
+        the given pose matrices (old_poses).
+
+        2. Returns N new pose matrices (new_poses), each of which can
+        transform a point from a camera coordinate system to the new
+        world coordinate system (W2).
+
+    Args:
+        old_poses       :   A NumPy array of shape (N, 4, 4)
+        origin_method   :   A string which is either "average" 
+                            or "min_dist"
+
+    Returns:
+        new_poses       :   A NumPy array of shape (N, 4, 4)
+    """
+    
+    # Shape of origin --> (3,)
+    origin = compute_new_world_origin(old_poses, method = "average")
+    # Shape of x_basis, y_basis and z_basis --> (3,)
+    x_basis, y_basis, z_basis = compute_new_world_basis(old_poses)
+
+    W2_to_W1_3x4 = np.stack([x_basis, y_basis, z_basis, origin], axis = 1)
+    W2_to_W1_pose = pose_utils.make_4x4(W2_to_W1_3x4)
+    W1_to_W2_pose = np.linalg.inv(W2_to_W1_pose)
+
+    # The matrix old_poses[i] would take a point from the i-th camera 
+    # coordinate system to the old world (W1) coordinate system. The 
+    # matrix W1_to_W2_pose would take a point from the old world 
+    # coordinate system (W1) to the new world coordinate system (W2). 
+    # Hence, the matrix new_poses[i] would take a point from the i-th 
+    # camera coordinate system to the new world world coordinate 
+    # system (W2). 
+    new_poses = W1_to_W2_pose @ old_poses
+
+    return new_poses
+
+def compute_new_world_origin(poses, method):
+    """
+    Computes the origin of a new world coordinate system given 
+    N pose matrices.
+
+    Each of the N pose matrices can transform a point from a camera 
+    coordinate system to a arbitrary world coordinate system (W1). 
+    In this function, we want to compute the origin of a new 
+    world coordinate system (W2).
+    
+    Args:
+        poses       :   A NumPy array of shape (N, 4, 4)
+        method      :   A string which is either "average" 
+                        or "min_dist"
+
+    Returns:
+        origin      :   A NumPy array of shape (3,) which denotes 
+                        the location of the new world world coordinate 
+                        system (W2).
+    """
+    if method == "average":
+        cam_locs = poses[:, :3, 3]
+        origin = np.mean(cam_locs, axis = 0)
+
+    elif method == "min_dist":
+        raise NotImplementedError(
+            "The method min_dist is not implemented yet."
+        )
+    
+    else:
+        raise ValueError(f"Invalid method: {method}")
+
+    return origin
+
+def compute_new_world_basis(poses):
+    """
+    Computed the basis vectors of the new world coordinate system (W2). 
+    The basis vectors are represented in the current world coordinate 
+    system (W1).
+
+    Args:
+        poses       :   A NumPy array of shape (N, 4, 4)
+
+    Returns:
+        x_basis     :   A NumPy array of shape (3,) which is a vector in 
+                        the current world system (W1) that represents the 
+                        X-Direction of the new world coordinate system (W2).
+
+        y_basis     :   A NumPy array of shape (3,) which is a vector in 
+                        the current world system (W1) that represents the 
+                        Y-Direction of the new world coordinate system (W2).
+
+        z_basis     :   A NumPy array of shape (3,) which is a vector in 
+                        the current world system (W1) that represents the 
+                        Z-Direction of the new world coordinate system (W2).
+    """
+    
+    # Getting the average X-Axis direction of the cameras and the average 
+    # Y-Axis direction of the cameras to serve as two reference vectors.
+    avg_x_direction = np.mean(poses[:, :3, 0], axis = 0)
+    avg_y_direction = np.mean(poses[:, :3, 1], axis = 0)
+
+    # Setting the y_basis of the new new world coordinate 
+    # system (W2) as avg_y_direction
+    y_basis = avg_y_direction
+
+    # Using avg_x_direction and y_basis to get z_basis. Note that 
+    # z_basis is perpendicular to avg_x_direction and y_basis.
+    z_basis = np.cross(avg_x_direction, y_basis)
+
+    # Using y_basis and z_basis to get x_basis. Note that 
+    # x_basis, y_basis and z_basis are now mutually perpendicular.
+    x_basis = np.cross(y_basis, z_basis)
+
+    return x_basis, y_basis, z_basis
+
 def create_input_batch_coarse_model(params, rays_o, rays_d, near, far):
     """
     Given rays_o and rays_d, creates a batch of inputs that 
@@ -301,12 +419,12 @@ def compute_weights(sigma, t_vals, N_samples):
 
     ## TODO, IMPORTANT: Should we multiply diffs by norm? Or 
     ## should we just make rays_d unit vectors ? 
-    # raise NotImplementedError(
-    #     "Need to decide about multiplying diffs by norm or "
-    #     "making rays_d unit vectors. This exception is placed "
-    #     "to strongly remind myself to decide before using "
-    #     "the function."
-    # )
+    raise NotImplementedError(
+        "Need to decide about multiplying diffs by norm or "
+        "making rays_d unit vectors. This exception is placed "
+        "to strongly remind myself to decide before using "
+        "the function."
+    )
 
     # Shape of sigma_ --> (N_rays, N_samples)
     sigma_ = tf.reshape(tf.squeeze(sigma), (-1, N_samples))

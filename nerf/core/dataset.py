@@ -79,6 +79,11 @@ class Dataset(ABC):
         rays_o, rays_d, rgb = [], [], []
         height_check, width_check = None, None
 
+        new_poses = ray_utils.reconfigure_poses(
+            old_poses = poses, 
+            origin_method = self.params.preprocessing.origin_method,
+        )
+
         for idx, img in enumerate(imgs):
             H, W = img.shape[:2]
             K = intrinsics[idx]
@@ -106,9 +111,14 @@ class Dataset(ABC):
             self._validate_intrinsic_matrix(K = K)
             
             rays_o_, rays_d_ = ray_utils.get_rays(
-                H = H, W = W, intrinsic = K, c2w = poses[idx],
+                H = H, W = W, intrinsic = K, c2w = new_poses[idx],
             )
-            rgb_ = img.reshape(-1, 3)
+
+            rgb_ = img.reshape(-1, 3).astype(np.float32)
+            
+            # Diving by 255 so that the range of the rgb 
+            # data is between [0, 1]
+            rgb_ = rgb_ / 255
 
             rgb.append(rgb_)
             rays_o.append(rays_o_)

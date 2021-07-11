@@ -9,6 +9,9 @@ data:
     img_root_dir: ../data/images
     pose_info_path: ../data/pose_info.csv
 
+preprocessing:
+  origin_method: "average"
+
 sampling:
   N_coarse: 64
   N_fine: 64

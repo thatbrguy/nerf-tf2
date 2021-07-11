@@ -79,7 +79,7 @@ class Dataset(ABC):
         rays_o, rays_d, rgb = [], [], []
         height_check, width_check = None, None
 
-        new_poses, new_bounds = ray_utils.reconfigure_poses_and_bounds(
+        new_poses, new_bounds = pose_utils.reconfigure_poses_and_bounds(
             old_poses = poses, 
             old_bounds = bounds,
             origin_method = self.params.preprocessing.origin_method,
@@ -313,9 +313,8 @@ class CustomDataset(Dataset):
                 model_params = camera_params
             )
 
-            RT = np.eye(4)
             values = np.array(yaml.safe_load(row.pose)).reshape(3, 4)
-            RT[:3, :] = values
+            RT = pose_utils.make_4x4(values)
 
             bound = [row.near, row.far]
 

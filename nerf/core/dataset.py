@@ -323,13 +323,24 @@ class CustomDataset(Dataset):
             bounds.append(bound)
             intrinsics.append(intrinsic)
 
+        imgs = np.array(imgs)
+        poses = np.array(poses)
         bounds = np.array(bounds)
+        intrinsics = np.array(intrinsics)
 
         return imgs, poses, bounds, intrinsics
 
     def _load_mock_dataset(self):
         """
         Loads mock data which can be used for testing functionality.
+
+        NOTE: The mock data may not be suitable for testing the 
+        working of the algorithms. I mostly used it to test if the 
+        codebase throws errors. Please use this function with extreme 
+        caution. Please use real data for proper testing.
+
+        THIS FUNCTION WILL BE REMOVED SOON. PLEASE USE THE REAL 
+        DATA ITSELF FOR TESTING.
 
         Returns:
             imgs        :   A NumPy array of shape (N, H, W, 3)
@@ -373,7 +384,15 @@ class CustomDataset(Dataset):
 
     def get_mock_dataset(self):
         """
-        TODO: Elaborate.
+        Loads mock data which can be used for testing functionality.
+
+        NOTE: The mock data may not be suitable for testing the 
+        working of the algorithms. I mostly used it to test if the 
+        codebase throws errors. Please use this function with extreme 
+        caution. Please use real data for proper testing.
+
+        THIS FUNCTION WILL BE REMOVED SOON. PLEASE USE THE REAL 
+        DATA ITSELF FOR TESTING.
         """
         (
             imgs, poses, 

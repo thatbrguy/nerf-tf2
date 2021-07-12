@@ -325,6 +325,31 @@ def scale_poses_and_bounds(old_poses, old_bounds):
     """
     raise NotImplementedError("Need to implement.")
 
+    rays_o = old_poses[:, :3, 3]
+    rays_d = old_poses[:, :3, 2]
+    far = old_bounds[:, 1]
+
+    # We want XYZ coordinates of points_far and the origin to be 
+    # within the range [-1, 1]
+    points_far = rays_o + far[:, None] * rays_d
+    points = np.concatenate([rays_o, points_far], axis = 0)
+
+    ## TODO: Explain!
+    projs = np.abs(points).max(axis = 0)
+    largest_proj = projs.max()
+    scale_factor = 1 / largest_proj
+
+    if scale_factor >= 1:
+        # No scaling required for this case.
+        new_poses = old_poses
+        new_bounds = old_bounds
+
+    elif scale_factor < 1:
+        # Poses and bounds are scaled in this case.    
+        new_poses = old_poses.copy()
+        new_poses[:3, :3] = new_poses[:3, :3] * scale_factor
+        new_bounds = old_bounds.copy() * scale_factor
+
     return new_poses, new_bounds
 
 def scale_imgs_and_intrinsics(old_imgs, old_intrinsics, scale_factor):

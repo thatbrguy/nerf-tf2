@@ -31,6 +31,40 @@ def make_homogeneous(points):
 
     return output
 
+def normalize(vec):
+    """
+    Normalizes vectors or a batch of vectors.
+
+    If the input (vec) has shape (D,), it is assumed to 
+    be D-Dimensional vector. In this case, the output 
+    will also have shape (D,). The output will be a unit vector.
+
+    If the input (vec) has shape (N, D), it is assumed to 
+    be a batch of N vectors each of which has D-Dimensions. In 
+    this case, the output will also have shape (N, D). Each of 
+    the N vectors in the output will be a unit vector.
+
+    Args:
+        vec         :   A NumPy array of shape (D,) or (N, D)
+
+    Returns
+        norm_vec    :   A NumPy array with the same shape as 
+                        of the input.
+    """
+    assert len(vec.shape) <= 2
+    EPS = 1e-8
+    
+    if len(vec.shape) == 1:
+        magnitude = np.sqrt(np.sum(vec ** 2))
+        norm_vec = vec / (magnitude + EPS)
+
+    elif len(vec.shape) == 2:
+        ## TODO: Verify calculation.
+        magnitude = np.sqrt(np.sum(vec ** 2, axis = 1))
+        norm_vec = vec / (magnitude[:, None] + EPS)
+
+    return norm_vec
+
 def rotate_vectors(mat, vectors):
     """
     TODO: Elaborate.
@@ -243,22 +277,38 @@ def compute_new_world_basis(poses):
                         Z-Direction of the new world coordinate system (W2).
     """
     
-    # Getting the average X-Axis direction of the cameras and the average 
-    # Y-Axis direction of the cameras to serve as two reference vectors.
-    avg_x_direction = np.mean(poses[:, :3, 0], axis = 0)
+    # Computing the average Y-Axis direction of the cameras.
     avg_y_direction = np.mean(poses[:, :3, 1], axis = 0)
+    # Normalizing the vector to get a unit vector.
+    avg_y_direction = normalize(avg_y_direction)
 
     # Setting the y_basis of the new new world coordinate 
-    # system (W2) as avg_y_direction
+    # system (W2) as avg_y_direction.
     y_basis = avg_y_direction
 
-    # Using avg_x_direction and y_basis to get z_basis. Note that 
-    # z_basis is perpendicular to avg_x_direction and y_basis.
-    z_basis = np.cross(avg_x_direction, y_basis)
+    # We would now like to calculate the z_basis vector. The z_basis 
+    # vector must be perpendicular to the y_basis vector. We can ensure 
+    # this by obtaining z_basis as a result of performing cross product 
+    # of some "reference" vector with the y_basis vector. Here, we take 
+    # the X-Axis direction of the first camera in the poses array to serve 
+    # as this "reference" vector. You can choose this "reference" vector 
+    # in many other ways as well; this method is just my preference. 
+    # In the below code, temp_vector is the "reference" vector.
+    temp_vector = poses[0, :3, 0]
+    # Normalizing the vector to get a unit vector.
+    temp_vector = normalize(temp_vector)
+
+    # Using temp_vector and y_basis to get z_basis. Note that 
+    # z_basis is perpendicular to temp_vector and y_basis.
+    z_basis = np.cross(temp_vector, y_basis)
+    # Normalizing the vector to get a unit vector.
+    z_basis = normalize(z_basis)
 
     # Using y_basis and z_basis to get x_basis. Note that 
     # x_basis, y_basis and z_basis are now mutually perpendicular.
     x_basis = np.cross(y_basis, z_basis)
+    # Normalizing the vector to get a unit vector.
+    x_basis = normalize(x_basis)
 
     return x_basis, y_basis, z_basis
 

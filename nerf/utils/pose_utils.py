@@ -190,9 +190,6 @@ def reconfigure_poses_and_bounds(old_poses, old_bounds, origin_method):
 
     Returns:
         new_poses       :   A NumPy array of shape (N, 4, 4)
-
-    ## TODO: Consider moving this fuction (and other relavent ones) 
-    ## to pose_utils!
     """
     
     # Shape of origin --> (3,)
@@ -201,7 +198,7 @@ def reconfigure_poses_and_bounds(old_poses, old_bounds, origin_method):
     x_basis, y_basis, z_basis = compute_new_world_basis(old_poses)
 
     W2_to_W1_3x4 = np.stack([x_basis, y_basis, z_basis, origin], axis = 1)
-    W2_to_W1_pose = pose_utils.make_4x4(W2_to_W1_3x4)
+    W2_to_W1_pose = make_4x4(W2_to_W1_3x4)
     W1_to_W2_pose = np.linalg.inv(W2_to_W1_pose)
 
     # The matrix old_poses[i] would take a point from the i-th camera 
@@ -215,7 +212,8 @@ def reconfigure_poses_and_bounds(old_poses, old_bounds, origin_method):
 
     # Scaling poses and bounds so that ... (TODO: Elaborate).
     new_poses, new_bounds = scale_poses_and_bounds(
-        poses = temp_poses, bounds = old_bounds
+        old_poses = temp_poses, old_bounds = old_bounds, 
+        method = "central_ray"
     )
 
     return new_poses, new_bounds
@@ -312,7 +310,7 @@ def compute_new_world_basis(poses):
 
     return x_basis, y_basis, z_basis
 
-def scale_poses_and_bounds(old_poses, old_bounds):
+def scale_poses_and_bounds(old_poses, old_bounds, method):
     """
     TODO: Elaborate.
     
@@ -323,7 +321,10 @@ def scale_poses_and_bounds(old_poses, old_bounds):
     TODO: Should this function ensure this only for the central ray and add 
     extra scaling, or consider the rays along each camera frustum as well?
     """
-    raise NotImplementedError("Need to implement.")
+    assert method in ["central_ray", "frustum"]
+
+    if method == "frustum":
+        raise NotImplementedError("TODO: Need to implement.")
 
     rays_o = old_poses[:, :3, 3]
     rays_d = old_poses[:, :3, 2]
@@ -345,9 +346,12 @@ def scale_poses_and_bounds(old_poses, old_bounds):
         new_bounds = old_bounds
 
     elif scale_factor < 1:
-        # Poses and bounds are scaled in this case.    
+        # Poses and bounds are scaled in this case.
+        ## TODO: Check if scaling logic is correct! Also implement 
+        ## additional scaling (to scale more if needed).
         new_poses = old_poses.copy()
-        new_poses[:3, :3] = new_poses[:3, :3] * scale_factor
+        new_poses[:, :3, 3] = new_poses[:, :3, 3] * scale_factor
+        
         new_bounds = old_bounds.copy() * scale_factor
 
     return new_poses, new_bounds

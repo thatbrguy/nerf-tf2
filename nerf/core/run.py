@@ -15,8 +15,9 @@ if __name__ ==  "__main__":
     params = load_params(path)
 
     loader = CustomDataset(params = params)
-    dataset = loader.get_mock_dataset()
-
+    dataset = loader.get_dataset()
+    tf.random.set_seed(11)
+    
     nerf = NeRF(params = params)
     # nerf_lite = NeRFLite(params)
 

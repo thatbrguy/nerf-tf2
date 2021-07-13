@@ -193,6 +193,7 @@ def create_input_batch_fine_model(params, rays_o, rays_d, bin_weights, bin_data,
     ## TODO: I think this code would work but need to check! 
     ## Do not use without testing!
     
+    import pdb; pdb.set_trace()  # breakpoint 5426f3a2 //
     ## agg_, pdf_ and left_edges_ have shape (N_rays, N_fine)
     agg_ = tf.gather(agg, piece_idxs, axis = 1, batch_dims = 1)
     pdf_ = tf.gather(pdf, piece_idxs, axis = 1, batch_dims = 1)
@@ -301,14 +302,8 @@ def compute_weights(sigma, t_vals, N_samples):
     # Shape of diffs_ --> (N_rays, N_samples)
     diffs_ = tf.concat([diffs, last_val_array], axis = -1)
 
-    ## TODO, IMPORTANT: Should we multiply diffs by norm? Or 
-    ## should we just make rays_d unit vectors ? 
-    raise NotImplementedError(
-        "Need to decide about multiplying diffs by norm or "
-        "making rays_d unit vectors. This exception is placed "
-        "to strongly remind myself to decide before using "
-        "the function."
-    )
+    # NOTE: We do not need to multiply diffs_ with the magnitude 
+    # of the ray_d vectors. TODO: Elaborate.
 
     # Shape of sigma_ --> (N_rays, N_samples)
     sigma_ = tf.reshape(tf.squeeze(sigma), (-1, N_samples))

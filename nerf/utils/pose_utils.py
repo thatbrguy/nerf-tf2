@@ -50,6 +50,8 @@ def normalize(vec):
     Returns
         norm_vec    :   A NumPy array with the same shape as 
                         of the input.
+
+    ## TODO: Consider adding EPS only if magnitude < EPS ?
     """
     assert len(vec.shape) <= 2
     EPS = 1e-8

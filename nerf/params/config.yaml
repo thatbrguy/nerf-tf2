@@ -1,7 +1,7 @@
 ## TODO: Complete this file and add comments.
 
 data:
-  batch_size: 5
+  batch_size: 1024
   
   # scale_imgs can either be set to null or a float value. If scale_imgs is null, no scaling is applied. 
   # If scale_imgs is a float value, then the images and the intrinsic matrices are scaled.

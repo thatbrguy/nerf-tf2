@@ -53,11 +53,11 @@ class Dataset(ABC):
         """
         Checks if the data is suitable for use with this codebase.
         """
-        for idx in range(len(imgs)):
-            
+        height_check, width_check = None, None
+        
+        for idx in range(len(imgs)):    
             img = imgs[idx]
             K = intrinsics[idx]
-            
             H, W = img.shape[:2]
 
             ## TODO: Allow images to have different heights and 
@@ -110,8 +110,6 @@ class Dataset(ABC):
 
         """
         rays_o, rays_d, rgb = [], [], []
-        height_check, width_check = None, None
-
         self._validate_data(imgs, poses, bounds, intrinsics)
 
         new_poses, new_bounds = pose_utils.reconfigure_poses_and_bounds(

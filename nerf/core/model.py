@@ -233,6 +233,8 @@ def get_nerf_model(model_name, num_units = 256):
 
     ## TODO: Verify consistency, indices, check for one off errors etc.
     ## Add comments to explain stuff!
+
+    ## NOTE: relu is added to sigma here itself.
     """
     assert model_name in ["coarse", "fine"]
     
@@ -256,7 +258,7 @@ def get_nerf_model(model_name, num_units = 256):
             value = Concatenate(name = name)([value, enc_xyz])
 
     name =  f"{model_name}/sigma"
-    sigma = Dense(1, activation = None, name = name)(value)
+    sigma = Dense(1, activation = "relu", name = name)(value)
 
     name =  f"{model_name}/dense_8"
     bottleneck = Dense(num_units, activation = None, name = name)(value)

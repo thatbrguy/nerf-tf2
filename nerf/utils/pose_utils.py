@@ -360,20 +360,39 @@ def scale_imgs_and_intrinsics(old_imgs, old_intrinsics, scale_factor):
     """
     Scales images and intrinsics by the given scaling factor.
 
-    The scale factor can be a single float or a tuple of two floats.
-
     TODO: Elaborate.
     """
-    if type(scale_factor) is tuple:
+
+    if scale_factor is None:
+        new_imgs = old_imgs
+        new_intrinsics = old_intrinsics
+
+    elif scale_factor is not None:
         sx, sy = scale_factor
-        assert (type(sx) is float) and (type(sy) is float)
-    
-    elif type(scale_factor) is float:
-        sx, sy = scale_factor, scale_factor
+        new_imgs, new_intrinsics = [], []
+
+        ## TODO: Maybe add arg to choose interpolation?
+        for idx in range(len(old_imgs)):
+
+            img = cv2.cvtColor(old_imgs[idx].copy(), cv2.COLOR_RGB2BGR)
+            resized = cv2.resize(
+                old_imgs[idx].copy(), fx = sx, fy = sy, 
+                interpolation = cv2.INTER_AREA
+            )
+            new_img = cv2.cvtColor(resized, cv2.COLOR_BGR2RGB)
+
+            temp = old_intrinsics[idx].copy()
+            temp[0, 0], temp[0, 2] = temp[0, 0] * sx, temp[0, 2] * sx
+            temp[1, 1], temp[1, 2] = temp[1, 1] * sy, temp[1, 2] * sy
+            new_intrinsic = temp
+
+            new_imgs.append(new_img)
+            new_intrinsics.append(new_intrinsics)
+
+        new_imgs = np.array(new_imgs)
+        new_intrinsics = np.array(new_intrinsics)
 
     else:
-        raise ValueError("Invalid type of scale_factor.")
-
-    raise NotImplementedError("Need to implement.")
+        raise ValueError("Invalid setting of scale_factor.")
 
     return new_imgs, new_intrinsics

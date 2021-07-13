@@ -49,6 +49,39 @@ class Dataset(ABC):
         assert K[2, 2] == 1
         assert np.all(zero_check == 0)
 
+    def _validate_data(self, imgs, poses, bounds, intrinsics):
+        """
+        Checks if the data is suitable for use with this codebase.
+        """
+        for idx in range(len(imgs)):
+            
+            img = imgs[idx]
+            K = intrinsics[idx]
+            
+            H, W = img.shape[:2]
+
+            ## TODO: Allow images to have different heights and 
+            ## widths in the future. 
+            if height_check is None:
+                height_check = H
+            else:
+                assert height_check == H, (
+                    "The current codebase requires all images "
+                    "to have the same height."
+                )
+
+            if width_check is None:
+                width_check = H
+            else:
+                assert width_check == W, (
+                    "The current codebase requires all images "
+                    "to have the same width."
+                )
+
+            ## TODO: Support H != W.
+            assert H == W, "The current codebase requries H == W"
+            self._validate_intrinsic_matrix(K = K)
+
     def prepare_data(self, imgs, poses, bounds, intrinsics):
         """
         Method that can be used by the subclasses.
@@ -79,38 +112,24 @@ class Dataset(ABC):
         rays_o, rays_d, rgb = [], [], []
         height_check, width_check = None, None
 
+        self._validate_data(imgs, poses, bounds, intrinsics)
+
         new_poses, new_bounds = pose_utils.reconfigure_poses_and_bounds(
             old_poses = poses, 
             old_bounds = bounds,
             origin_method = self.params.preprocessing.origin_method,
         )
 
-        for idx, img in enumerate(imgs):
-            H, W = img.shape[:2]
+        new_imgs, new_intrinsics = pose_utils.scale_imgs_and_intrinsics(
+            old_imgs = imgs, old_intrinsics = intrinsics, 
+            scale_factor = self.params.data.scale_imgs,
+        )
+
+        for idx in range(len(imgs)):
+            img = imgs[idx]
             K = intrinsics[idx]
-
-            ## TODO: Allow images to have different heights and 
-            ## widths in the future. 
-            if height_check is None:
-                height_check = H
-            else:
-                assert height_check == H, (
-                    "The current codebase requires all images "
-                    "to have the same height."
-                )
-
-            if width_check is None:
-                width_check = H
-            else:
-                assert width_check == W, (
-                    "The current codebase requires all images "
-                    "to have the same width."
-                )
-
-            ## TODO: Support H != W.
-            assert H == W, "The current codebase requries H == W"
-            self._validate_intrinsic_matrix(K = K)
             
+            H, W = img.shape[:2]
             rays_o_, rays_d_ = ray_utils.get_rays(
                 H = H, W = W, intrinsic = K, c2w = new_poses[idx],
             )

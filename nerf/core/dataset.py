@@ -32,55 +32,18 @@ class Dataset(ABC):
 
     def _validate_intrinsic_matrix(self, K):
         """
-        Code currently only supports intrinsic matrices that are of the form:
+        Code supports intrinsic matrices that are of the form:
         intrinsic = np.array([
-            [f, 0, c],
-            [0, f, c],
-            [0, 0, 1],
+            [fu, 0., cu],
+            [0., fv, cv],
+            [0., 0., 1.],
         ])
-        In the above, f is the focal length and c is the principal offset. 
-        
-        TODO: Support intrinsic matrices which have distinct fu, fv, cu, cv.
         """
         zero_check = np.array([
             K[0, 1], K[1, 0], K[2, 0], K[2, 1],
         ])
-        assert (K[0, 0] == K[1, 1]) and (K[0, 2] == K[1, 2])
         assert K[2, 2] == 1
         assert np.all(zero_check == 0)
-
-    def _validate_data(self, imgs, poses, bounds, intrinsics):
-        """
-        Checks if the data is suitable for use with this codebase.
-        """
-        height_check, width_check = None, None
-        
-        for idx in range(len(imgs)):    
-            img = imgs[idx]
-            K = intrinsics[idx]
-            H, W = img.shape[:2]
-
-            ## TODO: Allow images to have different heights and 
-            ## widths in the future. 
-            if height_check is None:
-                height_check = H
-            else:
-                assert height_check == H, (
-                    "The current codebase requires all images "
-                    "to have the same height."
-                )
-
-            if width_check is None:
-                width_check = H
-            else:
-                assert width_check == W, (
-                    "The current codebase requires all images "
-                    "to have the same width."
-                )
-
-            ## TODO: Support H != W.
-            assert H == W, "The current codebase requries H == W"
-            self._validate_intrinsic_matrix(K = K)
 
     def prepare_data(self, imgs, poses, bounds, intrinsics):
         """
@@ -88,29 +51,36 @@ class Dataset(ABC):
 
         TODO: Elaborate.
         
-        IMPORTANT: The current codebase requires all images MUST 
-        have the same height and all images MUST have the same width.
+        Each image can have a different height and width value. 
+        If image i has width W_i and height H_i, then the number 
+        of pixels in that image is Hi*Wi. Hence, total number 
+        of pixels in the dataset (L) is given by:
 
-        TODO: Do we normalize rgb range?
+        L = H_0*W_0 +  H_1*W_1 +  H_2*W_2 + ... + H_(N-1)*W_(N-1)
 
-        N --> Number of images in the dataset.
+        Legend:
+            N: Number of images in the dataset.
+            L: Total number of pixels in the dataset. 
 
         Args:
-            imgs        :   A NumPy array of shape (N, H, W, 3)
+            imgs        :   A list of N NumPy arrays. Each element
+                            of the list is a NumPy array with shape
+                            (H_i, W_i, 3) that represents an image.
+                            Each image can have different height
+                            and width.
             poses       :   A NumPy array of shape (N, 4, 4)
             bounds      :   A NumPy array of shape (N, 2)
             intrinsics  :   A NumPy array of shape (N, 3, 3)
 
         Returns:
-            rays_o      :   A NumPy array of shape (N * H * W, 3)
-            rays_d      :   A NumPy array of shape (N * H * W, 3)    
-            near        :   A NumPy array of shape (N * H * W, 1) 
-            far         :   A NumPy array of shape (N * H * W, 1)
-            rgb         :   A NumPy array of shape (N * H * W, 3)
+            rays_o      :   A NumPy array of shape (L, 3)
+            rays_d      :   A NumPy array of shape (L, 3)    
+            near        :   A NumPy array of shape (L, 1) 
+            far         :   A NumPy array of shape (L, 1)
+            rgb         :   A NumPy array of shape (L, 3)
 
         """
-        rays_o, rays_d, rgb = [], [], []
-        self._validate_data(imgs, poses, bounds, intrinsics)
+        rays_o, rays_d, near, far, rgb = [], [], [], [], []
 
         new_poses, new_bounds = pose_utils.reconfigure_poses_and_bounds(
             old_poses = poses, 
@@ -123,44 +93,40 @@ class Dataset(ABC):
             scale_factor = self.params.data.scale_imgs,
         )
 
-        for idx in range(len(imgs)):
-            img = imgs[idx]
-            K = intrinsics[idx]
+        for idx in range(len(new_imgs)):
             
+            img = new_imgs[idx]
+            K = new_intrinsics[idx]
+            self._validate_intrinsic_matrix(K = K)
+
             H, W = img.shape[:2]
             rays_o_, rays_d_ = ray_utils.get_rays(
                 H = H, W = W, intrinsic = K, c2w = new_poses[idx],
             )
-
-            rgb_ = img.reshape(-1, 3).astype(np.float32)
             
             # Diving by 255 so that the range of the rgb 
             # data is between [0, 1]
+            rgb_ = img.reshape(-1, 3).astype(np.float32)
             rgb_ = rgb_ / 255
 
             rgb.append(rgb_)
             rays_o.append(rays_o_)
             rays_d.append(rays_d_)
 
-        rgb = np.array(rgb)
-        rays_o = np.array(rays_o)
-        rays_d = np.array(rays_d)
+            bounds_ = new_bounds[idx]
+            bounds_ = np.broadcast_to(
+                bounds_[None, :], shape = (rays_d_.shape[0], 2)
+            )
+            near_, far_ = bounds_[:, 0:1], bounds_[:, 1:2]
 
-        # (N, 2) --> (N, H*W, 2). TODO: Elaborate.
-        bounds_ = np.broadcast_to(
-            new_bounds[:, None, :], shape = (*rays_d.shape[:-1], 2)
-        )
-        near, far = bounds_[..., 0:1], bounds_[..., 1:2]
+            near.append(near_)
+            far.append(far_)
 
-        # After reshaping, rays_o, rays_d and rgb will 
-        # have shape (N * H * W, 3)
-        rays_o = rays_o.reshape(-1, 3)
-        rays_d = rays_d.reshape(-1, 3)
-        rgb = rgb.reshape(-1, 3)
-        
-        # After reshaping, near and far will have shape (N * H * W, 1)
-        near = near.reshape(-1, 1)
-        far = far.reshape(-1, 1)
+        rgb = np.concatenate(rgb, axis = 0)
+        far = np.concatenate(far, axis = 0)
+        near = np.concatenate(near, axis = 0)
+        rays_o = np.concatenate(rays_o, axis = 0)
+        rays_d = np.concatenate(rays_d, axis = 0)
 
         return rays_o, rays_d, near, far, rgb
 
@@ -169,13 +135,23 @@ class Dataset(ABC):
         Method that can be used by the subclasses.
 
         Returns a tf.data.Dataset object.
+        
+        Each image can have a different height and width value. 
+        If image i has width W_i and height H_i, then the number 
+        of pixels in that image is Hi*Wi. Hence, total number 
+        of pixels in the dataset (L) is given by:
+
+        L = H_0*W_0 +  H_1*W_1 +  H_2*W_2 + ... + H_(N-1)*W_(N-1)
+
+        Legend:
+            L: Total number of pixels in the dataset.
 
         Args:
-            rays_o      :   A NumPy array of shape (N * H * W, 3)
-            rays_d      :   A NumPy array of shape (N * H * W, 3)    
-            near        :   A NumPy array of shape (N * H * W, 1) 
-            far         :   A NumPy array of shape (N * H * W, 1)
-            rgb         :   A NumPy array of shape (N * H * W, 3)
+            rays_o      :   A NumPy array of shape (L, 3)
+            rays_d      :   A NumPy array of shape (L, 3)    
+            near        :   A NumPy array of shape (L, 1) 
+            far         :   A NumPy array of shape (L, 1)
+            rgb         :   A NumPy array of shape (L, 3)
 
         Returns: 
             dataset
@@ -302,10 +278,12 @@ class CustomDataset(Dataset):
         N --> Number of images in the dataset. Column 0 in 
         bounds is near, column 1 in bounds is far.
 
-        Same intrinsic matrix is assumed for all images.
-
         Returns:
-            imgs        :   A NumPy array of shape (N, H, W, 3)
+            imgs        :   A list of N NumPy arrays. Each element
+                            of the list is a NumPy array with shape
+                            (H_i, W_i, 3) that represents an image.
+                            Each image can have different height
+                            and width.
             poses       :   A NumPy array of shape (N, 4, 4)
             bounds      :   A NumPy array of shape (N, 2)
             intrinsics  :   A NumPy array of shape (N, 3, 3)
@@ -340,42 +318,9 @@ class CustomDataset(Dataset):
             bounds.append(bound)
             intrinsics.append(intrinsic)
 
-        imgs = np.array(imgs)
         poses = np.array(poses)
         bounds = np.array(bounds)
         intrinsics = np.array(intrinsics)
-
-        return imgs, poses, bounds, intrinsics
-
-    def _load_mock_dataset(self):
-        """
-        Loads mock data which can be used for testing functionality.
-
-        NOTE: The mock data may not be suitable for testing the 
-        working of the algorithms. I mostly used it to test if the 
-        codebase throws errors. Please use this function with extreme 
-        caution. Please use real data for proper testing.
-
-        THIS FUNCTION WILL BE REMOVED SOON. PLEASE USE THE REAL 
-        DATA ITSELF FOR TESTING.
-
-        Returns:
-            imgs        :   A NumPy array of shape (N, H, W, 3)
-            poses       :   A NumPy array of shape (N, 4, 4)
-            bounds      :   A NumPy array of shape (N, 2)
-            intrinsic   :   A NumPy array of shape (N, 3, 3)
-        """
-        N, H, W = 10, 500, 500
-        focal = 250
-
-        K = np.eye(3)
-        K[0, 0], K[1, 1] = focal, focal
-        K[0, 2], K[1, 2] = W/2, H/2
-        intrinsics = np.array([K for _ in range(N)])
-
-        imgs = np.ones((N, H, W, 3))
-        poses = np.ones((N, 4, 4))
-        bounds = np.ones((N, 2))
 
         return imgs, poses, bounds, intrinsics
 
@@ -387,34 +332,6 @@ class CustomDataset(Dataset):
             imgs, poses, 
             bounds, intrinsic
         ) = self._load_full_dataset()
-
-        (
-            rays_o, rays_d, 
-            near, far, rgb
-        ) = super().prepare_data(imgs, poses, bounds, intrinsic)
-
-        dataset = super().create_tf_dataset(
-            rays_o, rays_d, near, far, rgb
-        )
-
-        return dataset
-
-    def get_mock_dataset(self):
-        """
-        Loads mock data which can be used for testing functionality.
-
-        NOTE: The mock data may not be suitable for testing the 
-        working of the algorithms. I mostly used it to test if the 
-        codebase throws errors. Please use this function with extreme 
-        caution. Please use real data for proper testing.
-
-        THIS FUNCTION WILL BE REMOVED SOON. PLEASE USE THE REAL 
-        DATA ITSELF FOR TESTING.
-        """
-        (
-            imgs, poses, 
-            bounds, intrinsic
-        ) = self._load_mock_dataset()
 
         (
             rays_o, rays_d, 

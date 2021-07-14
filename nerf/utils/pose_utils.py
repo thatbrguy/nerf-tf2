@@ -364,7 +364,6 @@ def scale_imgs_and_intrinsics(old_imgs, old_intrinsics, scale_factor):
 
     TODO: Elaborate.
     """
-
     if scale_factor is None:
         new_imgs = old_imgs
         new_intrinsics = old_intrinsics
@@ -389,9 +388,8 @@ def scale_imgs_and_intrinsics(old_imgs, old_intrinsics, scale_factor):
             new_intrinsic = temp
 
             new_imgs.append(new_img)
-            new_intrinsics.append(new_intrinsics)
+            new_intrinsics.append(new_intrinsic)
 
-        new_imgs = np.array(new_imgs)
         new_intrinsics = np.array(new_intrinsics)
 
     else:

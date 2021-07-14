@@ -13,28 +13,17 @@ def get_rays(H, W, intrinsic, c2w):
 
     TODO: Elaborate.
 
-    TODO: Support using fu, fv, cu, cv (get intrinsic matrix 
-    as argument) and H != W.
-
     TODO: Think about offset by 0.5 so that rays go through 
     the middle of the pixel.
     """
-    assert H == W, (
-        "Currently this function is written assuming "
-        "H == W and fu == fv. In a later version, "
-        "images with H != W and intrinsic matrices "
-        "with fu, fv, cu, cv will be supported."
-    ) 
-
-    focal = intrinsic[0, 0]
     H_vals = np.arange(H, dtype = np.float64)
     W_vals = np.arange(W, dtype = np.float64)
+    u, v = np.meshgrid(W_vals, H_vals, indexing = "xy")
 
-    x, y = np.meshgrid(W_vals, H_vals, indexing = "xy")
-
-    x_vals = x - (W / 2)
-    y_vals = y - (H / 2)
-    z_vals = np.full(x_vals.shape, focal, dtype = np.float64)
+    ## TODO: Explain logic.
+    x_vals = (u - intrinsic[0, 2]) / intrinsic[0, 0]
+    y_vals = (v - intrinsic[1, 2]) / intrinsic[1, 1]
+    z_vals = np.ones(x_vals.shape, dtype = np.float64)
 
     directions = np.stack([x_vals, y_vals, z_vals], axis = -1)
     # (H, W, 3) --> (H*W, 3) TODO: Verify

@@ -11,6 +11,7 @@ from nerf.utils.params_utils import load_params
 
 if __name__ ==  "__main__":
 
+    np.set_printoptions(precision = 5, suppress = True)
     path = "./nerf/params/config.yaml"
     params = load_params(path)
 

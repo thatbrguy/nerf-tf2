@@ -132,11 +132,6 @@ def create_input_batch_fine_model(params, rays_o, rays_d, bin_weights, bin_data,
 
     TODO: Consider explaining concepts briefly over certain 
     lines. Detailed description can be provided elsewhere.
-    
-    TODO: Handle weights calculation. Assuming the weights will be stored 
-    in a variable called weights. 
-    
-    Shape of weights must be --> (N_rays, N_coarse)
     """
     # Extracting useful content from bin_data
     # Shape of left_edges and bin_widths --> (N_rays, N_coarse)
@@ -144,7 +139,7 @@ def create_input_batch_fine_model(params, rays_o, rays_d, bin_weights, bin_data,
     bin_widths = bin_data["bin_widths"]
 
     # Creating pdf from weights.
-    # Shape of weights --> (N_rays, N_coarse)
+    # Shape of bin_weights --> (N_rays, N_coarse)
     bin_weights = bin_weights + 1e-5 ## To prevent nans ## TODO: Review.
     
     # Shape of pdf --> (N_rays, N_coarse). TODO: Review keepdims
@@ -152,7 +147,7 @@ def create_input_batch_fine_model(params, rays_o, rays_d, bin_weights, bin_data,
     N_rays = pdf.shape[0]
 
     # Shape of agg --> (N_rays, N_coarse)
-    agg = tf.cumsum(pdf, axis = 1)
+    agg = tf.cumsum(pdf * bin_widths, axis = 1)
     
     # Shape of agg --> (N_rays, N_coarse + 1)
     agg = tf.concat(
@@ -170,7 +165,11 @@ def create_input_batch_fine_model(params, rays_o, rays_d, bin_weights, bin_data,
 
     # Shape of u_vals --> (N_rays, N_fine)
     # Shape of piece_idxs --> (N_rays, N_fine)
-    piece_idxs = tf.searchsorted(agg, u_vals, side = 'right')
+    # Shape of agg[:, 1:-1] --> (N_rays, N_fine - 1).
+    # agg[:, 1:-1] has the "inner edges" with which we can do 
+    # searchsorted correctly. 
+    # TODO: Need to carefully check logic!
+    piece_idxs = tf.searchsorted(agg[:, 1:-1], u_vals, side = 'right')
 
     #################################################################
     ## TODO: Choose tf.gather or tf.gather_nd
@@ -182,9 +181,8 @@ def create_input_batch_fine_model(params, rays_o, rays_d, bin_weights, bin_data,
     ## TODO: I think this code would work but need to check! 
     ## Do not use without testing!
     
-    import pdb; pdb.set_trace()  # breakpoint 5426f3a2 //
     ## agg_, pdf_ and left_edges_ have shape (N_rays, N_fine)
-    agg_ = tf.gather(agg, piece_idxs, axis = 1, batch_dims = 1)
+    agg_ = tf.gather(agg[:, :-1], piece_idxs, axis = 1, batch_dims = 1)
     pdf_ = tf.gather(pdf, piece_idxs, axis = 1, batch_dims = 1)
     left_edges_ = tf.gather(left_edges, piece_idxs, axis = 1, batch_dims = 1)
 
@@ -198,7 +196,7 @@ def create_input_batch_fine_model(params, rays_o, rays_d, bin_weights, bin_data,
     # row_idxs = tf.broadcast_to(row_idxs, (N_rays, params.sampling.N_fine))
     # idxs = tf.stack([row_idxs, piece_idxs], axis = -1)
 
-    # agg_ = tf.gather_nd(agg, idxs)
+    # agg_ = tf.gather_nd(agg[:, :-1], idxs)
     # pdf_ = tf.gather_nd(pdf, idxs)
     # left_edges_ = tf.gather_nd(left_edges, idxs)
 

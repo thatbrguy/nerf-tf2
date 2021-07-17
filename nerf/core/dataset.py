@@ -45,6 +45,53 @@ class Dataset(ABC):
         assert K[2, 2] == 1
         assert np.all(zero_check == 0)
 
+    def _split(self, x, y, frac):
+        """
+        Splits the data into two splits.
+
+        Args:
+            x       :   A tuple with NumPy arrays. The tuple 
+                        should contain the following NumPy 
+                        arrays:
+                            x = (rays_o, rays_d, near, far)
+
+            y       :   A tuple with NumPy arrays. The tuple 
+                        should contain the following NumPy 
+                        array:
+                            y = (rgb,)
+            
+            frac    :   A float value in the range (0, 1) which 
+                        indicates the fraction of the data that 
+                        should belong in the second split. 
+
+        Returns:
+            x_split_1   :   TODO: Elaborate
+            x_split_2   :   TODO: Elaborate
+            y_split_1   :   TODO: Elaborate
+            y_split_2   :   TODO: Elaborate
+        """
+        (rays_o, rays_d, near, far) = x
+        (rgb,) = y
+
+        size = len(rays_o)
+
+        # Legend --> s1: Split 1, s2: Split 2
+        s2_size = int(size * frac)
+        s1_size = size - split_2_size
+
+        s1_rays_o, s2_rays_o = rays_o[:s1_size], rays_o[s1_size:]
+        s1_rays_d, s2_rays_d = rays_d[:s1_size], rays_d[s1_size:]
+        s1_near, s2_near = near[:s1_size], near[s1_size:]
+        s1_far, s2_far = far[:s1_size], far[s1_size:]
+        s1_rgb, s2_rgb = rgb[:s1_size], rgb[s1_size:]
+
+        x_split_1 = (s1_rays_o, s1_rays_d, s1_near, s1_far)
+        x_split_2 = (s2_rays_o, s2_rays_d, s2_near, s2_far)
+        y_split_1 = (s1_rgb,)
+        y_split_2 = (s2_rgb,)
+
+        return x_split_1, x_split_2, y_split_1, y_split_2
+
     def prepare_data(self, imgs, poses, bounds, intrinsics):
         """
         Method that can be used by the subclasses.
@@ -179,17 +226,29 @@ class Dataset(ABC):
         far = far.astype(np.float32)
         rgb = rgb.astype(np.float32)
 
-        # Here, x has the input data, y had the target data.
+        # Here, x has the input data, y has the target data.
         x = (rays_o, rays_d, near, far)
         y = (rgb,)        
-        dataset = tf.data.Dataset.from_tensor_slices((x, y))
-        dataset = dataset.batch(
+        
+        (
+            x_train, x_val, 
+            y_train, y_val,
+        ) = self._split(x = x, y = y, frac = self.params.data.val_split)
+
+        train_dataset = tf.data.Dataset.from_tensor_slices((x_train, y_train))
+        train_dataset = train_dataset.batch(
+            batch_size =  self.params.data.batch_size,
+            drop_remainder = True,
+        )
+
+        val_dataset = tf.data.Dataset.from_tensor_slices((x_val, y_val))
+        val_dataset = val_dataset.batch(
             batch_size =  self.params.data.batch_size,
             drop_remainder = True,
         )
 
         ## TODO: Think about what dataset operations to add here.
-        return dataset
+        return train_dataset, val_dataset
 
 class CustomDataset(Dataset):
     """
@@ -338,11 +397,11 @@ class CustomDataset(Dataset):
             near, far, rgb
         ) = super().prepare_data(imgs, poses, bounds, intrinsic)
 
-        dataset = super().create_tf_dataset(
+        train_dataset, val_dataset = super().create_tf_dataset(
             rays_o, rays_d, near, far, rgb
         )
 
-        return dataset
+        return train_dataset, val_dataset
 
 if __name__ ==  "__main__":
 

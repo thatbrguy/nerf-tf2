@@ -5,7 +5,10 @@ os.environ["TF_CPP_MIN_LOG_LEVEL"] = "2"
 import numpy as np
 import tensorflow as tf
 
-from nerf.core.model import PSNRMetric, NeRF, NeRFLite
+from tensorflow.keras.callbacks import TensorBoard
+from tensorflow.keras.callbacks import ModelCheckpoint
+
+from nerf.core.model import PSNRMetric, NeRF, NeRFLite, psnr_metric
 from nerf.core.dataset import CustomDataset
 from nerf.utils.params_utils import load_params
 
@@ -16,15 +19,23 @@ if __name__ ==  "__main__":
     params = load_params(path)
 
     loader = CustomDataset(params = params)
-    dataset = loader.get_dataset()
+    train_dataset, val_dataset = loader.get_dataset()
     tf.random.set_seed(11)
     
     nerf = NeRF(params = params)
     # nerf_lite = NeRFLite(params)
 
-    ## Enabling eager mode for ease of debugging. 
-    ## NOTE: The current mock data is not suitable for debugging. 
-    ## Have to use real data to debug. This code is only kept as 
-    ## a placeholder until the real data is ready to use.
+    ## TODO: Monitor the PSNR! Also, consider having filepath with formatting.
+    model_ckpt = ModelCheckpoint(
+        filepath = params.model.save_path, 
+        monitor = "val_loss", save_best_only = True
+    )
+    tensorboard = TensorBoard()
+
+    # Enabling eager mode for ease of debugging. 
     nerf.compile(optimizer = 'adam', metrics = [PSNRMetric()], run_eagerly = True)
-    nerf.fit(dataset, epochs = 1)
+    nerf.fit(
+        x = train_dataset, epochs = 1,
+        validation_data = val_dataset,
+        callbacks = [model_ckpt, tensorboard],
+    )

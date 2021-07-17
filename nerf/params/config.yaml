@@ -2,6 +2,7 @@
 
 data:
   batch_size: 1024
+  val_split: 0.1
   
   # scale_imgs can either be set to null or a float value. If scale_imgs is null, no scaling is applied. 
   # If scale_imgs is a float value, then the images and the intrinsic matrices are scaled.
@@ -22,3 +23,6 @@ sampling:
   N_fine: 64
   lindisp: False
   perturb: True
+
+model:
+  save_path: null

@@ -1,15 +1,16 @@
 import os
-os.environ["CUDA_VISIBLE_DEVICES"] = "-1"
-os.environ["TF_CPP_MIN_LOG_LEVEL"] = "2"
-
 import cv2
 import yaml
+import logging
 import numpy as np
 import pandas as pd
 import tensorflow as tf
 
 from abc import ABC, abstractmethod
 from nerf.utils import ray_utils, pose_utils
+
+# Setting up logger.
+logger = logging.getLogger(__name__)
 
 class Dataset(ABC):
     """
@@ -77,7 +78,7 @@ class Dataset(ABC):
 
         # Legend --> s1: Split 1, s2: Split 2
         s2_size = int(size * frac)
-        s1_size = size - split_2_size
+        s1_size = size - s2_size
 
         s1_rays_o, s2_rays_o = rays_o[:s1_size], rays_o[s1_size:]
         s1_rays_d, s2_rays_d = rays_d[:s1_size], rays_d[s1_size:]
@@ -205,6 +206,7 @@ class Dataset(ABC):
 
         TODO: Elaborate
         """
+        logger.debug("Creating TensorFlow datasets.")
         ## NOTE: Maybe add a comment on memory?
         if self.params.data.pre_shuffle:
 
@@ -246,6 +248,8 @@ class Dataset(ABC):
             batch_size =  self.params.data.batch_size,
             drop_remainder = True,
         )
+
+        logger.debug("Created TensorFlow datasets.")
 
         ## TODO: Think about what dataset operations to add here.
         return train_dataset, val_dataset
@@ -347,6 +351,7 @@ class CustomDataset(Dataset):
             bounds      :   A NumPy array of shape (N, 2)
             intrinsics  :   A NumPy array of shape (N, 3, 3)
         """
+        logger.debug("Loading custom dataset.")
         imgs, poses, bounds, intrinsics = [], [], [], []
 
         csv_path = self.dataset_params.pose_info_path
@@ -377,9 +382,15 @@ class CustomDataset(Dataset):
             bounds.append(bound)
             intrinsics.append(intrinsic)
 
+            ## Using a smaller dataset for the time being. TODO: Remove this!
+            if idx < 10:
+                break
+
         poses = np.array(poses)
         bounds = np.array(bounds)
         intrinsics = np.array(intrinsics)
+
+        logger.debug("Loaded custom dataset.")
 
         return imgs, poses, bounds, intrinsics
 
@@ -411,5 +422,5 @@ if __name__ ==  "__main__":
     params = load_params(path)
 
     loader = CustomDataset(params = params)
-    dataset = loader.get_dataset()
+    train_dataset, val_dataset = loader.get_dataset()
     import pdb; pdb.set_trace()  # breakpoint c051f513 //

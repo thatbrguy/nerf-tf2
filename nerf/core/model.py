@@ -1,7 +1,3 @@
-import os
-os.environ["CUDA_VISIBLE_DEVICES"] = "-1"
-os.environ["TF_CPP_MIN_LOG_LEVEL"] = "2"
-
 import numpy as np
 import tensorflow as tf
 
@@ -10,7 +6,7 @@ from tensorflow.keras.layers import Layer, Dense, Flatten
 from tensorflow.keras.layers import Input, Concatenate
 
 from tensorflow.keras.metrics import Metric
-from nerf.utils import ray_utils
+from nerf.utils import ray_utils, pose_utils
 
 def psnr_metric(y_true, y_pred):
     """
@@ -57,6 +53,50 @@ class NeRF(Model):
         self.coarse_model = get_nerf_model(model_name = "coarse")
         self.fine_model = get_nerf_model(model_name = "fine")
 
+    def forward(self, rays_o, rays_d, near, far):
+        """
+        Performs a forward pass.
+        """
+        # Getting data ready for the coarse model.
+        ## TODO: Verify if it is ok for the below line 
+        ## to be within GradientTape.
+        data_CM = ray_utils.create_input_batch_coarse_model(
+            params = self.params, rays_o = rays_o, 
+            rays_d = rays_d, near = near, far = far
+        )
+        
+        # Performing a forward pass through the coarse model.
+        rgb_CM, sigma_CM = self.coarse_model(
+            inputs = (data_CM["xyz_inputs"], data_CM["dir_inputs"])
+        )
+        
+        # Postprocessing coarse model output.            
+        post_proc_CM = ray_utils.post_process_model_output(
+            sample_rgb = rgb_CM, sigma = sigma_CM, 
+            t_vals = data_CM["t_vals"]
+        )
+
+        # Getting data ready for the fine model.
+        data_FM = ray_utils.create_input_batch_fine_model(
+            params = self.params, rays_o = rays_o, rays_d = rays_d, 
+            bin_weights = post_proc_CM["weights"], 
+            t_vals_coarse = data_CM["t_vals"],
+            bin_data = data_CM["bin_data"],
+        )
+
+        # Performing a forward pass through the fine model.
+        rgb_FM, sigma_FM = self.fine_model(
+            inputs = (data_FM["xyz_inputs"], data_FM["dir_inputs"])
+        )
+
+        # Postprocessing fine model output.
+        post_proc_FM = ray_utils.post_process_model_output(
+            sample_rgb = rgb_FM, sigma = sigma_FM, 
+            t_vals = data_FM["t_vals"]
+        )
+
+        return post_proc_CM, post_proc_FM
+
     def train_step(self, data):
         """
         TODO: Docstring!
@@ -69,49 +109,19 @@ class NeRF(Model):
             FM  : Fine Model
         """
         (rays_o, rays_d, near, far), (rgb,) = data
-
-        # Getting data ready for the coarse model.
-        data_CM = ray_utils.create_input_batch_coarse_model(
-            params = self.params, rays_o = rays_o, 
-            rays_d = rays_d, near = near, far = far
-        )
-
+        
         with tf.GradientTape() as tape:
             
-            # Performing a forward pass through the coarse model.
-            rgb_CM, sigma_CM = self.coarse_model(
-                inputs = (data_CM["xyz_inputs"], data_CM["dir_inputs"])
-            )
-            
-            # Postprocessing coarse model output.            
-            post_proc_CM = ray_utils.post_process_model_output(
-                sample_rgb = rgb_CM, sigma = sigma_CM, 
-                t_vals = data_CM["t_vals"]
+            # Performing a forward pass.
+            post_proc_CM, post_proc_FM = self.forward(
+                rays_o = rays_o, rays_d = rays_d, 
+                near = near, far = far,
             )
 
             # Computing coarse loss.
             coarse_loss = self.mse_loss(
                 y_true = rgb, 
                 y_pred = post_proc_CM["pred_rgb"]
-            )
-
-            # Getting data ready for the fine model.
-            data_FM = ray_utils.create_input_batch_fine_model(
-                params = self.params, rays_o = rays_o, rays_d = rays_d, 
-                bin_weights = post_proc_CM["weights"], 
-                t_vals_coarse = data_CM["t_vals"],
-                bin_data = data_CM["bin_data"],
-            )
-
-            # Performing a forward pass through the fine model.
-            rgb_FM, sigma_FM = self.fine_model(
-                inputs = (data_FM["xyz_inputs"], data_FM["dir_inputs"])
-            )
-
-            # Postprocessing fine model output.
-            post_proc_FM = ray_utils.post_process_model_output(
-                sample_rgb = rgb_FM, sigma = sigma_FM, 
-                t_vals = data_FM["t_vals"]
             )
 
             # Computing fine loss
@@ -139,6 +149,20 @@ class NeRF(Model):
 
     def predict_step(self, data):
         pass
+
+    def render(self, data):
+        """
+        Renders images.
+        """
+        # imgs = []
+        
+        # for H, W, intrinsic, c2w in data:
+            # 1. Get rays_o and rays_d
+            # 2. Set near to 0 and far to 1 ?
+            # 3. Use self.forward to get predictions for rgb
+            # 4. Reshape to desired image size.
+
+        # return imgs
 
 class NeRFLite(Model):
     """

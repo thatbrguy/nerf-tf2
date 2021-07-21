@@ -17,8 +17,11 @@ if __name__ ==  "__main__":
     np.set_printoptions(precision = 5, suppress = True)
 
     # Setting up logger.
-    logger = logging.getLogger("nerf.core.run")
-    logger.setLevel(logging.DEBUG)
+    logging.basicConfig(
+        format='[%(asctime)s]:[%(levelname)s]:[%(name)s]: %(message)s', 
+        datefmt='%m/%d/%Y %I:%M:%S %p', level=logging.DEBUG
+    )
+    logger = logging.getLogger()
 
     # Setting TF seed to enable determinism of TF.
     tf.random.set_seed(11)
@@ -37,8 +40,11 @@ if __name__ ==  "__main__":
         filepath = params.model.save_path, 
         monitor = "val_loss", save_best_only = True
     )
-    tensorboard = TensorBoard()
     psnr = ops.PSNRMetric()
+    tensorboard = TensorBoard()
+
+    ## TODO: Setup val_spec!
+    val_imgs_logger = ops.LogValImages(params = params, val_spec = None)
 
     # Enabling eager mode for ease of debugging. 
     nerf.compile(optimizer = 'adam', metrics = [psnr], run_eagerly = True)
@@ -46,5 +52,5 @@ if __name__ ==  "__main__":
         x = train_dataset, epochs = 1,
         validation_data = val_dataset,
         validation_freq = 3,
-        callbacks = [model_ckpt, tensorboard],
+        callbacks = [model_ckpt, tensorboard, val_imgs_logger],
     )

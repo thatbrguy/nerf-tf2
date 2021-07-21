@@ -8,6 +8,8 @@ class LogValImages(Callback):
     """
     This custom callback is used to convert the pixel wise RGB 
     predictions to images, and then log the images to tensorboard.
+
+    The TensorBoard Callback MUST also be used for this callback to work!
     """
     def __init__(self, params, val_spec):
         """

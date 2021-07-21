@@ -130,6 +130,11 @@ class Dataset(ABC):
         """
         rays_o, rays_d, near, far, rgb = [], [], [], [], []
 
+        # Validating intrinsic matrices.
+        for idx in range(len(intrinsics)):
+            K = intrinsics[idx]
+            self._validate_intrinsic_matrix(K = K)
+
         new_poses, new_bounds = pose_utils.reconfigure_poses_and_bounds(
             old_poses = poses, 
             old_bounds = bounds,
@@ -145,7 +150,6 @@ class Dataset(ABC):
             
             img = new_imgs[idx]
             K = new_intrinsics[idx]
-            self._validate_intrinsic_matrix(K = K)
 
             H, W = img.shape[:2]
             rays_o_, rays_d_ = ray_utils.get_rays(
@@ -383,7 +387,7 @@ class CustomDataset(Dataset):
             intrinsics.append(intrinsic)
 
             ## Using a smaller dataset for the time being. TODO: Remove this!
-            if idx < 10:
+            if idx == 10:
                 break
 
         poses = np.array(poses)
@@ -400,13 +404,13 @@ class CustomDataset(Dataset):
         """
         (
             imgs, poses, 
-            bounds, intrinsic
+            bounds, intrinsics
         ) = self._load_full_dataset()
 
         (
             rays_o, rays_d, 
             near, far, rgb
-        ) = super().prepare_data(imgs, poses, bounds, intrinsic)
+        ) = super().prepare_data(imgs, poses, bounds, intrinsics)
 
         train_dataset, val_dataset = super().create_tf_dataset(
             rays_o, rays_d, near, far, rgb

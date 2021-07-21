@@ -55,15 +55,15 @@ def get_rays_tf(H, W, intrinsic, c2w):
         "NOTE: This function is not complete! TODO: Need to Finish."
     )
 
-    # directions = np.stack([x_vals, y_vals, z_vals], axis = -1)
+    directions = tf.stack([x_vals, y_vals, z_vals], axis = -1)
     # # (H, W, 3) --> (H*W, 3) TODO: Verify
-    # directions = directions.reshape(-1, 3)
+    directions = tf.reshape(directions, (-1, 3))
 
     # ## TODO: Check output for correctness! Add comments!
     # rays_d = pose_utils.rotate_vectors(c2w, directions)
     # rays_d = pose_utils.normalize(rays_d)
     
-    # rays_o = np.broadcast_to(c2w[:3, 3], rays_d.shape)
+    # rays_o = tf.broadcast_to(c2w[:3, 3], rays_d.shape)
     
     return rays_o, rays_d
 

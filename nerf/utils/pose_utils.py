@@ -387,6 +387,7 @@ def scale_imgs_and_intrinsics(old_imgs, old_intrinsics, scale_factor):
             temp[1, 1], temp[1, 2] = temp[1, 1] * sy, temp[1, 2] * sy
             new_intrinsic = temp
 
+            ## TODO: Maybe add validate intrinsic here for sanity?
             new_imgs.append(new_img)
             new_intrinsics.append(new_intrinsic)
 

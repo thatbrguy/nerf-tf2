@@ -5,8 +5,10 @@ import tensorflow as tf
 from tensorflow.keras.callbacks import TensorBoard
 from tensorflow.keras.callbacks import ModelCheckpoint
 
-from nerf.core.model import PSNRMetric, NeRF, NeRFLite, psnr_metric
+from nerf.core import ops
+from nerf.core.model import NeRF, NeRFLite
 from nerf.core.dataset import CustomDataset
+
 from nerf.utils.params_utils import load_params
 
 if __name__ ==  "__main__":
@@ -36,7 +38,7 @@ if __name__ ==  "__main__":
         monitor = "val_loss", save_best_only = True
     )
     tensorboard = TensorBoard()
-    psnr = PSNRMetric()
+    psnr = ops.PSNRMetric()
 
     # Enabling eager mode for ease of debugging. 
     nerf.compile(optimizer = 'adam', metrics = [psnr], run_eagerly = True)

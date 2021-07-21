@@ -5,38 +5,8 @@ from tensorflow.keras.models import Model
 from tensorflow.keras.layers import Layer, Dense, Flatten
 from tensorflow.keras.layers import Input, Concatenate
 
-from tensorflow.keras.metrics import Metric
+from nerf.core import ops
 from nerf.utils import ray_utils, pose_utils
-
-def psnr_metric(y_true, y_pred):
-    """
-    Creating a metric function instead of a metric class.
-    """
-    mse = tf.reduce_mean(tf.square(y_true - y_pred))
-    psnr = (-10.) * (tf.math.log(mse)/tf.math.log(10.))
-
-    return psnr
-
-class PSNRMetric(Metric):
-    def __init__(self, name = "psnr_metric", **kwargs):
-        super().__init__(name = name, **kwargs)
-        self.psnr = self.add_weight(name = "psnr", initializer = "zeros")
-
-    def update_state(self, y_true, y_pred, sample_weight = None):
-        """
-        IMPORTANT: sample_weight has no effect. TODO: Elaborate.
-        """
-        mse = tf.reduce_mean(tf.square(y_true - y_pred))
-        psnr = (-10.) * (tf.math.log(mse)/tf.math.log(10.))
-        
-        ## TODO: Check if using assign is the right thing to do.
-        self.psnr.assign(psnr)
-
-    def result(self):
-        return self.psnr
-
-    def reset_states(self):
-        self.psnr.assign(0.0)
 
 class NeRF(Model):
     """
@@ -323,6 +293,7 @@ if __name__ == '__main__':
     fine_model = get_nerf_model(model_name = "fine")
 
     nerf = NeRF(params)
-    nerf.compile(optimizer = 'adam', metrics = [PSNRMetric()])
+    psnr = ops.PSNRMetric()
+    nerf.compile(optimizer = 'adam', metrics = [psnr])
     
     nerf_lite = NeRFLite(params)

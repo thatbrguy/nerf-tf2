@@ -19,7 +19,7 @@ class LogValImages(Callback):
         self.params = params
         self.val_spec = val_spec
 
-    def log_imgs(pred_batches):
+    def log_imgs(self, pred_batches):
         """
         Given a list of predictions of RGB values of pixels, this 
         function combines them into images based on the information 
@@ -53,7 +53,7 @@ class LogValImages(Callback):
         # run can use it properly.
         self.model.val_cache = []
 
-    def on_test_end(logs):
+    def on_test_end(self, logs):
         """
         TODO: Docstring.
         """

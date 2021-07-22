@@ -2,7 +2,6 @@
 
 data:
   batch_size: 1024
-  val_split: 0.1
   
   # scale_imgs can either be set to null or a float value. If scale_imgs is null, no scaling is applied. 
   # If scale_imgs is a float value, then the images and the intrinsic matrices are scaled.
@@ -10,6 +9,11 @@ data:
   
   pre_shuffle: True
   pre_shuffle_seed: 93
+
+  # Validation data pipeline is different from the training data pipeline.
+  validation:
+    num_imgs: 3
+    frac_imgs: null
 
   custom_dataset:
     img_root_dir: ../data/images
@@ -25,4 +29,4 @@ sampling:
   perturb: True
 
 model:
-  save_path: null
+  save_path: "./dummy.h5"

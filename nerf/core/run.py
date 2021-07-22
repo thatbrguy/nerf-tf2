@@ -30,7 +30,7 @@ if __name__ ==  "__main__":
     params = load_params(path)
 
     loader = CustomDataset(params = params)
-    train_dataset, val_dataset = loader.get_dataset()
+    train_dataset, val_dataset, train_spec, val_spec = loader.get_dataset()
     
     nerf = NeRF(params = params)
     # nerf_lite = NeRFLite(params)
@@ -38,19 +38,20 @@ if __name__ ==  "__main__":
     ## TODO: Monitor the PSNR! Also, consider having filepath with formatting.
     model_ckpt = ModelCheckpoint(
         filepath = params.model.save_path, 
-        monitor = "val_loss", save_best_only = True
+        monitor = "val_psnr", save_best_only = True
     )
     psnr = ops.PSNRMetric()
     tensorboard = TensorBoard()
 
     ## TODO: Setup val_spec!
-    val_imgs_logger = ops.LogValImages(params = params, val_spec = None)
+    val_imgs_logger = ops.LogValImages(params = params, val_spec = val_spec)
 
     # Enabling eager mode for ease of debugging. 
     nerf.compile(optimizer = 'adam', metrics = [psnr], run_eagerly = True)
     nerf.fit(
-        x = train_dataset, epochs = 1,
+        x = train_dataset, epochs = 2,
         validation_data = val_dataset,
-        validation_freq = 3,
+        validation_freq = 1,
         callbacks = [model_ckpt, tensorboard, val_imgs_logger],
+        steps_per_epoch = 10,
     )

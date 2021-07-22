@@ -18,6 +18,7 @@ class NeRF(Model):
 
         super().__init__()
         self.params = params
+        self.val_cache = []
 
         self.mse_loss = tf.keras.losses.MeanSquaredError()
         self.coarse_model = get_nerf_model(model_name = "coarse")
@@ -71,9 +72,6 @@ class NeRF(Model):
         """
         TODO: Docstring!
 
-        TODO: Consider returning dictionaries for some 
-        of the function calls.
-
         Legend:
             CM  : Coarse Model
             FM  : Fine Model
@@ -115,7 +113,34 @@ class NeRF(Model):
         return {m.name: m.result() for m in self.metrics}
 
     def test_step(self, data):
-        pass
+        """
+        TODO: Docstring!
+
+        Legend:
+            CM  : Coarse Model
+            FM  : Fine Model
+        """
+        (rays_o, rays_d, near, far), (rgb,) = data
+        
+        # Performing a forward pass.
+        post_proc_CM, post_proc_FM = self.forward(
+            rays_o = rays_o, rays_d = rays_d, 
+            near = near, far = far,
+        )
+
+        ## TODO: Make note somewhere. Metric is computed only for the 
+        ## fine model output for the class NeRF. Change if required.
+        self.compiled_metrics.update_state(
+            y_true = rgb, 
+            y_pred = post_proc_FM["pred_rgb"]
+        )
+
+        # Saving predictions to val_cache so that LogValImages can 
+        # use val_cache to log validation images to TensorBoard 
+        # after one validation run is complete.
+        self.val_cache.append(post_proc_FM["pred_rgb"])
+
+        return {m.name: m.result() for m in self.metrics}
 
     def predict_step(self, data):
         pass

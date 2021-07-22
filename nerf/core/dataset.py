@@ -46,68 +46,146 @@ class Dataset(ABC):
         assert K[2, 2] == 1
         assert np.all(zero_check == 0)
 
-    def _split(self, x, y, frac):
+    def _split(self, data, frac = None, num = None):
         """
         Splits the data into two splits.
 
-        Args:
-            x       :   A tuple with NumPy arrays. The tuple 
-                        should contain the following NumPy 
-                        arrays:
-                            x = (rays_o, rays_d, near, far)
+        Either frac or num MUST be provided. Only one of 
+        them must be provided.
 
-            y       :   A tuple with NumPy arrays. The tuple 
-                        should contain the following NumPy 
-                        array:
-                            y = (rgb,)
+        Args:
+            data    :   A tuple with NumPy arrays or lists. 
+                        TODO: Mention len constraint.
             
             frac    :   A float value in the range (0, 1) which 
                         indicates the fraction of the data that 
-                        should belong in the second split. 
+                        should belong in the second split. If 
+                        None, then num MUST be provided.
+
+            num     :   A positive integer which indicates 
+                        indicates the number of data elements 
+                        that should belong in the second split. 
+                        If None, then frac MUST be provided.
 
         Returns:
-            x_split_1   :   TODO: Elaborate
-            x_split_2   :   TODO: Elaborate
-            y_split_1   :   TODO: Elaborate
-            y_split_2   :   TODO: Elaborate
+            split_1     :   TODO: Elaborate
+            split_2     :   TODO: Elaborate
         """
-        (rays_o, rays_d, near, far) = x
-        (rgb,) = y
-
-        size = len(rays_o)
+        assert ((frac is None) ^ (num is None)), (
+            "Please provide either frac or num. Only one of "
+            "them must be provided."
+        )
+        shape_check = np.array([len(arr) for arr in data])
+        assert np.all(shape_check == shape_check[0])
 
         # Legend --> s1: Split 1, s2: Split 2
-        s2_size = int(size * frac)
+        size = len(data[0])
+        if frac is not None:
+            assert (type(frac) is float) and (frac > 0) and (frac < 1)
+            s2_size = int(size * frac)
+        else:
+            assert (type(num) is int) and (num > 0)
+            s2_size = num
+
         s1_size = size - s2_size
+        split_1, split_2 = [], []
+        
+        for arr in data:
+            s1_arr, s2_arr = arr[:s1_size], arr[s1_size:]
+            split_1.append(s1_arr)
+            split_2.append(s2_arr)
 
-        s1_rays_o, s2_rays_o = rays_o[:s1_size], rays_o[s1_size:]
-        s1_rays_d, s2_rays_d = rays_d[:s1_size], rays_d[s1_size:]
-        s1_near, s2_near = near[:s1_size], near[s1_size:]
-        s1_far, s2_far = far[:s1_size], far[s1_size:]
-        s1_rgb, s2_rgb = rgb[:s1_size], rgb[s1_size:]
+        split_1 = tuple(split_1)
+        split_2 = tuple(split_2)
 
-        x_split_1 = (s1_rays_o, s1_rays_d, s1_near, s1_far)
-        x_split_2 = (s2_rays_o, s2_rays_d, s2_near, s2_far)
-        y_split_1 = (s1_rgb,)
-        y_split_2 = (s2_rgb,)
+        return split_1, split_2
 
-        return x_split_1, x_split_2, y_split_1, y_split_2
-
-    def prepare_data(self, imgs, poses, bounds, intrinsics):
+    def process_data(self, imgs, poses, bounds, intrinsics):
         """
-        Method that can be used by the subclasses.
+        Creates rays_o, rays_d, near, far, rgb
 
         TODO: Elaborate.
         
         Each image can have a different height and width value. 
         If image i has width W_i and height H_i, then the number 
         of pixels in that image is Hi*Wi. Hence, total number 
-        of pixels in the dataset (L) is given by:
+        of pixels (here, L) is given by:
 
         L = H_0*W_0 +  H_1*W_1 +  H_2*W_2 + ... + H_(N-1)*W_(N-1)
 
         Legend:
-            N: Number of images in the dataset.
+            N: Number of images.
+            L: Total number of pixels. 
+
+        Args:
+            imgs        :   A list of N NumPy arrays. Each element
+                            of the list is a NumPy array with shape
+                            (H_i, W_i, 3) that represents an image.
+                            Each image can have different height
+                            and width.
+            poses       :   A NumPy array of shape (N, 4, 4)
+            bounds      :   A NumPy array of shape (N, 2)
+            intrinsics  :   A NumPy array of shape (N, 3, 3)
+
+        Returns:
+            A list containing the following:
+            rays_o      :   A NumPy array of shape (L, 3)
+            rays_d      :   A NumPy array of shape (L, 3)
+            near        :   A NumPy array of shape (L, 1) 
+            far         :   A NumPy array of shape (L, 1)
+            rgb         :   A NumPy array of shape (L, 3)
+            spec        :   A list of length N which contains 
+                            the height and width information 
+                            of each image.
+        """
+        rays_o, rays_d, near = [], [], []
+        far, rgb, spec = [], [], []
+        
+        for idx in range(len(imgs)):
+            
+            img = imgs[idx]
+            K = intrinsics[idx]
+
+            H, W = img.shape[:2]
+            rays_o_, rays_d_ = ray_utils.get_rays(
+                H = H, W = W, intrinsic = K, c2w = poses[idx],
+            )
+            
+            # Diving by 255 so that the range of the rgb 
+            # data is between [0, 1]
+            rgb_ = img.reshape(-1, 3).astype(np.float32)
+            rgb_ = rgb_ / 255
+
+            rgb.append(rgb_)
+            rays_o.append(rays_o_)
+            rays_d.append(rays_d_)
+
+            bounds_ = bounds[idx]
+            bounds_ = np.broadcast_to(
+                bounds_[None, :], shape = (rays_d_.shape[0], 2)
+            )
+            near_, far_ = bounds_[:, 0:1], bounds_[:, 1:2]
+
+            near.append(near_)
+            far.append(far_)
+            spec.append((H, W))
+
+        rgb = np.concatenate(rgb, axis = 0)
+        far = np.concatenate(far, axis = 0)
+        near = np.concatenate(near, axis = 0)
+        rays_o = np.concatenate(rays_o, axis = 0)
+        rays_d = np.concatenate(rays_d, axis = 0)
+
+        return [rays_o, rays_d, near, far, rgb, spec]
+
+    def prepare_data(self, imgs, poses, bounds, intrinsics):
+        """
+        Method that can be used by the subclasses.
+
+        TODO: Elaborate.
+
+        Legend:
+            N: Number of images.
             L: Total number of pixels in the dataset. 
 
         Args:
@@ -121,15 +199,10 @@ class Dataset(ABC):
             intrinsics  :   A NumPy array of shape (N, 3, 3)
 
         Returns:
-            rays_o      :   A NumPy array of shape (L, 3)
-            rays_d      :   A NumPy array of shape (L, 3)    
-            near        :   A NumPy array of shape (L, 1) 
-            far         :   A NumPy array of shape (L, 1)
-            rgb         :   A NumPy array of shape (L, 3)
+            train_data  : TODO: Elaborate
+            val_data    : TODO: Elaborate
 
         """
-        rays_o, rays_d, near, far, rgb = [], [], [], [], []
-
         # Validating intrinsic matrices.
         for idx in range(len(intrinsics)):
             K = intrinsics[idx]
@@ -146,47 +219,21 @@ class Dataset(ABC):
             scale_factor = self.params.data.scale_imgs,
         )
 
-        for idx in range(len(new_imgs)):
-            
-            img = new_imgs[idx]
-            K = new_intrinsics[idx]
+        data = (new_imgs, new_poses, new_bounds, new_intrinsics)
+        train_data, val_data = self._split(
+            data = data, 
+            frac = self.params.data.validation.frac_imgs, 
+            num = self.params.data.validation.num_imgs,
+        )
 
-            H, W = img.shape[:2]
-            rays_o_, rays_d_ = ray_utils.get_rays(
-                H = H, W = W, intrinsic = K, c2w = new_poses[idx],
-            )
-            
-            # Diving by 255 so that the range of the rgb 
-            # data is between [0, 1]
-            rgb_ = img.reshape(-1, 3).astype(np.float32)
-            rgb_ = rgb_ / 255
+        train_proc = self.process_data(*train_data)
+        val_proc = self.process_data(*val_data)
 
-            rgb.append(rgb_)
-            rays_o.append(rays_o_)
-            rays_d.append(rays_d_)
+        return train_proc, val_proc
 
-            bounds_ = new_bounds[idx]
-            bounds_ = np.broadcast_to(
-                bounds_[None, :], shape = (rays_d_.shape[0], 2)
-            )
-            near_, far_ = bounds_[:, 0:1], bounds_[:, 1:2]
-
-            near.append(near_)
-            far.append(far_)
-
-        rgb = np.concatenate(rgb, axis = 0)
-        far = np.concatenate(far, axis = 0)
-        near = np.concatenate(near, axis = 0)
-        rays_o = np.concatenate(rays_o, axis = 0)
-        rays_d = np.concatenate(rays_d, axis = 0)
-
-        return rays_o, rays_d, near, far, rgb
-
-    def create_tf_dataset(self, rays_o, rays_d, near, far, rgb):
+    def create_tf_dataset(self, train_proc, val_proc):
         """
         Method that can be used by the subclasses.
-
-        Returns a tf.data.Dataset object.
         
         Each image can have a different height and width value. 
         If image i has width W_i and height H_i, then the number 
@@ -199,47 +246,57 @@ class Dataset(ABC):
             L: Total number of pixels in the dataset.
 
         Args:
+            TODO
+
+        Returns: 
+            TODO
+        
+        Shapes:
             rays_o      :   A NumPy array of shape (L, 3)
             rays_d      :   A NumPy array of shape (L, 3)    
             near        :   A NumPy array of shape (L, 1) 
             far         :   A NumPy array of shape (L, 1)
             rgb         :   A NumPy array of shape (L, 3)
 
-        Returns: 
-            dataset
-
         TODO: Elaborate
         """
         logger.debug("Creating TensorFlow datasets.")
+        
+        x_train, y_train = train_proc[:4], train_proc[4:5]
+        x_val, y_val = val_proc[:4], val_proc[4:5]
+        train_spec, val_spec = train_proc[5], val_proc[5]
+
         ## NOTE: Maybe add a comment on memory?
         if self.params.data.pre_shuffle:
 
             rng = np.random.default_rng(
                 seed = self.params.data.pre_shuffle_seed
             )
-            perm = rng.permutation(len(rays_o))
+            perm = rng.permutation(len(x_train[0]))
 
-            rays_o = rays_o[perm]
-            rays_d = rays_d[perm]
-            near = near[perm]
-            far = far[perm]
-            rgb = rgb[perm]
+            # We only shuffle the train dataset. We do not 
+            # shuffle the val dataset.
+            x_train[0] = x_train[0][perm]
+            x_train[1] = x_train[1][perm]
+            x_train[2] = x_train[2][perm]
+            x_train[3] = x_train[3][perm]
+            y_train[0] = y_train[0][perm]
 
         ## TODO: A more elegant way if possible?
-        rays_o = rays_o.astype(np.float32)
-        rays_d = rays_d.astype(np.float32)
-        near = near.astype(np.float32)
-        far = far.astype(np.float32)
-        rgb = rgb.astype(np.float32)
+        x_train[0] = x_train[0].astype(np.float32)
+        x_train[1] = x_train[1].astype(np.float32)
+        x_train[2] = x_train[2].astype(np.float32)
+        x_train[3] = x_train[3].astype(np.float32)
+        y_train[0] = y_train[0].astype(np.float32)
 
-        # Here, x has the input data, y has the target data.
-        x = (rays_o, rays_d, near, far)
-        y = (rgb,)        
-        
-        (
-            x_train, x_val, 
-            y_train, y_val,
-        ) = self._split(x = x, y = y, frac = self.params.data.val_split)
+        x_val[0] = x_val[0].astype(np.float32)
+        x_val[1] = x_val[1].astype(np.float32)
+        x_val[2] = x_val[2].astype(np.float32)
+        x_val[3] = x_val[3].astype(np.float32)
+        y_val[0] = y_val[0].astype(np.float32)
+
+        x_train, y_train = tuple(x_train), tuple(y_train)
+        x_val, y_val = tuple(x_val), tuple(y_val)
 
         train_dataset = tf.data.Dataset.from_tensor_slices((x_train, y_train))
         train_dataset = train_dataset.batch(
@@ -250,13 +307,13 @@ class Dataset(ABC):
         val_dataset = tf.data.Dataset.from_tensor_slices((x_val, y_val))
         val_dataset = val_dataset.batch(
             batch_size =  self.params.data.batch_size,
-            drop_remainder = True,
+            drop_remainder = False,
         )
 
         logger.debug("Created TensorFlow datasets.")
 
         ## TODO: Think about what dataset operations to add here.
-        return train_dataset, val_dataset
+        return train_dataset, val_dataset, train_spec, val_spec
 
 class CustomDataset(Dataset):
     """
@@ -407,16 +464,18 @@ class CustomDataset(Dataset):
             bounds, intrinsics
         ) = self._load_full_dataset()
 
-        (
-            rays_o, rays_d, 
-            near, far, rgb
-        ) = super().prepare_data(imgs, poses, bounds, intrinsics)
-
-        train_dataset, val_dataset = super().create_tf_dataset(
-            rays_o, rays_d, near, far, rgb
+        train_proc, val_proc = super().prepare_data(
+            imgs, poses, bounds, intrinsics
         )
 
-        return train_dataset, val_dataset
+        (
+            train_dataset, val_dataset, 
+            train_spec, val_spec
+        ) = super().create_tf_dataset(
+            train_proc, val_proc
+        )
+
+        return train_dataset, val_dataset, train_spec, val_spec
 
 if __name__ ==  "__main__":
 

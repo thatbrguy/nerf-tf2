@@ -53,5 +53,5 @@ if __name__ ==  "__main__":
         validation_data = val_dataset,
         validation_freq = 1,
         callbacks = [model_ckpt, tensorboard, val_imgs_logger],
-        steps_per_epoch = 10,
+        steps_per_epoch = int((800*800*5)/(1024)),
     )

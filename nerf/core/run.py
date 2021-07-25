@@ -47,7 +47,7 @@ if __name__ ==  "__main__":
     #     save_best_only = True, mode = "max"
     # )
 
-    model_ckpt = ops.CustomModelSaver(params = params)
+    model_ckpt = ops.CustomModelSaver(params = params, save_best_only = False)
     tensorboard = TensorBoard(update_freq = "epoch")
 
     ## NOTE: The val images logger is not working as 
@@ -84,7 +84,7 @@ if __name__ ==  "__main__":
     nerf.fit(
         x = train_dataset, epochs = num_epochs,
         validation_data = val_dataset,
-        validation_freq = 100,
+        validation_freq = 75, # 100
         callbacks = [model_ckpt, tensorboard],
         steps_per_epoch = steps_per_epoch,
     )

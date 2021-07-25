@@ -187,8 +187,14 @@ def create_input_batch_fine_model(params, rays_o, rays_d, bin_weights, bin_data,
     #     [tf.zeros((agg.shape[0], 1), dtype = agg.dtype), agg], 
     #     axis = -1
     # )
+    # agg = tf.concat(
+    #     [tf.zeros((N_rays, 1), dtype = agg.dtype), agg], 
+    #     axis = -1
+    # )
+    ## TODO: Verify that functionality of the below line is the 
+    ## same as the above commented out line..
     agg = tf.concat(
-        [tf.zeros((N_rays, 1), dtype = agg.dtype), agg], 
+        [tf.zeros_like(agg[:, 0:1]), agg], 
         axis = -1
     )
 
@@ -377,7 +383,7 @@ def post_process_model_output(sample_rgb, sigma, t_vals, white_bg = False):
     ## implmentation is complete. 
     ## TODO: Check https://github.com/bmild/nerf/issues/28 and decide 
     ## on what to do for this implmentation.
-    pred_inv_depth = None
+    # pred_inv_depth = None
 
     # Shape of pred_depth --> (N_rays,); TODO: Verify shape.
     pred_depth = tf.reduce_sum(t_vals * weights, axis = 1)
@@ -397,7 +403,7 @@ def post_process_model_output(sample_rgb, sigma, t_vals, white_bg = False):
 
     post_proc_model_outputs["pred_rgb"] = pred_rgb
     post_proc_model_outputs["pred_depth"] = pred_depth
-    post_proc_model_outputs["pred_inv_depth"] = pred_inv_depth
+    # post_proc_model_outputs["pred_inv_depth"] = pred_inv_depth
     post_proc_model_outputs["weights"] = weights
     
     return post_proc_model_outputs

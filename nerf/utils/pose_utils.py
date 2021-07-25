@@ -195,7 +195,7 @@ def reconfigure_poses_and_bounds(old_poses, old_bounds, origin_method):
     """
     
     # Shape of origin --> (3,)
-    origin = compute_new_world_origin(old_poses, method = "average")
+    origin = compute_new_world_origin(old_poses, method = origin_method)
     # Shape of x_basis, y_basis and z_basis --> (3,)
     x_basis, y_basis, z_basis = compute_new_world_basis(old_poses)
 

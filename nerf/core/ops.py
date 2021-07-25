@@ -1,9 +1,13 @@
 import os
+import logging
 import numpy as np
 import tensorflow as tf
 
 from tensorflow.keras.metrics import Metric
 from tensorflow.keras.callbacks import Callback
+
+# Setting up logger
+logger = logging.getLogger(__name__)
 
 class LogValImages(Callback):
     """
@@ -66,33 +70,63 @@ class CustomModelSaver(Callback):
     """
     This custom callback is used to save the models after 
     a validation run.
+
+    TODO:
+        1.  Consider saving optimzier and other relavent states as well.
+        2.  Add support for NeRFLite as well. Currently the code 
+            assumes that the fine model is available and will try to 
+            save the weights of the fine model as well.
     """
-    def __init__(self, params):
+    def __init__(self, params, save_best_only = False):
         """
         TODO: Docstring.
         """
         super().__init__()
         self.params = params
-        self.val_run = 0
         self.best_score = -1
+        self.save_best_only = save_best_only
 
         self.root = self.params.model.save_dir
         if not os.path.exists(self.root):
             os.mkdir(self.root)
 
-    def on_test_end(self, logs):
+    def _save(self, epoch, val_psnr_score):
+        """
+        Saves the model weights
+        """
+        name = f"{epoch: 06d}_{val_psnr_score: .2f}"
+        coarse_model_name = f"{name}_coarse.h5"
+        fine_model_name = f"{name}_fine.h5"
+        
+        coarse_model_path = os.path.join(self.root, coarse_model_name)
+        fine_model_path = os.path.join(self.root, fine_model_name)
+
+        self.model.coarse_model.save_weights(filepath = coarse_model_path)
+        self.model.fine_model.save_weights(filepath = fine_model_path)
+
+    def on_epoch_end(self, epoch, logs = None):
         """
         TODO: Docstring.
         """
-        val_psnr_score = logs["val_psnr_metric"]
-        self.val_run += 1
-        
-        if val_psnr_score > self.best_score:
-            name = f"{self.val_run: 06d}_{val_psnr_score: .2f}"
-            path = os.path.join(self.root, name)
+        try:
+            val_psnr_score = logs["val_psnr_metric"]
 
-            self.model.save(filepath = path, save_format = "tf")
-            self.best_score = val_psnr_score
+        except KeyError:
+            logger.debug(
+                f"val_psnr_metric not found for epoch {epoch}. Skipping."
+            )
+            return
+        
+        if self.save_best_only:
+            if val_psnr_score > self.best_score:
+                logger.debug(f"Saving model weights for epoch {epoch}.")
+                self._save(epoch, val_psnr_score)
+                self.best_score = val_psnr_score
+
+        else:
+            logger.debug(f"Saving model weights for epoch {epoch}.")
+            self._save(epoch, val_psnr_score)
+
 
 def psnr_metric(y_true, y_pred):
     """
@@ -104,6 +138,9 @@ def psnr_metric(y_true, y_pred):
     return psnr
 
 class PSNRMetric(Metric):
+    """
+    NOTE: Do not use this!
+    """
     def __init__(self, name = "psnr_metric", **kwargs):
         super().__init__(name = name, **kwargs)
         self.psnr = self.add_weight(name = "psnr", initializer = "zeros")

@@ -485,5 +485,8 @@ if __name__ ==  "__main__":
     params = load_params(path)
 
     loader = CustomDataset(params = params)
-    train_dataset, val_dataset = loader.get_dataset()
-    import pdb; pdb.set_trace()  # breakpoint c051f513 //
+    (
+        train_dataset, val_dataset, 
+        train_spec, val_spec
+    ) = loader.get_dataset()
+    import pdb; pdb.set_trace()  # breakpoint bf3ff96d //

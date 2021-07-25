@@ -24,6 +24,13 @@ class NeRF(Model):
         self.coarse_model = get_nerf_model(model_name = "coarse")
         self.fine_model = get_nerf_model(model_name = "fine")
 
+    def call(self, inputs):
+        """
+        TODO: Docstring.
+        """
+        output = self.forward(*inputs)
+        return output
+
     def forward(self, rays_o, rays_d, near, far):
         """
         Performs a forward pass.

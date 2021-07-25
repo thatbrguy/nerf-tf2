@@ -29,4 +29,4 @@ sampling:
   perturb: True
 
 model:
-  save_path: "./dummy.h5"
+  save_dir: "./models"

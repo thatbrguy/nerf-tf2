@@ -444,8 +444,8 @@ class CustomDataset(Dataset):
             intrinsics.append(intrinsic)
 
             ## Using a smaller dataset for the time being. TODO: Remove this!
-            if idx == 10:
-                break
+            # if idx == 10:
+            #     break
 
         poses = np.array(poses)
         bounds = np.array(bounds)

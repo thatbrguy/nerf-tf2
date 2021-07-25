@@ -112,7 +112,8 @@ def create_input_batch_coarse_model(params, rays_o, rays_d, near, far):
 
         # Getting random uniform samples in the range [0, 1). 
         # Shape of u_vals --> (N_rays, N_coarse)
-        u_vals = tf.random.uniform(shape = bin_widths.shape)
+        # u_vals = tf.random.uniform(shape = bin_widths.shape)
+        u_vals = tf.random.uniform(shape = tf.shape(bin_widths))
 
         # Using the below logic, we get one random sample in each bin.
         # Shape of t_vals --> (N_rays, N_coarse)
@@ -132,7 +133,8 @@ def create_input_batch_coarse_model(params, rays_o, rays_d, near, far):
     # Shape of xyz --> (N_rays, N_coarse, 3)
     xyz = rays_o[:, None, :] + t_vals[..., None] * rays_d[:, None, :]
     # Shape of rays_d_broadcasted --> (N_rays, N_coarse, 3)
-    rays_d_broadcasted = tf.broadcast_to(rays_d[:, None, :], xyz.shape)
+    # rays_d_broadcasted = tf.broadcast_to(rays_d[:, None, :], xyz.shape)
+    rays_d_broadcasted = tf.broadcast_to(rays_d[:, None, :], tf.shape(xyz))
     
     # Shape of dir_inputs --> (N_rays * N_coarse, 3)
     dir_inputs = tf.reshape(rays_d_broadcasted, (-1, 3))
@@ -174,14 +176,19 @@ def create_input_batch_fine_model(params, rays_o, rays_d, bin_weights, bin_data,
     
     # Shape of pdf --> (N_rays, N_coarse). TODO: Review keepdims
     pdf = bin_weights / tf.reduce_sum(bin_weights * bin_widths, axis = 1, keepdims = True)
-    N_rays = pdf.shape[0]
+    # N_rays = pdf.shape[0]
+    N_rays = tf.shape(pdf)[0]
 
     # Shape of agg --> (N_rays, N_coarse)
     agg = tf.cumsum(pdf * bin_widths, axis = 1)
     
     # Shape of agg --> (N_rays, N_coarse + 1)
+    # agg = tf.concat(
+    #     [tf.zeros((agg.shape[0], 1), dtype = agg.dtype), agg], 
+    #     axis = -1
+    # )
     agg = tf.concat(
-        [tf.zeros((agg.shape[0], 1), dtype = agg.dtype), agg], 
+        [tf.zeros((N_rays, 1), dtype = agg.dtype), agg], 
         axis = -1
     )
 
@@ -254,7 +261,8 @@ def create_input_batch_fine_model(params, rays_o, rays_d, bin_weights, bin_data,
     xyz = rays_o[:, None, :] + t_vals[..., None] * rays_d[:, None, :]
     
     # Shape of rays_d_broadcasted --> (N_rays, N_coarse + N_fine, 3)
-    rays_d_broadcasted = tf.broadcast_to(rays_d[:, None, :], xyz.shape)
+    # rays_d_broadcasted = tf.broadcast_to(rays_d[:, None, :], xyz.shape)
+    rays_d_broadcasted = tf.broadcast_to(rays_d[:, None, :], tf.shape(xyz))
     
     # Shape of dir_inputs --> (N_rays * (N_coarse + N_fine), 3)
     dir_inputs = tf.reshape(rays_d_broadcasted, (-1, 3))
@@ -314,7 +322,9 @@ def compute_weights(sigma, t_vals, N_samples):
     diffs = t_vals[:, 1:] - t_vals[:, :-1]
 
     ## TODO: Should it be INF or can we just provide the far bound value?
-    last_val_array = tf.fill((diffs.shape[0], 1), INF)
+    N_rays = tf.shape(diffs)[0]
+    # last_val_array = tf.fill((diffs.shape[0], 1), INF)
+    last_val_array = tf.fill((N_rays, 1), INF)
 
     # Shape of diffs_ --> (N_rays, N_samples)
     diffs_ = tf.concat([diffs, last_val_array], axis = -1)
@@ -351,7 +361,8 @@ def post_process_model_output(sample_rgb, sigma, t_vals, white_bg = False):
     use "bin" and when to use "sample".)
     """
     post_proc_model_outputs = dict()
-    N_samples = t_vals.shape[1]
+    # N_samples = t_vals.shape[1]
+    N_samples = tf.shape(t_vals)[1]
 
     # Shape of weights --> (N_rays, N_samples).
     weights = compute_weights(sigma, t_vals, N_samples)

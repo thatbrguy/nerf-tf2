@@ -138,7 +138,10 @@ class NeRF(Model):
         # Saving predictions to val_cache so that LogValImages can 
         # use val_cache to log validation images to TensorBoard 
         # after one validation run is complete.
-        self.val_cache.append(post_proc_FM["pred_rgb"])
+        ## NOTE: The val images logger is not working as 
+        ## expected and hence is not currently being used. 
+        ## Will think about an alternative way to log images later.
+        # self.val_cache.append(post_proc_FM["pred_rgb"])
 
         return {m.name: m.result() for m in self.metrics}
 
@@ -147,17 +150,41 @@ class NeRF(Model):
 
     def render(self, data):
         """
-        Renders images.
-        """
-        # imgs = []
-        
-        # for H, W, intrinsic, c2w in data:
-            # 1. Get rays_o and rays_d
-            # 2. Set near to 0 and far to 1 ?
-            # 3. Use self.forward to get predictions for rgb
-            # 4. Reshape to desired image size.
+        Renders an image.
 
-        # return imgs
+        Requires eager mode!
+        """
+        pixels = []
+        (intrinsic, c2w, H, W) = data
+        
+        # Here, L denotes the number of pixels in this image.
+        L = H * W
+        far_all = tf.ones(shape = (L, 1), dtype = tf.float32)
+        near_all = tf.zeros(shape = (L, 1), dtype = tf.float32)
+        rays_o_all, rays_d_all = pose_utils.get_rays_tf(H, W, intrinsic, c2w)
+
+        data = (rays_o_all, rays_d_all, near_all, far_all)
+        dataset = tf.data.Dataset.from_tensor_slices(data)
+        dataset = dataset.batch(
+            batch_size = self.params.data.batch_size, 
+            drop_remainder = False,
+        )
+
+        for batch in dataset:
+            (rays_o, rays_d, near, far) = batch
+            
+            # Performing a forward pass.
+            post_proc_CM, post_proc_FM = self.forward(
+                rays_o = rays_o, rays_d = rays_d, 
+                near = near, far = far,
+            )
+            batch_pixels = post_proc_FM["pred_rgb"].numpy()
+            pixels.append(batch_pixels)
+
+        pixels = np.concatenate(pixels, axis = 0)
+        img = np.reshape(pixels, (H, W, 3))
+        
+        return img
 
 class NeRFLite(Model):
     """

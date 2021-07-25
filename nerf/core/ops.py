@@ -1,3 +1,4 @@
+import os
 import numpy as np
 import tensorflow as tf
 
@@ -60,6 +61,38 @@ class LogValImages(Callback):
         # No action is taken if val_cache has no elements present.
         if len(self.model.val_cache) > 0:
             imgs = self.log_images(self.model.val_cache)
+
+class CustomModelSaver(Callback):
+    """
+    This custom callback is used to save the models after 
+    a validation run.
+    """
+    def __init__(self, params):
+        """
+        TODO: Docstring.
+        """
+        super().__init__()
+        self.params = params
+        self.val_run = 0
+        self.best_score = -1
+
+        self.root = self.params.model.save_dir
+        if not os.path.exists(self.root):
+            os.mkdir(self.root)
+
+    def on_test_end(self, logs):
+        """
+        TODO: Docstring.
+        """
+        val_psnr_score = logs["val_psnr_metric"]
+        self.val_run += 1
+        
+        if val_psnr_score > self.best_score:
+            name = f"{self.val_run: 06d}_{val_psnr_score: .2f}"
+            path = os.path.join(self.root, name)
+
+            self.model.save(filepath = path, save_format = "tf")
+            self.best_score = val_psnr_score
 
 def psnr_metric(y_true, y_pred):
     """

@@ -83,11 +83,11 @@ if __name__ ==  "__main__":
 
     if params.model.load.set_weights:
         nerf.set_everything()
-
+    
     nerf.fit(
         x = train_dataset, epochs = 3, # num_epochs,
         validation_data = val_dataset,
-        validation_freq = 75, # 100
+        validation_freq = 1, # 100
         callbacks = [model_ckpt, tensorboard],
         steps_per_epoch = 1, # steps_per_epoch,
     )

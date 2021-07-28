@@ -169,7 +169,7 @@ class NeRF(Model):
         L = H * W
         far_all = tf.ones(shape = (L, 1), dtype = tf.float32)
         near_all = tf.zeros(shape = (L, 1), dtype = tf.float32)
-        rays_o_all, rays_d_all = pose_utils.get_rays_tf(H, W, intrinsic, c2w)
+        rays_o_all, rays_d_all = ray_utils.get_rays_tf(H, W, intrinsic, c2w)
 
         data = (rays_o_all, rays_d_all, near_all, far_all)
         dataset = tf.data.Dataset.from_tensor_slices(data)
@@ -191,6 +191,8 @@ class NeRF(Model):
 
         pixels = np.concatenate(pixels, axis = 0)
         img = np.reshape(pixels, (H, W, 3))
+        img = np.clip(img * 255.0, 0, 255)
+        img = img.astype(np.uint8)
         
         return img
 

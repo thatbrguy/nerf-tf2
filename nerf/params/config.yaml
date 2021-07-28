@@ -35,6 +35,6 @@ model:
   
   load:
     load_dir: "./models"
-    load_tag: "000000_6.68"
+    load_tag: "check"
     set_weights: True
-    skip_optimizer: False
+    skip_optimizer: True

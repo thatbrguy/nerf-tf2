@@ -1,3 +1,4 @@
+import os
 import numpy as np
 import tensorflow as tf
 
@@ -192,6 +193,56 @@ class NeRF(Model):
         img = np.reshape(pixels, (H, W, 3))
         
         return img
+
+    def set_everything(self):
+        """
+        This function can be called AFTER model.compile has been 
+        called to set the weights of coarse model, fine model and 
+        the optimizer.
+        """
+        load_params = self.params.model.load
+        root = load_params.load_dir
+
+        if not load_params.skip_optimizer:
+            # Performing an optimizer step so that self.optimizer.variables() 
+            # gets populated with variables. We use zero gradients for all the 
+            # trainable variables. I think this step is fine since after 
+            # self.optimizer.variables() gets populated, we will set 
+            # all the variables (of the coarse model, fine model and the 
+            # optimizer) to the saved values.
+            trainable_vars = self.trainable_variables
+            gradients = [tf.zeros_like(x) for x in trainable_vars]
+            self.optimizer.apply_gradients(zip(gradients, trainable_vars))
+
+            optimizer_variables = self.optimizer.variables()
+            current_var_names = np.array([x.name for x in optimizer_variables])
+
+            optimizer_weights_path = os.path.join(
+                root, f"{load_params.load_tag}_optimizer.npz"
+            )
+
+            optimizer_data = np.load(optimizer_weights_path)
+            saved_var_names = optimizer_data["names"]
+
+            assert np.all(current_var_names == saved_var_names), (
+                "The optimizer state cannot be loaded since the "
+                "current variable names and saved variable names "
+                "are different."
+            )
+
+            optimizer_weights = [optimizer_data[str(k)] for k in saved_var_names]
+            self.optimizer.set_weights(optimizer_weights)
+
+        coarse_model_weights_path = os.path.join(
+                root, f"{load_params.load_tag}_coarse.h5"
+        )
+        fine_model_weights_path = os.path.join(
+                root, f"{load_params.load_tag}_fine.h5"
+        )
+
+        # Now, we load the weights of the coarse model and the fine model.
+        self.coarse_model.load_weights(coarse_model_weights_path)
+        self.fine_model.load_weights(fine_model_weights_path)
 
 class NeRFLite(Model):
     """

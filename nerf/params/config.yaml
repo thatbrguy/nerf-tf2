@@ -29,4 +29,12 @@ sampling:
   perturb: True
 
 model:
-  save_dir: "./models"
+  save:
+    save_dir: "./models"
+    save_optimizer_state: True
+  
+  load:
+    load_dir: "./models"
+    load_tag: "000000_6.68"
+    set_weights: True
+    skip_optimizer: False

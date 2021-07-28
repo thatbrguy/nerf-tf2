@@ -86,15 +86,29 @@ class CustomModelSaver(Callback):
         self.best_score = -1
         self.save_best_only = save_best_only
 
-        self.root = self.params.model.save_dir
+        self.save_opt_state = self.params.model.save.save_optimizer_state
+        self.root = self.params.model.save.save_dir
         if not os.path.exists(self.root):
             os.mkdir(self.root)
 
-    def _save(self, epoch, val_psnr_score):
+    def _save_weights(self, path, variables):
+        """
+        Saves weights to a .npz file given a list of variables.
+        """
+        variable_names = [x.name for x in variables]
+        variable_values = [x.numpy() for x in variables]
+        items = {k:v for k, v in zip(variable_names, variable_values)}
+        
+        # Saving names as well to preserve order of the variables names.
+        items["names"] = np.array(variable_names)
+        np.savez(path, **items)
+
+    def _save_everything(self, epoch, val_psnr_score):
         """
         Saves the model weights
         """
-        name = f"{epoch: 06d}_{val_psnr_score: .2f}"
+        ## TODO: Print and see how the names look.
+        name = f"{epoch:06d}_{val_psnr_score:.2f}"
         coarse_model_name = f"{name}_coarse.h5"
         fine_model_name = f"{name}_fine.h5"
         
@@ -103,6 +117,11 @@ class CustomModelSaver(Callback):
 
         self.model.coarse_model.save_weights(filepath = coarse_model_path)
         self.model.fine_model.save_weights(filepath = fine_model_path)
+
+        if self.save_opt_state:
+            opt_save_path =  os.path.join(self.root, f"{name}_optimizer.npz")
+            opt_variables = self.model.optimizer.variables()
+            self._save_weights(opt_save_path, opt_variables)
 
     def on_epoch_end(self, epoch, logs = None):
         """
@@ -125,7 +144,7 @@ class CustomModelSaver(Callback):
 
         else:
             logger.debug(f"Saving model weights for epoch {epoch}.")
-            self._save(epoch, val_psnr_score)
+            self._save_everything(epoch, val_psnr_score)
 
 
 def psnr_metric(y_true, y_pred):

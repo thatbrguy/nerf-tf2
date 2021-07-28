@@ -81,10 +81,14 @@ if __name__ ==  "__main__":
         metrics = [ops.psnr_metric], run_eagerly = True,
     )
 
+    if params.model.load.set_weights:
+        nerf.set_everything()
+
     nerf.fit(
-        x = train_dataset, epochs = num_epochs,
+        x = train_dataset, epochs = 3, # num_epochs,
         validation_data = val_dataset,
         validation_freq = 75, # 100
         callbacks = [model_ckpt, tensorboard],
-        steps_per_epoch = steps_per_epoch,
+        steps_per_epoch = 1, # steps_per_epoch,
     )
+    import pdb; pdb.set_trace()  # breakpoint 3ccdf13b //

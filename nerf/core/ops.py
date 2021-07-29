@@ -24,7 +24,7 @@ class LogValImages(Callback):
         self.params = params
         self.val_spec = val_spec
 
-    def log_images(self, pred_batches):
+    def log_images(self, epoch, pred_batches):
         """
         Given a list of predictions of RGB values of pixels, this 
         function combines them into images based on the information 
@@ -33,38 +33,42 @@ class LogValImages(Callback):
         # Shape of pred_pixels --> (L, 3)
         pred_pixels = tf.concat(pred_batches, axis = 0)
         start = 0
+
+        writer = tf.summary.create_file_writer("./logs/imgs")
+        with writer.as_default():
         
-        # Since each image can have different (H, W), we are handling 
-        # one image at a time.
-        for idx, (H, W) in enumerate(self.val_spec):
-            num_pixels_current_img = H * W
-            end = start + num_pixels_current_img
+            # Since each image can have different (H, W), we are handling 
+            # one image at a time.
+            for idx, (H, W) in enumerate(self.val_spec):
+                num_pixels_current_img = H * W
+                end = start + num_pixels_current_img
 
-            # Extracting all pixels that are part of the current image.
-            pixels_current_img = pred_pixels[start:end, :]
-            img = tf.reshape(pixels_current_img, (H, W, 3))
+                # Extracting all pixels that are part of the current image.
+                pixels_current_img = pred_pixels[start:end, :]
+                img = tf.reshape(pixels_current_img, (H, W, 3))
 
-            ## TODO: Use [img] with img shape being (H, W, 3) OR 
-            ## use img with img shape being (1, H, W, 3) ?? Will 
-            ## both work?
-            ## TODO: Check behavior and setting of max_outputs
-            tf.summary.image(f"val_img_{idx}", [img], max_outputs = 1)
+                ## TODO: Use [img] with img shape being (H, W, 3) OR 
+                ## use img with img shape being (1, H, W, 3) ?? Will 
+                ## both work?
+                ## TODO: Check behavior and setting of max_outputs
+                tf.summary.image(f"val_img_{idx}", [img], max_outputs = 1, step = epoch)
+                writer.flush()
 
-            # Updating start so that the next iteration of the loop 
-            # can access the next image.
-            start = end
+                # Updating start so that the next iteration of the loop 
+                # can access the next image.
+                start = end
 
         # Resetting self.model.val_cache so that the next validation 
         # run can use it properly.
         self.model.val_cache = []
 
-    def on_test_end(self, logs):
+    def on_epoch_end(self, epoch, logs = None):
         """
         TODO: Docstring.
         """
         # No action is taken if val_cache has no elements present.
         if len(self.model.val_cache) > 0:
-            imgs = self.log_images(self.model.val_cache)
+            imgs = self.log_images(epoch, self.model.val_cache)
 
 class CustomModelSaver(Callback):
     """

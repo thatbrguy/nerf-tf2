@@ -49,11 +49,12 @@ if __name__ ==  "__main__":
 
     model_ckpt = ops.CustomModelSaver(params = params, save_best_only = False)
     tensorboard = TensorBoard(update_freq = "epoch")
-
-    ## NOTE: The val images logger is not working as 
-    ## expected and hence is not currently being used. 
-    ## Will think about an alternative way to log images later.
-    # val_imgs_logger = ops.LogValImages(params = params, val_spec = val_spec)
+    callbacks = [model_ckpt, tensorboard]
+    
+    # Can use ops.LogValImages only if eager mode is enabled.
+    if params.system.run_eagerly and params.system.log_images:
+        val_imgs_logger = ops.LogValImages(params = params, val_spec = val_spec)
+        callbacks += val_imgs_logger
 
     # Total number of pixels when the entire dataset is repeated 5 times:
     total_pixels = (800 * 800 * 100 * 5)
@@ -88,7 +89,7 @@ if __name__ ==  "__main__":
         x = train_dataset, epochs = 3, # num_epochs,
         validation_data = val_dataset,
         validation_freq = 1, # 100
-        callbacks = [model_ckpt, tensorboard],
+        callbacks = callbacks,
         steps_per_epoch = 1, # steps_per_epoch,
     )
     import pdb; pdb.set_trace()  # breakpoint 3ccdf13b //

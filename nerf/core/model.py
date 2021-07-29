@@ -145,16 +145,18 @@ class NeRF(Model):
 
         # Saving predictions to val_cache so that LogValImages can 
         # use val_cache to log validation images to TensorBoard 
-        # after one validation run is complete.
-        ## NOTE: The val images logger is not working as 
-        ## expected and hence is not currently being used. 
-        ## Will think about an alternative way to log images later.
-        # self.val_cache.append(post_proc_FM["pred_rgb"])
+        # after one validation run is complete. Only works 
+        # with eager mode.
+        if self.params.system.run_eagerly and self.params.system.log_images:
+            self.val_cache.append(post_proc_FM["pred_rgb"].numpy())
 
         return {m.name: m.result() for m in self.metrics}
 
     def predict_step(self, data):
-        pass
+        """
+        TODO: Check correctness.
+        """
+        return self(data)
 
     def render(self, data):
         """

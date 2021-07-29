@@ -28,6 +28,10 @@ sampling:
   lindisp: False
   perturb: True
 
+system:
+  run_eagerly: True
+  log_images: True
+
 model:
   save:
     save_dir: "./models"

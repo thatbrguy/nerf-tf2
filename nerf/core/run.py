@@ -48,7 +48,10 @@ if __name__ ==  "__main__":
     # )
 
     model_ckpt = ops.CustomModelSaver(params = params, save_best_only = False)
-    tensorboard = TensorBoard(update_freq = "epoch")
+    tensorboard = TensorBoard(
+        log_dir = params.system.tensorboard_dir, 
+        update_freq = "epoch"
+    )
     callbacks = [model_ckpt, tensorboard]
     
     # Can use ops.LogValImages only if eager mode is enabled.

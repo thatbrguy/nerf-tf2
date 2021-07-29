@@ -23,6 +23,7 @@ class LogValImages(Callback):
         super().__init__()
         self.params = params
         self.val_spec = val_spec
+        self.log_dir = os.path.join(self.params.system.tensorboard_dir, "imgs")
 
     def log_images(self, epoch, pred_batches):
         """
@@ -34,7 +35,7 @@ class LogValImages(Callback):
         pred_pixels = tf.concat(pred_batches, axis = 0)
         start = 0
 
-        writer = tf.summary.create_file_writer("./logs/imgs")
+        writer = tf.summary.create_file_writer(self.log_dir)
         with writer.as_default():
         
             # Since each image can have different (H, W), we are handling 
@@ -51,7 +52,10 @@ class LogValImages(Callback):
                 ## use img with img shape being (1, H, W, 3) ?? Will 
                 ## both work?
                 ## TODO: Check behavior and setting of max_outputs
-                tf.summary.image(f"val_img_{idx}", [img], max_outputs = 1, step = epoch)
+                tf.summary.image(
+                    f"val_img_{idx}", [img], 
+                    max_outputs = 1, step = epoch
+                )
                 writer.flush()
 
                 # Updating start so that the next iteration of the loop 

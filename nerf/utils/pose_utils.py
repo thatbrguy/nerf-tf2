@@ -1,4 +1,5 @@
 import numpy as np
+import tensorflow as tf
 
 def make_4x4(RT):
     """
@@ -187,13 +188,12 @@ def reconfigure_poses_and_bounds(old_poses, old_bounds, origin_method):
     Args:
         old_poses       :   A NumPy array of shape (N, 4, 4)
         old_bounds      :   A NumPy array of shape (N, 2)
-        origin_method   :   A string which is either "average" 
-                            or "min_dist"
+        origin_method   :   A string which is either "average", 
+                            "min_dist_solve" or "min_dist_opt"
 
     Returns:
         new_poses       :   A NumPy array of shape (N, 4, 4)
     """
-    
     # Shape of origin --> (3,)
     origin = compute_new_world_origin(old_poses, method = origin_method)
     # Shape of x_basis, y_basis and z_basis --> (3,)
@@ -220,6 +220,77 @@ def reconfigure_poses_and_bounds(old_poses, old_bounds, origin_method):
 
     return new_poses, new_bounds
 
+def optimize_min_dist_point(poses):
+    """
+    Optimizes a 3D point such that the perpendicular distance from that 
+    point to each of N lines is as small as as possible.
+    
+    TODO: 
+        1.  Elaborate explanation.
+        2.  Move some hyperparams to the param file if this function 
+            will be used in the future.
+    """
+    # Initializing the point with all zeros.
+    point = tf.Variable([[0., 0., 0.]], dtype = tf.float64)
+    
+    # Getting the origin point of each line and the normalized 
+    # direction vector of each line.
+    origins = poses[:, :3, 3]
+    directions = normalize(poses[:, :3, 2])
+
+    # Converting origins and directions to TF constants. 
+    # (TODO: Should I call them eager tensors?)
+    tf_origins = tf.constant(origins)
+    tf_directions = tf.constant(directions)
+    
+    opt = tf.keras.optimizers.SGD(learning_rate = 0.0001)
+    losses = []
+    
+    ## TODO: Verify logic and add comments if needed.
+    for _ in range(1000):
+        with tf.GradientTape() as tape:
+            factor_1 = point - tf_origins
+            factor_2 = tf.reduce_sum(factor_1 * factor_1, axis = 1)
+            factor_3 = tf.reduce_sum(factor_1 * tf_directions, axis = 1) ** 2
+            
+            ## loss is the sum of the squared distance to 
+            ## each line.
+            loss = tf.reduce_sum(factor_2 - factor_3)
+
+        gradient = tape.gradient(loss, point)
+        opt.apply_gradients(zip([gradient], [point]))
+        losses.append(loss.numpy())
+
+    output = point.numpy().T
+    output = np.squeeze(output)
+
+    return output
+
+def solve_min_dist_point(poses):
+    """
+    This function uses linear algebra to solve for a point in 3D space 
+    that has the smallest perpendicular distance to each of N lines.
+    
+    TODO: Elaborate.
+    """
+    origins = poses[:, :3, 3]
+    directions = normalize(poses[:, :3, 2])
+
+    A_matrix = np.zeros((3, 3))
+    b_matrix = np.zeros((3, 1))
+    
+    ## TODO: Verify logic and add comments if needed.
+    for i in range(len(poses)):
+        outer = directions[i, :, None] @ directions[i, :, None].T
+        factor = outer - np.eye(3)
+        A_matrix += factor
+        b_matrix += (factor @ origins[i, :, None])
+
+    output = np.linalg.solve(A_matrix, b_matrix)
+    output = np.squeeze(output)
+    
+    return output
+
 def compute_new_world_origin(poses, method):
     """
     Computes the origin of a new world coordinate system given 
@@ -232,8 +303,8 @@ def compute_new_world_origin(poses, method):
     
     Args:
         poses       :   A NumPy array of shape (N, 4, 4)
-        method      :   A string which is either "average" 
-                        or "min_dist"
+        method      :   A string which is either "average", 
+                        "min_dist_solve" or "min_dist_opt"
 
     Returns:
         origin      :   A NumPy array of shape (3,) which denotes 
@@ -244,10 +315,11 @@ def compute_new_world_origin(poses, method):
         cam_locs = poses[:, :3, 3]
         origin = np.mean(cam_locs, axis = 0)
 
-    elif method == "min_dist":
-        raise NotImplementedError(
-            "The method min_dist is not implemented yet."
-        )
+    elif method == "min_dist_solve":
+        origin = solve_min_dist_point(poses)
+
+    elif method == "min_dist_opt":
+        origin = optimize_min_dist_point(poses)
     
     else:
         raise ValueError(f"Invalid method: {method}")

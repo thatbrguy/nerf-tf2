@@ -20,7 +20,7 @@ data:
     pose_info_path: ../data/pose_info.csv
 
 preprocessing:
-  origin_method: "average"
+  origin_method: "min_dist_solve"
 
 sampling:
   N_coarse: 64

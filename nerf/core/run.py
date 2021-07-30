@@ -39,13 +39,6 @@ if __name__ ==  "__main__":
     train_dataset, val_dataset, train_spec, val_spec = loader.get_dataset()
     
     nerf = NeRF(params = params)
-    # nerf_lite = NeRFLite(params)
-
-    # model_ckpt = ModelCheckpoint(
-    #     filepath = params.model.save_path, 
-    #     monitor = "val_psnr_metric", 
-    #     save_best_only = True, mode = "max"
-    # )
 
     model_ckpt = ops.CustomModelSaver(params = params, save_best_only = False)
     tensorboard = TensorBoard(
@@ -82,7 +75,8 @@ if __name__ ==  "__main__":
     # Enabling eager mode for ease of debugging. 
     nerf.compile(
         optimizer = optimizer, 
-        metrics = [ops.psnr_metric], run_eagerly = True,
+        metrics = [ops.psnr_metric], 
+        run_eagerly = params.system.run_eagerly,
     )
 
     if params.model.load.set_weights:

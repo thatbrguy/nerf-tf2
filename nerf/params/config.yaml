@@ -1,10 +1,39 @@
-## TODO: Complete this file and add comments.
+###############################################################################
+## A. General Parameters 
+###############################################################################
+
+system:
+  tf_seed: 11
+  white_bg: False
+  run_eagerly: True
+  log_images: True
+  tensorboard_dir: "./logs"
+
+###############################################################################
+## B. Model Functionality Related Parameters
+###############################################################################
+
+model:
+  save:
+    save_dir: "./models"
+    save_optimizer_state: True
+  
+  load:
+    load_dir: "./models"
+    load_tag: "check"
+    set_weights: True
+    skip_optimizer: True
+
+###############################################################################
+## C. Data Parameters
+###############################################################################
 
 data:
   batch_size: 1024
   
-  # scale_imgs can either be set to null or a float value. If scale_imgs is null, no scaling is applied. 
-  # If scale_imgs is a float value, then the images and the intrinsic matrices are scaled.
+  # scale_imgs can either be set to null or a float value. If scale_imgs 
+  # is null, no scaling is applied. If scale_imgs is a float value, then 
+  # the images and the intrinsic matrices are scaled.
   scale_imgs: null
   
   pre_shuffle: True
@@ -19,6 +48,10 @@ data:
     img_root_dir: ../data/images
     pose_info_path: ../data/pose_info.csv
 
+###############################################################################
+## D. Miscellaneous Parameters
+###############################################################################
+
 preprocessing:
   origin_method: "min_dist_solve"
 
@@ -27,19 +60,3 @@ sampling:
   N_fine: 64
   lindisp: False
   perturb: True
-
-system:
-  run_eagerly: True
-  log_images: True
-  tensorboard_dir: "./logs"
-
-model:
-  save:
-    save_dir: "./models"
-    save_optimizer_state: True
-  
-  load:
-    load_dir: "./models"
-    load_tag: "check"
-    set_weights: True
-    skip_optimizer: True

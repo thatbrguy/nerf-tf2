@@ -383,12 +383,6 @@ def post_process_model_output(sample_rgb, sigma, t_vals, white_bg = False):
     # Shape of pred_rgb --> (N_rays, 3)
     pred_rgb = tf.reduce_sum(weights[..., None] * sample_rgb_, axis = 1)
 
-    ## Setting pred_inv_depth to None temporarily until its 
-    ## implmentation is complete. 
-    ## TODO: Check https://github.com/bmild/nerf/issues/28 and decide 
-    ## on what to do for this implmentation.
-    # pred_inv_depth = None
-
     # Shape of pred_depth --> (N_rays,); TODO: Verify shape.
     pred_depth = tf.reduce_sum(t_vals * weights, axis = 1)
 
@@ -405,10 +399,9 @@ def post_process_model_output(sample_rgb, sigma, t_vals, white_bg = False):
         ## to somewhere else maybe etc.
         pred_rgb = pred_rgb + (1 - acc_map[:, None]) 
 
+    post_proc_model_outputs["weights"] = weights
     post_proc_model_outputs["pred_rgb"] = pred_rgb
     post_proc_model_outputs["pred_depth"] = pred_depth
-    # post_proc_model_outputs["pred_inv_depth"] = pred_inv_depth
-    post_proc_model_outputs["weights"] = weights
     
     return post_proc_model_outputs
 

@@ -19,8 +19,9 @@ class NeRF(Model):
 
         super().__init__()
         self.params = params
+        self.white_bg = self.params.system.white_bg
+        
         self.val_cache = []
-
         self.mse_loss = tf.keras.losses.MeanSquaredError()
         self.coarse_model = get_nerf_model(model_name = "coarse")
         self.fine_model = get_nerf_model(model_name = "fine")
@@ -52,7 +53,8 @@ class NeRF(Model):
         # Postprocessing coarse model output.            
         post_proc_CM = ray_utils.post_process_model_output(
             sample_rgb = rgb_CM, sigma = sigma_CM, 
-            t_vals = data_CM["t_vals"]
+            t_vals = data_CM["t_vals"], 
+            white_bg = self.white_bg,
         )
 
         # Getting data ready for the fine model.

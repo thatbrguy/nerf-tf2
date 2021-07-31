@@ -30,7 +30,8 @@ if __name__ ==  "__main__":
     logger = logging.getLogger()
 
     # Setting TF seed to enable determinism of TF.
-    tf.random.set_seed(11)
+    if params.system.tf_seed is not None:
+        tf.random.set_seed(params.system.tf_seed)
     
     path = "./nerf/params/config.yaml"
     params = load_params(path)

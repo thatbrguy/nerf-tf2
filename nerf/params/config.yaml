@@ -5,8 +5,10 @@
 system:
   tf_seed: 11
   white_bg: False
-  run_eagerly: True
+  run_eagerly: False
   log_images: True
+  steps_per_epoch: 128
+  validation_freq: 100
   tensorboard_dir: "./logs"
 
 ###############################################################################
@@ -21,8 +23,8 @@ model:
   load:
     load_dir: "./models"
     load_tag: "check"
-    set_weights: True
-    skip_optimizer: True
+    set_weights: False
+    skip_optimizer: False
 
 ###############################################################################
 ## C. Data Parameters
@@ -30,6 +32,7 @@ model:
 
 data:
   batch_size: 1024
+  repeat_count: 5
   
   # scale_imgs can either be set to null or a float value. If scale_imgs 
   # is null, no scaling is applied. If scale_imgs is a float value, then 

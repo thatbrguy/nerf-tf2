@@ -303,6 +303,9 @@ class Dataset(ABC):
             batch_size =  self.params.data.batch_size,
             drop_remainder = True,
         )
+        train_dataset = train_dataset.repeat(
+            count = self.params.data.repeat_count
+        )
 
         val_dataset = tf.data.Dataset.from_tensor_slices((x_val, y_val))
         val_dataset = val_dataset.batch(

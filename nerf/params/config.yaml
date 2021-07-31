@@ -23,8 +23,8 @@ model:
   load:
     load_dir: "./models"
     load_tag: "check"
-    set_weights: False
-    skip_optimizer: False
+    set_weights: True
+    skip_optimizer: True
 
 ###############################################################################
 ## C. Data Parameters

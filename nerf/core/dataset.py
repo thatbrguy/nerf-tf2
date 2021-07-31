@@ -100,6 +100,30 @@ class Dataset(ABC):
 
         return split_1, split_2
 
+    def validate_and_reconfigure_data(self, imgs, poses, bounds, intrinsics):
+        """
+        TODO: Docstring.
+        """
+        # Validating intrinsic matrices.
+        for idx in range(len(intrinsics)):
+            K = intrinsics[idx]
+            self._validate_intrinsic_matrix(K = K)
+
+        new_poses, new_bounds = pose_utils.reconfigure_poses_and_bounds(
+            old_poses = poses, 
+            old_bounds = bounds,
+            origin_method = self.params.preprocessing.origin_method,
+        )
+
+        new_imgs, new_intrinsics = pose_utils.scale_imgs_and_intrinsics(
+            old_imgs = imgs, old_intrinsics = intrinsics, 
+            scale_factor = self.params.data.scale_imgs,
+        )
+
+        output = (new_imgs, new_poses, new_bounds, new_intrinsics)
+
+        return output
+
     def process_data(self, imgs, poses, bounds, intrinsics):
         """
         Creates rays_o, rays_d, near, far, rgb
@@ -203,23 +227,11 @@ class Dataset(ABC):
             val_data    : TODO: Elaborate
 
         """
-        # Validating intrinsic matrices.
-        for idx in range(len(intrinsics)):
-            K = intrinsics[idx]
-            self._validate_intrinsic_matrix(K = K)
-
-        new_poses, new_bounds = pose_utils.reconfigure_poses_and_bounds(
-            old_poses = poses, 
-            old_bounds = bounds,
-            origin_method = self.params.preprocessing.origin_method,
+        data = self.validate_and_reconfigure_data(
+            imgs = imgs, poses = poses, 
+            bounds = bounds, intrinsics = intrinsics,
         )
 
-        new_imgs, new_intrinsics = pose_utils.scale_imgs_and_intrinsics(
-            old_imgs = imgs, old_intrinsics = intrinsics, 
-            scale_factor = self.params.data.scale_imgs,
-        )
-
-        data = (new_imgs, new_poses, new_bounds, new_intrinsics)
         train_data, val_data = self._split(
             data = data, 
             frac = self.params.data.validation.frac_imgs, 
@@ -479,6 +491,22 @@ class CustomDataset(Dataset):
         )
 
         return train_dataset, val_dataset, train_spec, val_spec
+
+    def get_reconfigured_data(self):
+        """
+        TODO: Elaborate.
+        """
+        (
+            imgs, poses, 
+            bounds, intrinsics
+        ) = self._load_full_dataset()
+
+        output = super().validate_and_reconfigure_data(
+            imgs = imgs, poses = poses, 
+            bounds = bounds, intrinsics = intrinsics,
+        )
+
+        return output
 
 if __name__ ==  "__main__":
 

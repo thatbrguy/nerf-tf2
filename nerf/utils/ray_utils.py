@@ -5,9 +5,28 @@ from nerf.utils import pose_utils
 
 def get_rays(H, W, intrinsic, c2w):
     """
-    Gets ray origin and ray directions in the world coordinate system.
+    Returns the origin and direction vectors of the desired rays.
+    
+    We have one ray passing through each pixel of an image with 
+    height "H" and width "W". Hence, in total we have H*W rays.
+    The aforementioned image was captured with a camera which 
+    has the pose matrix "c2w" and intrinsic matrix "intrinsic".
+    
+    Args:
+        H           :   An integer representing the height of 
+                        the image.
+        W           :   An integer representing the width of 
+                        the image.
+        intrinsic   :   A NumPy array of shape (3, 3) representing 
+                        the intrinsic matrix.
+        c2w         :   A NumPy array of shape (4, 4) representing 
+                        the pose of the camera.
 
-    TODO: Elaborate.
+    Returns:
+        rays_o      :   A NumPy array of shape (H*W, 3) representing 
+                        the origin vector of each ray.
+        rays_d      :   A NumPy array of shape (H*W, 3) representing 
+                        the normalized direction vector of each ray.
 
     TODO: Think about offset by 0.5 so that rays go through 
     the middle of the pixel.
@@ -35,9 +54,30 @@ def get_rays(H, W, intrinsic, c2w):
 
 def get_rays_tf(H, W, intrinsic, c2w):
     """
-    Gets ray origin and ray directions in the world coordinate system.
+    Returns the origin and direction vectors of the desired rays.
+    
+    We have one ray passing through each pixel of an image with 
+    height "H" and width "W". Hence, in total we have H*W rays.
+    The aforementioned image was captured with a camera which 
+    has the pose matrix "c2w" and intrinsic matrix "intrinsic".
 
-    TODO: Elaborate.
+    This function uses TensorFlow. 
+    
+    Args:
+        H           :   (TODO: type) representing the height of 
+                        the image.
+        W           :   (TODO: type) representing the width of 
+                        the image.
+        intrinsic   :   (TODO: type) of shape (3, 3) representing 
+                        the intrinsic matrix.
+        c2w         :   (TODO: type) of shape (4, 4) representing 
+                        the pose of the camera.
+
+    Returns:
+        rays_o      :   (TODO: type) of shape (H*W, 3) representing 
+                        the origin vector of each ray.
+        rays_d      :   (TODO: type) of shape (H*W, 3) representing 
+                        the normalized direction vector of each ray.
 
     TODO: Think about offset by 0.5 so that rays go through 
     the middle of the pixel.
@@ -259,7 +299,6 @@ def sigma_to_alpha(sigma, diffs):
 
     Returns:
         alpha   : TODO (type, explain) with shape (N_rays, N_samples)
-
     """
     ## TODO: Add noise to sigma based on parameter setting?
     alpha = 1 - tf.exp(-sigma * diffs)
@@ -277,7 +316,7 @@ def compute_weights(sigma, t_vals, N_samples):
     Args:
         sigma       : TODO (type, explain) with shape (N_rays * N_samples, 1)
         t_vals      : TODO (type, explain) with shape (N_rays, N_samples)
-        N_samples   : Integer. TODO: Explain.
+        N_samples   : TODO (type, explain)
 
     Returns:
         weights     : TODO (type, explain) with shape (N_rays, N_samples)
@@ -318,6 +357,7 @@ def post_process_model_output(sample_rgb, sigma, t_vals, white_bg = False):
         sample_rgb      : TODO (type, explain) with shape (N_rays * N_samples, 3)
         sigma           : TODO (type, explain) with shape (N_rays * N_samples, 1)
         t_vals          : TODO (type, explain) with shape (N_rays, N_samples)
+        white_bg        : TODO (type, explain)
 
     Returns:
         TODO

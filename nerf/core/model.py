@@ -253,8 +253,9 @@ class NeRF(Model):
 class NeRFLite(Model):
     """
     Model to define custom fit, evaluate and predict operations.
-
     This class implements only the coarse model.
+
+    NOTE: NeRFLite is incomplete! Do not use it.
 
     Legend:
         CM  : Coarse Model

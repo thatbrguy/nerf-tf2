@@ -67,7 +67,7 @@ def get_rays_tf(H, W, intrinsic, c2w):
     magnitude = tf.sqrt(tf.reduce_sum(rays_d ** 2, axis = 1, keepdims = True))
     rays_d = rays_d / (magnitude + EPS)
     
-    rays_o = tf.broadcast_to(c2w[:3, 3], rays_d.shape)
+    rays_o = tf.broadcast_to(c2w[:3, 3], tf.shape(rays_d))
     
     return rays_o, rays_d
 
@@ -116,7 +116,6 @@ def create_input_batch_coarse_model(params, rays_o, rays_d, near, far):
 
         # Getting random uniform samples in the range [0, 1). 
         # Shape of u_vals --> (N_rays, N_coarse)
-        # u_vals = tf.random.uniform(shape = bin_widths.shape)
         u_vals = tf.random.uniform(shape = tf.shape(bin_widths))
 
         # Using the below logic, we get one random sample in each bin.
@@ -137,7 +136,6 @@ def create_input_batch_coarse_model(params, rays_o, rays_d, near, far):
     # Shape of xyz --> (N_rays, N_coarse, 3)
     xyz = rays_o[:, None, :] + t_vals[..., None] * rays_d[:, None, :]
     # Shape of rays_d_broadcasted --> (N_rays, N_coarse, 3)
-    # rays_d_broadcasted = tf.broadcast_to(rays_d[:, None, :], xyz.shape)
     rays_d_broadcasted = tf.broadcast_to(rays_d[:, None, :], tf.shape(xyz))
     
     # Shape of dir_inputs --> (N_rays * N_coarse, 3)
@@ -178,76 +176,39 @@ def create_input_batch_fine_model(params, rays_o, rays_d, bin_weights, bin_data,
     # Shape of bin_weights --> (N_rays, N_coarse)
     bin_weights = bin_weights + 1e-5 ## To prevent nans ## TODO: Review.
     
-    # Shape of pdf --> (N_rays, N_coarse). TODO: Review keepdims
-    pdf = bin_weights / tf.reduce_sum(bin_weights * bin_widths, axis = 1, keepdims = True)
-    # N_rays = pdf.shape[0]
-    N_rays = tf.shape(pdf)[0]
+    # Shape of pdf --> (N_rays, N_coarse).
+    denom = tf.reduce_sum(bin_weights * bin_widths, axis = 1, keepdims = True)
+    pdf = bin_weights / denom
 
     # Shape of agg --> (N_rays, N_coarse)
     agg = tf.cumsum(pdf * bin_widths, axis = 1)
     
-    # Shape of agg --> (N_rays, N_coarse + 1)
-    # agg = tf.concat(
-    #     [tf.zeros((agg.shape[0], 1), dtype = agg.dtype), agg], 
-    #     axis = -1
-    # )
-    # agg = tf.concat(
-    #     [tf.zeros((N_rays, 1), dtype = agg.dtype), agg], 
-    #     axis = -1
-    # )
-    ## TODO: Verify that functionality of the below line is the 
-    ## same as the above commented out line..
-    agg = tf.concat(
-        [tf.zeros_like(agg[:, 0:1]), agg], 
-        axis = -1
-    )
+    # Shape of agg (output) --> (N_rays, N_coarse + 1)
+    agg = tf.concat([tf.zeros_like(agg[:, 0:1]), agg], axis = -1)
 
     ## TODO: Use det from params and give it a different name!
     det = False
+    N_rays = tf.shape(pdf)[0]
+    
     if det:
         spaced = tf.linspace(0, 1, params.sampling.N_fine)
         u_vals = tf.broadcast_to(spaced, (N_rays, params.sampling.N_fine))
     else:
         u_vals = tf.random.uniform(shape = (N_rays, params.sampling.N_fine))
 
+    ## TODO: Verify functionality.
     # Shape of u_vals --> (N_rays, N_fine)
     # Shape of piece_idxs --> (N_rays, N_fine)
     # Shape of agg[:, 1:-1] --> (N_rays, N_fine - 1).
+    
     # agg[:, 1:-1] has the "inner edges" with which we can do 
     # searchsorted correctly. 
-    # TODO: Need to carefully check logic!
     piece_idxs = tf.searchsorted(agg[:, 1:-1], u_vals, side = 'right')
 
-    #################################################################
-    ## TODO: Choose tf.gather or tf.gather_nd
-
-    #################################################################
-    ## Using tf.gather
-    #################################################################
-
-    ## TODO: I think this code would work but need to check! 
-    ## Do not use without testing!
-    
     ## agg_, pdf_ and left_edges_ have shape (N_rays, N_fine)
     agg_ = tf.gather(agg[:, :-1], piece_idxs, axis = 1, batch_dims = 1)
     pdf_ = tf.gather(pdf, piece_idxs, axis = 1, batch_dims = 1)
     left_edges_ = tf.gather(left_edges, piece_idxs, axis = 1, batch_dims = 1)
-
-    #################################################################
-    ## Using tf.gather_nd
-    #################################################################
-
-    ## TODO: If using tf.gather_nd, elaborate shapes.
-
-    # row_idxs = tf.reshape(tf.range(0, N_rays), (N_rays, 1))
-    # row_idxs = tf.broadcast_to(row_idxs, (N_rays, params.sampling.N_fine))
-    # idxs = tf.stack([row_idxs, piece_idxs], axis = -1)
-
-    # agg_ = tf.gather_nd(agg[:, :-1], idxs)
-    # pdf_ = tf.gather_nd(pdf, idxs)
-    # left_edges_ = tf.gather_nd(left_edges, idxs)
-
-    #################################################################
 
     ## Instead of setting denom to 1, trying new logic!
     mask = tf.where(pdf_ < 1e-8, tf.zeros_like(pdf_), tf.ones_like(pdf_))
@@ -263,7 +224,7 @@ def create_input_batch_fine_model(params, rays_o, rays_d, bin_weights, bin_data,
     # Shape of t_vals --> (N_rays, N_coarse + N_fine) 
     t_vals = tf.concat([t_vals_coarse, t_vals_fine], axis = 1)
     
-    ## TODO: Why sorting? Is it for alpha compositing or something?
+    ## TODO: Mention reason for sorting.
     t_vals = tf.sort(t_vals, axis = 1)
 
     # Getting xyz points using the equation r(t) = o + t * d
@@ -271,7 +232,6 @@ def create_input_batch_fine_model(params, rays_o, rays_d, bin_weights, bin_data,
     xyz = rays_o[:, None, :] + t_vals[..., None] * rays_d[:, None, :]
     
     # Shape of rays_d_broadcasted --> (N_rays, N_coarse + N_fine, 3)
-    # rays_d_broadcasted = tf.broadcast_to(rays_d[:, None, :], xyz.shape)
     rays_d_broadcasted = tf.broadcast_to(rays_d[:, None, :], tf.shape(xyz))
     
     # Shape of dir_inputs --> (N_rays * (N_coarse + N_fine), 3)
@@ -321,9 +281,6 @@ def compute_weights(sigma, t_vals, N_samples):
 
     Returns:
         weights     : TODO (type, explain) with shape (N_rays, N_samples)
-
-    TODO, IMPORTANT: Should we multiply diffs by norm? Or 
-    should we just make rays_d unit vectors ? 
     """
     EPS = 1e-10
     INF = 1e10
@@ -333,14 +290,12 @@ def compute_weights(sigma, t_vals, N_samples):
 
     ## TODO: Should it be INF or can we just provide the far bound value?
     N_rays = tf.shape(diffs)[0]
-    # last_val_array = tf.fill((diffs.shape[0], 1), INF)
     last_val_array = tf.fill((N_rays, 1), INF)
 
     # Shape of diffs_ --> (N_rays, N_samples)
-    diffs_ = tf.concat([diffs, last_val_array], axis = -1)
-
     # NOTE: We do not need to multiply diffs_ with the magnitude 
     # of the ray_d vectors. TODO: Elaborate.
+    diffs_ = tf.concat([diffs, last_val_array], axis = -1)
 
     # Shape of sigma_ --> (N_rays, N_samples)
     sigma_ = tf.reshape(tf.squeeze(sigma), (-1, N_samples))
@@ -371,7 +326,6 @@ def post_process_model_output(sample_rgb, sigma, t_vals, white_bg = False):
     use "bin" and when to use "sample".)
     """
     post_proc_model_outputs = dict()
-    # N_samples = t_vals.shape[1]
     N_samples = tf.shape(t_vals)[1]
 
     # Shape of weights --> (N_rays, N_samples).

@@ -32,7 +32,7 @@ def setup_model_and_callbacks(params):
     # Can use ops.LogValImages only if eager mode is enabled.
     if params.system.run_eagerly and params.system.log_images:
         val_imgs_logger = ops.LogValImages(params = params, val_spec = val_spec)
-        callbacks += val_imgs_logger
+        callbacks += [val_imgs_logger]
 
     ## Setting up the optimizer and LR scheduler.
     lr_schedule = ExponentialDecay(

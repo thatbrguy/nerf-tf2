@@ -67,12 +67,15 @@ if __name__ == "__main__":
         tf.random.set_seed(params.system.tf_seed)
 
     loader = CustomDataset(params = params)
-    nerf = setup_model()
+    nerf = setup_model(params)
     
     imgs, poses, bounds, intrinsics = loader.get_reconfigured_data()
 
     # data = (intrinsic, c2w, H, W)
-    data = (intrinsics[0], poses[0], imgs[0].shape[0], imgs[0].shape[1])
+    data = (
+        intrinsics[0].astype(np.float32), poses[0].astype(np.float32), 
+        imgs[0].shape[0], imgs[0].shape[1]
+    )
 
     logger.debug("Starting to render.")
     start = time.time()

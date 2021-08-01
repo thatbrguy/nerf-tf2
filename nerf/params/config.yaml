@@ -5,7 +5,7 @@
 system:
   tf_seed: 11
   white_bg: False
-  run_eagerly: False
+  run_eagerly: True
   log_images: True
   steps_per_epoch: 128
   validation_freq: 100

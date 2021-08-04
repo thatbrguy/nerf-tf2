@@ -41,6 +41,7 @@ def setup_model_and_callbacks(params):
         decay_rate = 0.1,
     )
     optimizer = Adam(learning_rate = lr_schedule)
+    psnr_metric = ops.PSNRMetric()
 
     # Instantiating the model.
     nerf = NeRF(params = params)
@@ -48,7 +49,7 @@ def setup_model_and_callbacks(params):
     # Enabling eager mode for ease of debugging. 
     nerf.compile(
         optimizer = optimizer, 
-        metrics = [ops.psnr_metric], 
+        metrics = [psnr_metric], 
         run_eagerly = params.system.run_eagerly,
     )
 

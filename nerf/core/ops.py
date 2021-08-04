@@ -154,36 +154,57 @@ class CustomModelSaver(Callback):
             logger.debug(f"Saving model weights for epoch {epoch}.")
             self._save_everything(epoch, val_psnr_score)
 
+class PSNRMetric(Metric):
+    """
+    Computes PSNR
+
+    TODO: Elaborate functionality for all functions
+    """
+    def __init__(self, name = "psnr_metric", **kwargs):
+        super().__init__(name = name, **kwargs)
+        
+        self.sq_error = self.add_weight(
+            name = "metric_vars/sq_error", initializer = "zeros"
+        )
+        
+        self.count = self.add_weight(
+            name = "metric_vars/count", initializer = "zeros"
+        )
+
+    def update_state(self, y_true, y_pred, sample_weight = None):
+        """
+        IMPORTANT: sample_weight has no effect.
+
+        TODO: Elaborate functionality.
+        """
+        sq_error = tf.reduce_sum(tf.square(y_true - y_pred))
+        count = tf.cast(tf.shape(y_true)[0], tf.float32)
+        
+        self.sq_error.assign_add(sq_error)
+        self.count.assign_add(count)
+
+    def result(self):
+        """
+        Computes the PSNR and returns the result.
+        """
+        # Computing mean squared error
+        mse = self.sq_error / self.count
+        # Computing psnr
+        psnr = (-10.) * (tf.math.log(mse)/tf.math.log(10.))
+
+        return psnr
+
+    def reset_states(self):
+        self.sq_error.assign(0.0)
+        self.count.assign(0.0)
 
 def psnr_metric(y_true, y_pred):
     """
     Creating a metric function instead of a metric class.
+
+    NOTE: Do note use this! Only kept here for reference purposes.
     """
     mse = tf.reduce_mean(tf.square(y_true - y_pred))
     psnr = (-10.) * (tf.math.log(mse)/tf.math.log(10.))
 
     return psnr
-
-class PSNRMetric(Metric):
-    """
-    NOTE: Do not use this!
-    """
-    def __init__(self, name = "psnr_metric", **kwargs):
-        super().__init__(name = name, **kwargs)
-        self.psnr = self.add_weight(name = "psnr", initializer = "zeros")
-
-    def update_state(self, y_true, y_pred, sample_weight = None):
-        """
-        IMPORTANT: sample_weight has no effect. TODO: Elaborate.
-        """
-        mse = tf.reduce_mean(tf.square(y_true - y_pred))
-        psnr = (-10.) * (tf.math.log(mse)/tf.math.log(10.))
-        
-        ## TODO: Check if using assign is the right thing to do.
-        self.psnr.assign(psnr)
-
-    def result(self):
-        return self.psnr
-
-    def reset_states(self):
-        self.psnr.assign(0.0)

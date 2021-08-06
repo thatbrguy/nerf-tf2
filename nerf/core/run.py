@@ -17,6 +17,19 @@ from nerf.utils.params_utils import load_params
 
 os.environ["TF_MIN_CPP_LOG_LEVEL"] = "2"
 
+def setup_datasets(params):
+    """
+    Sets up the train and val datasets.
+    """
+    loader = CustomDataset(params = params)
+    train_dataset, val_dataset, train_spec, val_spec = loader.get_dataset()
+
+    if params.data.advance_train_loader.enable:
+        skip_count = params.data.advance_train_loader.skip_count
+        train_dataset = train_dataset.skip(skip_count)
+
+    return train_dataset, val_dataset, train_spec, val_spec
+
 def setup_model_and_callbacks(params):
     """
     Sets up the NeRF model and the list of callbacks.
@@ -78,9 +91,8 @@ if __name__ ==  "__main__":
     if params.system.tf_seed is not None:
         tf.random.set_seed(params.system.tf_seed)
     
-    ## Setting up the dataset.
-    loader = CustomDataset(params = params)
-    train_dataset, val_dataset, train_spec, val_spec = loader.get_dataset()
+    # Getting datasets and specs
+    train_dataset, val_dataset, train_spec, val_spec = setup_datasets(params)
 
     # Setting up some dataset related parameters.
     # Total number of pixels when the entire dataset is repeated 5 times:

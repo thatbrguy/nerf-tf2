@@ -42,6 +42,10 @@ data:
   pre_shuffle: True
   pre_shuffle_seed: 93
 
+  advance_train_loader:
+    enable: True
+    skip_count: 12800
+
   # Validation data pipeline is different from the training data pipeline.
   validation:
     num_imgs: 3

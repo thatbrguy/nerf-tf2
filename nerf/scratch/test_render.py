@@ -72,9 +72,10 @@ if __name__ == "__main__":
     imgs, poses, bounds, intrinsics = loader.get_reconfigured_data()
 
     # data = (intrinsic, c2w, H, W)
+    idx = 0
     data = (
-        intrinsics[0].astype(np.float32), poses[0].astype(np.float32), 
-        imgs[0].shape[0], imgs[0].shape[1]
+        intrinsics[idx].astype(np.float32), poses[idx].astype(np.float32), 
+        imgs[idx].shape[0], imgs[idx].shape[1]
     )
 
     logger.debug("Starting to render.")

@@ -5,11 +5,12 @@
 system:
   tf_seed: 11
   white_bg: False
-  run_eagerly: True
-  log_images: True
-  steps_per_epoch: 128
+  run_eagerly: False
+  log_images: False
+  steps_per_epoch: 32
   validation_freq: 100
   tensorboard_dir: "./logs"
+  initial_epoch: 1000
 
 ###############################################################################
 ## B. Model Functionality Related Parameters
@@ -21,17 +22,17 @@ model:
     save_optimizer_state: True
   
   load:
-    load_dir: "./models"
-    load_tag: "check"
+    load_dir: "./trained_models"
+    load_tag: "000999_21.12"
     set_weights: True
-    skip_optimizer: True
+    skip_optimizer: False
 
 ###############################################################################
 ## C. Data Parameters
 ###############################################################################
 
 data:
-  batch_size: 1024
+  batch_size: 4096
   repeat_count: 5
   
   # scale_imgs can either be set to null or a float value. If scale_imgs 
@@ -44,7 +45,7 @@ data:
 
   advance_train_loader:
     enable: True
-    skip_count: 12800
+    skip_count: 32000 # epochs * steps_per_epoch
 
   # Validation data pipeline is different from the training data pipeline.
   validation:

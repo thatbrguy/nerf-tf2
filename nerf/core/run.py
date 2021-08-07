@@ -116,5 +116,5 @@ if __name__ ==  "__main__":
         validation_freq = params.system.validation_freq,
         callbacks = callbacks,
         steps_per_epoch = steps_per_epoch,
+        inital_epoch = params.system.initial_epoch,
     )
-    import pdb; pdb.set_trace()  # breakpoint 3ccdf13b //

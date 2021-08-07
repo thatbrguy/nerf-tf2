@@ -80,8 +80,7 @@ class CustomModelSaver(Callback):
     a validation run.
 
     TODO:
-        1.  Consider saving optimzier and other relavent states as well.
-        2.  Add support for NeRFLite as well. Currently the code 
+        1.  Add support for NeRFLite as well. Currently the code 
             assumes that the fine model is available and will try to 
             save the weights of the fine model as well.
     """

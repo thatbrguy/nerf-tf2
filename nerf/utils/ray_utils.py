@@ -127,15 +127,21 @@ def create_input_batch_coarse_model(params, rays_o, rays_d, near, far):
         dir_inputs  : TODO: Explain
 
     TODO: Elaborate!
-
-    TODO: Implement lindisp.
     """
-    if params.sampling.lindisp:
-        raise NotImplementedError()
-
-    # Getting N_coarse+1 evenly spaced samples between near and far values 
-    # for each ray. Shape of vals --> (N_rays, N_coarse + 1, 1)
-    vals = tf.linspace(near, far, num = params.sampling.N_coarse + 1, axis = 1)
+    # Shape of vals --> (N_rays, N_coarse + 1, 1)
+    ## TODO: Explain the sampling.
+    if not params.sampling.lin_inv_depth: 
+        vals = tf.linspace(
+            start = near, stop = far, 
+            num = params.sampling.N_coarse + 1, axis = 1
+        )
+    else:
+        ## TODO: Add eps to avoid avoid division by zero error, or 
+        ## ensure elsewhere that division by zero error cannot happen.
+        vals = 1 / tf.linspace(
+            start = (1 / near), stop = (1 / far), 
+            num = params.sampling.N_coarse + 1, axis = 1
+        )
     
     # TODO: Explain bin_edges
     # Shape of bin_edges --> (N_rays, N_coarse + 1)

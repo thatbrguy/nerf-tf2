@@ -72,7 +72,7 @@ if __name__ == "__main__":
     imgs, poses, bounds, intrinsics = loader.get_reconfigured_data()
 
     # data = (intrinsic, c2w, H, W)
-    idx = 0
+    idx = -3
     data = (
         intrinsics[idx].astype(np.float32), poses[idx].astype(np.float32), 
         imgs[idx].shape[0], imgs[idx].shape[1]

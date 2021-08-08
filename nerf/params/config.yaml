@@ -65,6 +65,6 @@ preprocessing:
 
 sampling:
   N_coarse: 64
-  N_fine: 64
-  lindisp: False
+  N_fine: 128
   perturb: True
+  lin_inv_depth: False

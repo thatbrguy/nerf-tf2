@@ -317,7 +317,16 @@ class NeRFLite(Model):
 
 class PositionalEncoder(Layer):
     """
-    TODO: Docstring and verify code!
+    TODO: 
+
+    1.  Add docstring and verify code!
+    2.  Consider adding a parameter so that the user can 
+        multiply ((2 ** exponents) * np.pi) with that parameter. 
+        This can be used to control the periodicity of the sin 
+        and cos functions.
+    3.  Allow the user to decide if they want to concatenate 
+        the input with the positional encoded values. Curently 
+        it is concatenated.
     """
     def __init__(self, L, name = None):
         """
@@ -330,6 +339,12 @@ class PositionalEncoder(Layer):
         self.multipliers = (2 ** exponents) * np.pi
         self.multipliers =  tf.reshape(self.multipliers, (1, 1, -1))
 
+    def build(self, input_shape):
+        """
+        TODO: Docstring
+        """
+        self.last_dim = input_shape[1] * self.L * 2
+
     def call(self, x):
         """
         TODO: Docstring
@@ -341,9 +356,10 @@ class PositionalEncoder(Layer):
 
         intermediate = tf.stack([sin_, cos_], axis = -1)
 
-        ## TODO: Check if using Flatten is correct.
-        # output = tf.reshape(intermediate, (x.shape[0], -1))
-        output = Flatten()(intermediate)
+        ## TODO: Check if Flatten can be used.
+        # output = Flatten()(intermediate)
+        sincos = tf.reshape(intermediate, (-1, self.last_dim))
+        output = tf.concat([x, sincos], axis = -1)
 
         return output
 

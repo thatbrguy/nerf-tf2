@@ -96,7 +96,7 @@ if __name__ ==  "__main__":
 
     # Setting up some dataset related parameters.
     # Total number of pixels when the entire dataset is repeated 5 times:
-    total_pixels = (800 * 800 * 100 * 5)
+    total_pixels = (800 * 800 * 97 * 5)
     # Total number of steps:
     total_steps = int(total_pixels / params.data.batch_size)
     # Steps per epoch:
@@ -116,5 +116,5 @@ if __name__ ==  "__main__":
         validation_freq = params.system.validation_freq,
         callbacks = callbacks,
         steps_per_epoch = steps_per_epoch,
-        inital_epoch = params.system.initial_epoch,
+        initial_epoch = params.system.initial_epoch,
     )

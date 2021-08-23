@@ -10,7 +10,7 @@ system:
   steps_per_epoch: 32
   validation_freq: 100
   tensorboard_dir: "./logs"
-  initial_epoch: 1000
+  initial_epoch: 0
 
 ###############################################################################
 ## B. Model Functionality Related Parameters
@@ -24,7 +24,7 @@ model:
   load:
     load_dir: "./trained_models"
     load_tag: "000999_21.12"
-    set_weights: True
+    set_weights: False
     skip_optimizer: False
 
 ###############################################################################
@@ -33,18 +33,18 @@ model:
 
 data:
   batch_size: 4096
-  repeat_count: 5
+  repeat_count: 20
   
   # scale_imgs can either be set to null or a float value. If scale_imgs 
   # is null, no scaling is applied. If scale_imgs is a float value, then 
   # the images and the intrinsic matrices are scaled.
-  scale_imgs: null
+  scale_imgs: 0.5
   
   pre_shuffle: True
   pre_shuffle_seed: 93
 
   advance_train_loader:
-    enable: True
+    enable: False
     skip_count: 32000 # epochs * steps_per_epoch
 
   # Validation data pipeline is different from the training data pipeline.
@@ -67,4 +67,4 @@ sampling:
   N_coarse: 64
   N_fine: 128
   perturb: True
-  lin_inv_depth: False
+  lin_inv_depth: True

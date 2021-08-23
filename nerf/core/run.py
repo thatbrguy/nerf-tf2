@@ -95,8 +95,8 @@ if __name__ ==  "__main__":
     train_dataset, val_dataset, train_spec, val_spec = setup_datasets(params)
 
     # Setting up some dataset related parameters.
-    # Total number of pixels when the entire dataset is repeated 5 times:
-    total_pixels = (800 * 800 * 97 * 5)
+    # Total number of pixels when the entire dataset is repeated 20 times:
+    total_pixels = (400 * 400 * 97 * 20)
     # Total number of steps:
     total_steps = int(total_pixels / params.data.batch_size)
     # Steps per epoch:

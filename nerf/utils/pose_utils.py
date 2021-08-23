@@ -1,3 +1,4 @@
+import cv2
 import numpy as np
 import tensorflow as tf
 
@@ -441,7 +442,7 @@ def scale_imgs_and_intrinsics(old_imgs, old_intrinsics, scale_factor):
         new_intrinsics = old_intrinsics
 
     elif scale_factor is not None:
-        sx, sy = scale_factor
+        sx, sy = scale_factor, scale_factor
         new_imgs, new_intrinsics = [], []
 
         ## TODO: Maybe add arg to choose interpolation?
@@ -449,8 +450,8 @@ def scale_imgs_and_intrinsics(old_imgs, old_intrinsics, scale_factor):
 
             img = cv2.cvtColor(old_imgs[idx].copy(), cv2.COLOR_RGB2BGR)
             resized = cv2.resize(
-                old_imgs[idx].copy(), fx = sx, fy = sy, 
-                interpolation = cv2.INTER_AREA
+                old_imgs[idx].copy(), dsize = None,
+                fx = sx, fy = sy, interpolation = cv2.INTER_AREA,
             )
             new_img = cv2.cvtColor(resized, cv2.COLOR_BGR2RGB)
 

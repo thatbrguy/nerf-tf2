@@ -39,25 +39,41 @@ data:
   # is null, no scaling is applied. If scale_imgs is a float value, then 
   # the images and the intrinsic matrices are scaled.
   scale_imgs: 0.5
-  
-  pre_shuffle: True
-  pre_shuffle_seed: 93
 
   advance_train_loader:
     enable: False
     skip_count: 32000 # epochs * steps_per_epoch
 
-  # Validation data pipeline is different from the training data pipeline.
-  validation:
-    num_imgs: 3
-    frac_imgs: null
+###############################################################################
+## D1. Blender Dataset Parameters (Only required if using BlenderDataset)
+###############################################################################
 
-  custom_dataset:
+blender_dataset:
+  base_dir: /path/to/base/dir
+
+  shuffle:
+    enable: ["train", "test", "val"]
+    seed: 83
+
+  val:
+    num:
+    frac:
+  
+  test:
+    num:
+    frac:
+
+###############################################################################
+## D2. Custom Dataset Parameters (Only required if using CustomDataset)
+###############################################################################
+
+custom_dataset:
+  full:
     img_root_dir: ../data/images
     pose_info_path: ../data/pose_info.csv
 
 ###############################################################################
-## D. Miscellaneous Parameters
+## E. Miscellaneous Parameters
 ###############################################################################
 
 preprocessing:

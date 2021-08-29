@@ -173,7 +173,53 @@ def batched_transform_line_segments(RT_matrices, lines):
 
     return output
 
-def reconfigure_poses_and_bounds(old_poses, old_bounds, origin_method):
+def calculate_new_world_pose(poses, origin_method):
+    return W2_to_W1_transform
+
+def calculate_scene_scale(
+        poses, bounds, origin_method, 
+        intrinsics = None, height = None, width = None
+    ):
+    return scene_scale_factor
+
+def reconfigure_poses(old_poses, W2_to_W1_transform):
+    return new_poses
+
+def reconfigure_scene_scale(old_poses, old_bounds, scene_scale_factor):
+    return new_poses, new_bounds
+
+def get_frustum_end_points(poses, bounds, intrinsics, img_shape):
+    """
+    TODO: Elaborate
+
+    NOTE: poses must be new_poses
+    """
+    H, W = img_shape[:2]
+    
+    # Shape of u and v: (1, 4)
+    u = np.array([[0, 0, W, W]], dtype = np.float64)
+    v = np.array([[0, H, 0, H]], dtype = np.float64)
+
+    # Shape of fu, fv, cu, cv: (B, 1)
+    fu, fv = intrinsics[:, 0, 0, None], intrinsics[:, 1, 1, None]
+    cu, cv = intrinsics[:, 0, 2, None], intrinsics[:, 1, 2, None]
+
+    # Shape of x_vals, y_vals, z_vals: (B, 4)
+    x_vals = (u - cu) / fu
+    y_vals = (v - cv) / fv
+    z_vals = np.ones(x_vals.shape, dtype = np.float64)
+    directions = np.stack([x_vals, y_vals, z_vals], axis = -1)
+    
+    # (H, W, 3) --> (H*W, 3) TODO: Verify
+    directions = directions.reshape(-1, 3)
+
+    ## TODO: Check output for correctness! Add comments!
+    rays_d = pose_utils.rotate_vectors(c2w, directions)
+
+def reconfigure_poses_and_bounds(
+        old_poses, old_bounds, origin_method, 
+        bounds_method, intrinsics = None
+    ):
     """
     Given N pose matrices (old_poses), each of which can transform a 
     point from a camera coordinate system to an arbitrary world 
@@ -191,10 +237,18 @@ def reconfigure_poses_and_bounds(old_poses, old_bounds, origin_method):
         old_bounds      :   A NumPy array of shape (N, 2)
         origin_method   :   A string which is either "average", 
                             "min_dist_solve" or "min_dist_opt"
+        bounds_method   :   A string which is either "central_ray" 
+                            or "frustum"
+        intrinsics      :   If bounds_method is "frustum", a NumPy 
+                            array of shape (N, 3, 3) must be provided. 
+                            Else, None can be provided.
 
     Returns:
         new_poses       :   A NumPy array of shape (N, 4, 4)
     """
+    if bounds_method == "frustum":
+        assert intrinsics is not None
+
     # Shape of origin --> (3,)
     origin = compute_new_world_origin(old_poses, method = origin_method)
     # Shape of x_basis, y_basis and z_basis --> (3,)
@@ -216,7 +270,7 @@ def reconfigure_poses_and_bounds(old_poses, old_bounds, origin_method):
     # Scaling poses and bounds so that ... (TODO: Elaborate).
     new_poses, new_bounds = scale_poses_and_bounds(
         old_poses = temp_poses, old_bounds = old_bounds, 
-        method = "central_ray"
+        method = bounds_method, intrinsics = intrinsics 
     )
 
     return new_poses, new_bounds
@@ -385,7 +439,7 @@ def compute_new_world_basis(poses):
 
     return x_basis, y_basis, z_basis
 
-def scale_poses_and_bounds(old_poses, old_bounds, method):
+def scale_poses_and_bounds(old_poses, old_bounds, bounds_method, intrinsics = None):
     """
     TODO: Elaborate.
     
@@ -399,16 +453,18 @@ def scale_poses_and_bounds(old_poses, old_bounds, method):
     assert method in ["central_ray", "frustum"]
 
     if method == "frustum":
+        assert intrinsics is not None
         raise NotImplementedError("TODO: Need to implement.")
 
-    rays_o = old_poses[:, :3, 3]
-    rays_d = old_poses[:, :3, 2]
-    far = old_bounds[:, 1]
+    elif method == "central_ray":
+        rays_o = old_poses[:, :3, 3]
+        rays_d = old_poses[:, :3, 2]
+        far = old_bounds[:, 1]
 
-    # We want XYZ coordinates of points_far and the origin to be 
-    # within the range [-1, 1]
-    points_far = rays_o + far[:, None] * rays_d
-    points = np.concatenate([rays_o, points_far], axis = 0)
+        # We want XYZ coordinates of points_far and the origin to be 
+        # within the range [-1, 1]
+        points_far = rays_o + far[:, None] * rays_d
+        points = np.concatenate([rays_o, points_far], axis = 0)
 
     ## TODO: Explain!
     projs = np.abs(points).max(axis = 0)
@@ -450,8 +506,8 @@ def scale_imgs_and_intrinsics(old_imgs, old_intrinsics, scale_factor):
 
             img = cv2.cvtColor(old_imgs[idx].copy(), cv2.COLOR_RGB2BGR)
             resized = cv2.resize(
-                old_imgs[idx].copy(), dsize = None,
-                fx = sx, fy = sy, interpolation = cv2.INTER_AREA,
+                img, dsize = None, fx = sx, fy = sy, 
+                interpolation = cv2.INTER_AREA,
             )
             new_img = cv2.cvtColor(resized, cv2.COLOR_BGR2RGB)
 

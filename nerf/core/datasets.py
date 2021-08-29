@@ -343,7 +343,8 @@ class BlenderDataset(Dataset):
                     paths = paths[:num_paths]
 
                 elif (frac is None) and (num is None):
-                    # Nothing to be done in this case.
+                    # Nothing to be done in this case. All the paths 
+                    # will be used.
                     pass
 
                 elif (frac is not None) and (num is not None):
@@ -400,14 +401,14 @@ class BlenderDataset(Dataset):
         """
         logger.debug("Loading blender dataset.")
         
-        data_dict = dict()
-        data_dict["train"] = self._load_split(split = "train")
-        data_dict["test"] = self._load_split(split = "test")
-        data_dict["val"] = self._load_split(split = "val")
+        data_splits = dict()
+        data_splits["train"] = self._load_split(split = "train")
+        data_splits["test"] = self._load_split(split = "test")
+        data_splits["val"] = self._load_split(split = "val")
 
         logger.debug("Loaded blender dataset.")
 
-        return data_dict
+        return data_splits
 
 if __name__ ==  "__main__":
 

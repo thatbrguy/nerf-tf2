@@ -24,6 +24,7 @@ class Dataset(ABC):
     """
     def __init__(self, params):
         self.params = params
+        self.splits = ["train", "test", "val"]
 
     @abstractmethod
     def get_dataset(self):
@@ -34,7 +35,8 @@ class Dataset(ABC):
         """
         pass
 
-    def _validate_intrinsic_matrix(self, K):
+    @staticmethod
+    def _validate_intrinsic_matrix(K):
         """
         Code supports intrinsic matrices that are of the form:
         intrinsic = np.array([
@@ -49,29 +51,130 @@ class Dataset(ABC):
         assert K[2, 2] == 1
         assert np.all(zero_check == 0)
 
-    def validate_and_reconfigure_data(self, imgs, poses, bounds, intrinsics):
+    def _validate_all_splits(self, data_splits):
         """
-        TODO: Docstring.
+        TODO: Docstring
         """
-        # Validating intrinsic matrices.
-        for idx in range(len(intrinsics)):
-            K = intrinsics[idx]
-            self._validate_intrinsic_matrix(K = K)
+        all_H, all_W = [], []
+        for split in self.splits:
+            data = data_splits[split]
+            img, intrinsics = data.img, data.intrinsics
 
-        new_poses, new_bounds = pose_utils.reconfigure_poses_and_bounds(
-            old_poses = poses, 
-            old_bounds = bounds,
+            for idx in range(len(intrinsics)):
+                K = intrinsics[idx]
+                img = imgs[idx]
+
+                H, W = img.shape[:2]
+                all_H.append(H)
+                all_W.append(W)
+                self._validate_intrinsic_matrix(K = K)
+
+        all_H, all_W = np.array(all_H), np.array(all_W)
+        assert np.all(all_H == all_H[0])
+        assert np.all(all_W == all_W[0])
+
+    def _reconfigure_imgs_and_intrinsics(self, data_splits):
+        """
+        TODO: Docstring
+        """
+        reconf_data_splits = dict()
+        
+        for split in self.splits:
+            data = data_splits[split]
+            
+            new_imgs, new_intrinsics = pose_utils.scale_imgs_and_intrinsics(
+                old_imgs = data.imgs, old_intrinsics = data.intrinsics, 
+                scale_factor = self.params.data.scale_imgs,
+            )
+
+            reconf_data = DatasetContainer(
+                imgs = new_imgs, poses = data.poses, 
+                bounds = data.bounds, intrinsics = new_intrinsics,
+            )
+            reconf_data_splits[split] = reconf_data
+
+        return reconf_data_splits
+
+    def _reconfigure_poses(self, data_splits):
+        """
+        TODO: Docstring
+        """
+        reconf_data_splits = dict()
+        
+        all_poses = [data[x].poses for x in self.splits]
+        all_poses = np.concatenate(all_poses, axis = 0)
+
+        W2_to_W1_transform = pose_utils.calculate_new_world_pose(
+            poses = all_poses, 
             origin_method = self.params.preprocessing.origin_method,
         )
 
-        new_imgs, new_intrinsics = pose_utils.scale_imgs_and_intrinsics(
-            old_imgs = imgs, old_intrinsics = intrinsics, 
-            scale_factor = self.params.data.scale_imgs,
+        for split in self.splits:
+            data = data_splits[split]
+
+            new_poses = pose_utils.reconfigure_poses(
+                old_poses = data.poses, 
+                W2_to_W1_transform = W2_to_W1_transform
+            )
+            new_data = DatasetContainer(
+                imgs = data.imgs, poses = new_poses, 
+                bounds = data.bounds, intrinsics = data.intrinsics,
+            )
+            reconf_data_splits[split] = new_data
+
+        return reconf_data_splits
+
+    def _reconfigure_scene_scale(self, data_splits):
+        """
+        TODO: Docstring
+        """
+        reconf_data_splits = dict()
+        
+        # Currently, we make sure that all images in all splits have the same 
+        # height (H) and width (W). Hence, we can take the H, W of an arbitrary 
+        # image for our purposes.
+        H, W = data_splits["train"].imgs[0].shape[:2]
+        all_poses = [data[x].poses for x in self.splits]
+        all_bounds = [data[x].bounds for x in self.splits]
+        all_intrinsics = [data[x].intrinsics for x in self.splits]
+
+        all_poses = np.concatenate(all_poses, axis = 0)
+        all_bounds = np.concatenate(all_bounds, axis = 0)
+        all_intrinsics = np.concatenate(all_intrinsics, axis = 0)
+
+        ## TODO: Rename function name
+        scene_scale_factor = pose_utils.calculate_scene_scale(
+            poses = all_poses, bounds = all_bounds, 
+            origin_method = self.params.preprocessing.bounds_method,
+            intrinsics = all_intrinsics, height = H, width = W
         )
 
-        output = (new_imgs, new_poses, new_bounds, new_intrinsics)
+        for split in self.splits:
+            data = data_splits[split]
 
-        return output
+            new_poses, new_bounds = pose_utils.reconfigure_scene_scale(
+                old_poses = data.poses, old_bounds = data.bounds, 
+                scene_scale_factor = scene_scale_factor,
+            )
+            new_data = DatasetContainer(
+                imgs = data.imgs, poses = new_poses, 
+                bounds = new_bounds, intrinsics = data.intrinsics,
+            )
+            reconf_data_splits[split] = new_data
+
+        return reconf_data_splits
+
+    def validate_and_reconfigure_data(self, data_splits):
+        """
+        TODO: Docstring.
+        """
+        self._validate_all_splits(data_splits)
+
+        temp_data_step_1 = self._reconfigure_imgs_and_intrinsics(data_splits)
+        temp_data_step_2 = self._reconfigure_poses(temp_data_step_1)
+        final_data_splits = self._reconfigure_scene_scale(temp_data_step_2)
+
+        return final_data_splits
 
     def process_data(self, imgs, poses, bounds, intrinsics):
         """

@@ -16,13 +16,16 @@ class LogValImages(Callback):
 
     The TensorBoard Callback MUST also be used for this callback to work!
     """
-    def __init__(self, params, val_spec):
+    def __init__(self, params, height, width, num_val_imgs):
         """
         TODO: Docstring.
         """
         super().__init__()
         self.params = params
-        self.val_spec = val_spec
+        self.img_width = width
+        self.img_height = height
+        self.num_imgs = num_val_imgs
+
         self.log_dir = os.path.join(self.params.system.tensorboard_dir, "imgs")
 
     def log_images(self, epoch, pred_batches):
@@ -33,14 +36,13 @@ class LogValImages(Callback):
         """
         # Shape of pred_pixels --> (L, 3)
         pred_pixels = tf.concat(pred_batches, axis = 0)
+        H, W = self.height, self.width
         start = 0
 
         writer = tf.summary.create_file_writer(self.log_dir)
         with writer.as_default():
-        
-            # Since each image can have different (H, W), we are handling 
-            # one image at a time.
-            for idx, (H, W) in enumerate(self.val_spec):
+
+            for idx in range(self.num_imgs):
                 num_pixels_current_img = H * W
                 end = start + num_pixels_current_img
 

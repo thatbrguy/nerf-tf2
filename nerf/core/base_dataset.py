@@ -69,7 +69,7 @@ class Dataset(ABC):
         all_H, all_W = [], []
         for split in self.splits:
             data = data_splits[split]
-            img, intrinsics = data.img, data.intrinsics
+            imgs, intrinsics = data.imgs, data.intrinsics
 
             for idx in range(len(intrinsics)):
                 K = intrinsics[idx]
@@ -112,7 +112,7 @@ class Dataset(ABC):
         """
         reconf_data_splits = dict()
         
-        all_poses = [data[x].poses for x in self.splits]
+        all_poses = [data_splits[x].poses for x in self.splits]
         all_poses = np.concatenate(all_poses, axis = 0)
 
         W2_to_W1_transform = pose_utils.calculate_new_world_pose(
@@ -145,9 +145,9 @@ class Dataset(ABC):
         # height (H) and width (W). Hence, we can take the H, W of an arbitrary 
         # image for our purposes.
         H, W = data_splits["train"].imgs[0].shape[:2]
-        all_poses = [data[x].poses for x in self.splits]
-        all_bounds = [data[x].bounds for x in self.splits]
-        all_intrinsics = [data[x].intrinsics for x in self.splits]
+        all_poses = [data_splits[x].poses for x in self.splits]
+        all_bounds = [data_splits[x].bounds for x in self.splits]
+        all_intrinsics = [data_splits[x].intrinsics for x in self.splits]
 
         all_poses = np.concatenate(all_poses, axis = 0)
         all_bounds = np.concatenate(all_bounds, axis = 0)
@@ -258,15 +258,21 @@ class Dataset(ABC):
                 data_splits = data_splits,
             )
             processed_splits[split] = self.process_data(reconf_data_splits[split])
+
+        # img_HW holds the height and width of the images in the 
+        # dataset. Since all the images in the dataset will have the 
+        # same shape, we just get the shape of the first image 
+        # in reconf_data_splits["train"]
+        img_HW = reconf_data_splits["train"].imgs[0].shape[:2]
             
-        return processed_splits
+        return processed_splits, img_HW
 
     def _shuffle(self, container_type_2):
         """
         TODO: Docstring.
         """
         rng = np.random.default_rng(
-            seed = self.params.data.pre_shuffle_seed
+            seed = self.params.data.train_shuffle.seed
         )
         perm = rng.permutation(len(container_type_2.rays_o))
 
@@ -318,7 +324,7 @@ class Dataset(ABC):
         """
         logger.debug("Creating TensorFlow datasets.")
         
-        if self.params.data.pre_shuffle:
+        if self.params.data.train_shuffle.enable:
             processed_splits["train"] = self._shuffle(processed_splits["train"])
 
         x_train, y_train = self._separate(processed_splits["train"])

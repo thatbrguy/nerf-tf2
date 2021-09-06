@@ -1,12 +1,13 @@
 import os
 import cv2
+import json
 import yaml
 import logging
 import numpy as np
 import pandas as pd
 
 from nerf.utils import pose_utils
-from nerf.core.base_dataset import Dataset, DataContainer
+from nerf.core.base_dataset import Dataset, ContainerType1
 
 # Setting up logger.
 logger = logging.getLogger(__name__)
@@ -267,11 +268,13 @@ class BlenderDataset(Dataset):
         """
         Transforms a pose in OpenGL format to the Classic CV format. For 
         information about the formats, please refer to the documentation.
+
+        TODO: Elaborate.
         """
         transformation = np.array([
             [ 1.0,  0.0,  0.0,  0.0],
             [ 0.0, -1.0,  0.0,  0.0],
-            [ 1.0,  0.0, -1.0,  0.0],
+            [ 0.0,  0.0, -1.0,  0.0],
             [ 0.0,  0.0,  0.0,  1.0],
         ], dtype = np.float64)
         output = pose @ transformation
@@ -282,6 +285,8 @@ class BlenderDataset(Dataset):
     def _create_intrinsic_matrix(H, W, focal_length):
         """
         Creates an intrinsic matrix.
+
+        TODO: Verify
         """
         fx, fy = focal_length, focal_length
         cx, cy = W/2, H/2
@@ -348,8 +353,9 @@ class BlenderDataset(Dataset):
                     pass
 
                 elif (frac is not None) and (num is not None):
+                    ## TODO: redo message.
                     raise ValueError(
-                        "Only frac could be not None, or num "
+                        "Either frac could be not None, OR num "
                         "could be not None."
                     )
 
@@ -361,8 +367,8 @@ class BlenderDataset(Dataset):
         """
         imgs, poses, bounds = [], [], []
 
-        for path in self.img_paths:
-            name = os.path.path.basename(path).split(".")[0]
+        for path in self.img_paths[split]:
+            name = os.path.basename(path).split(".")[0]
 
             img = cv2.cvtColor(cv2.imread(path, 1), cv2.COLOR_BGR2RGB)
             opengl_pose = self.metadata[split][name]["transform_matrix"]
@@ -388,7 +394,7 @@ class BlenderDataset(Dataset):
         bounds = np.array(bounds)
         intrinsics = np.array(intrinsics)
 
-        data = DatasetContainer(
+        data = ContainerType1(
             imgs = imgs, poses = poses, 
             bounds = bounds, intrinsics = intrinsics
         )
@@ -401,14 +407,27 @@ class BlenderDataset(Dataset):
         """
         logger.debug("Loading blender dataset.")
         
-        data_splits = dict()
-        data_splits["train"] = self._load_split(split = "train")
-        data_splits["test"] = self._load_split(split = "test")
-        data_splits["val"] = self._load_split(split = "val")
+        num_imgs, data_splits = dict(), dict()
+        splits = ["train", "test", "val"]
 
+        for split in splits:
+            data_splits[split] = self._load_split(split = split)
+            num_imgs[split] = len(self.img_paths[split])
+    
         logger.debug("Loaded blender dataset.")
 
-        return data_splits
+        return data_splits, num_imgs
+
+    def get_dataset(self):
+        """
+        TODO: Elaborate.
+        """
+        data_splits, num_imgs = self._load_full_dataset()
+        processed_splits, img_HW = super().prepare_data(data_splits)
+        
+        tf_datasets = super().create_tf_dataset(processed_splits)
+
+        return tf_datasets, num_imgs, img_HW
 
 if __name__ ==  "__main__":
 

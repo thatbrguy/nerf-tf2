@@ -175,17 +175,15 @@ def batched_transform_line_segments(RT_matrices, lines):
 
 def calculate_new_world_pose(poses, origin_method):
     """
-    Given N pose matrices (old_poses), each of which can transform a 
+    Given N pose matrices (poses), each of which can transform a 
     point from a camera coordinate system to an arbitrary world 
     coordinate system (W1), this function configures a new world 
-    coordinate system (W2) based on the given pose matrices (old_poses).
+    coordinate system (W2) based on the given pose matrices (poses).
 
-        2. Returns N new pose matrices (new_poses), each of which can
-        transform a point from a camera coordinate system to the new
-        world coordinate system (W2).
+    TODO: Rewrite if needed.
 
     Args:
-        old_poses               :   A NumPy array of shape (N, 4, 4)
+        poses                   :   A NumPy array of shape (N, 4, 4)
         origin_method           :   A string which is either "average", 
                                     "min_dist_solve" or "min_dist_opt"
 
@@ -193,9 +191,9 @@ def calculate_new_world_pose(poses, origin_method):
         W2_to_W1_transform       :   A NumPy array of shape (4, 4)
     """
     # Shape of origin: (3,)
-    origin = compute_new_world_origin(old_poses, method = origin_method)
+    origin = compute_new_world_origin(poses, method = origin_method)
     # Shape of x_basis, y_basis and z_basis: (3,)
-    x_basis, y_basis, z_basis = compute_new_world_basis(old_poses)
+    x_basis, y_basis, z_basis = compute_new_world_basis(poses)
 
     W2_to_W1_3x4 = np.stack([x_basis, y_basis, z_basis, origin], axis = 1)
     W2_to_W1_transform = make_4x4(W2_to_W1_3x4)
@@ -216,7 +214,7 @@ def calculate_scene_scale(
 
     points_far = rays_o + far[:, None] * rays_d
 
-    if method == "include_corners":
+    if bounds_method == "include_corners":
         check_1 = intrinsics is not None
         check_2 = height is not None
         check_3 = width is not None
@@ -231,7 +229,7 @@ def calculate_scene_scale(
         # to be within the range [-1, 1]
         points = np.concatenate([rays_o, points_far, corner_points], axis = 0)
 
-    elif method == "central_ray":
+    elif bounds_method == "central_ray":
         
         # We want XYZ coordinates of points_far and the origin to be 
         # within the range [-1, 1]
@@ -253,11 +251,11 @@ def reconfigure_poses(old_poses, W2_to_W1_transform):
     """
     # The matrix old_poses[i] would take a point from the i-th camera 
     # coordinate system to the old world (W1) coordinate system. The 
-    # matrix W1_to_W2_pose would take a point from the old world 
+    # matrix W2_to_W1_transform would take a point from the old world 
     # coordinate system (W1) to the new world coordinate system (W2). 
     # Hence, the matrix new_poses[i] would take a point from the i-th 
     # camera coordinate system to the new world coordinate system (W2). 
-    new_poses = W1_to_W2_pose @ old_poses
+    new_poses = W2_to_W1_transform @ old_poses
 
     return new_poses
 

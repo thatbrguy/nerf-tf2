@@ -43,6 +43,11 @@ data:
   scene_scale_mul: 0.75
   scene_scale_add: 0.0
 
+  ## TODO: Give this parameter a better name.
+  train_shuffle:
+    enable: True
+    seed: 35 
+
   advance_train_loader:
     enable: False
     skip_count: 32000 # epochs * steps_per_epoch
@@ -52,19 +57,19 @@ data:
 ###############################################################################
 
 blender_dataset:
-  base_dir: /path/to/base/dir
+  base_dir: ../lego
 
   shuffle:
-    enable: ["train", "test", "val"]
+    enable: ["train"]
     seed: 83
 
   val:
-    num:
-    frac:
+    num: 3
+    frac: null
   
   test:
-    num:
-    frac:
+    num: 3
+    frac: null
 
 ###############################################################################
 ## D2. Custom Dataset Parameters (Only required if using CustomDataset)
@@ -81,6 +86,7 @@ custom_dataset:
 
 preprocessing:
   origin_method: "min_dist_solve"
+  bounds_method: "include_corners"
 
 sampling:
   N_coarse: 64

@@ -74,7 +74,7 @@ def setup_model_and_callbacks(params, num_imgs, img_HW):
 
     return nerf, callbacks
 
-def launch():
+def launch(logger):
     """
     TODO: Docstring
     """
@@ -90,8 +90,9 @@ def launch():
     tf_datasets, num_imgs, img_HW = setup_datasets(params)
 
     # Setting up some dataset related parameters.
-    # Total number of pixels when the entire dataset is repeated 20 times:
-    total_pixels = (400 * 400 * 100 * 20)
+    repeat_count = params.data.repeat_count
+    # Total number of pixels when the entire dataset is repeated repeat_count times:
+    total_pixels = (img_HW[0] * img_HW[1] * num_imgs["train"] * repeat_count)
     # Total number of steps:
     total_steps = int(total_pixels / params.data.batch_size)
     # Steps per epoch:
@@ -126,4 +127,4 @@ if __name__ ==  "__main__":
     )
     logger = logging.getLogger()
 
-    launch()
+    launch(logger)

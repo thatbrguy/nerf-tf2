@@ -10,7 +10,7 @@ from tensorflow.keras.optimizers import Adam
 from tensorflow.keras.optimizers.schedules import ExponentialDecay
 
 from nerf.core import ops
-from nerf.core.model import NeRF, NeRFLite
+from nerf.core.model import NeRF
 from nerf.core.datasets import BlenderDataset
 
 from nerf.utils.params_utils import load_params

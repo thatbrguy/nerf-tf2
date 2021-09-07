@@ -250,71 +250,6 @@ class NeRF(Model):
         self.coarse_model.load_weights(coarse_model_weights_path)
         self.fine_model.load_weights(fine_model_weights_path)
 
-class NeRFLite(Model):
-    """
-    Model to define custom fit, evaluate and predict operations.
-    This class implements only the coarse model.
-
-    NOTE: NeRFLite is incomplete! Do not use it.
-
-    Legend:
-        CM  : Coarse Model
-    """
-    def __init__(self, params):
-        
-        super().__init__()
-        self.params = params
-
-        self.mse_loss = tf.keras.losses.MeanSquaredError()
-        self.coarse_model = get_nerf_model(model_name = "coarse")
-
-    def train_step(self, data):
-        """
-        TODO: Docstring
-        """
-        (rays_o, rays_d, near, far), (rgb,) = data
-
-        # Getting data ready for the coarse model.
-        data_CM = ray_utils.create_input_batch_coarse_model(
-            params = self.params, rays_o = rays_o, 
-            rays_d = rays_d, near = near, far = far
-        )
-
-        # Performing a forward pass through the coarse model.
-        with tf.GradientTape() as tape:
-            rgb_CM, sigma_CM = self.coarse_model(
-                inputs = (data_CM["xyz_inputs"], data_CM["dir_inputs"])
-            )
-            
-            post_proc_CM = ray_utils.post_process_model_output(
-                sample_rgb = rgb_CM, sigma = sigma_CM, 
-                t_vals = data_CM["t_vals"]
-            )
-
-            # Computing coarse loss.
-            coarse_loss = self.mse_loss(
-                y_true = rgb, 
-                y_pred = post_proc_CM["pred_rgb"]
-            )
-
-        gradients = tape.gradient(coarse_loss, self.trainable_variables)
-        self.optimizer.apply_gradients(zip(gradients, self.trainable_variables))
-
-        ## TODO: Make note somewhere. Metric is computed for the coarse model 
-        ## output for the class NeRFLite.
-        self.compiled_metrics.update_state(
-            y_true = rgb, 
-            y_pred = post_proc_CM["pred_rgb"]
-        )
-
-        return {m.name: m.result() for m in self.metrics}
-
-    def test_step(self, data):
-        pass
-
-    def predict_step(self, data):
-        pass
-
 class PositionalEncoder(Layer):
     """
     TODO: 
@@ -428,5 +363,3 @@ if __name__ == '__main__':
     nerf = NeRF(params)
     psnr = ops.PSNRMetric()
     nerf.compile(optimizer = 'adam', metrics = [psnr])
-    
-    nerf_lite = NeRFLite(params)

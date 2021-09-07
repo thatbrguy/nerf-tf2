@@ -11,7 +11,7 @@ from tensorflow.keras.optimizers.schedules import ExponentialDecay
 
 from nerf.core import ops
 from nerf.core.model import NeRF, NeRFLite
-from nerf.core.dataset import CustomDataset
+from nerf.core.datasets import BlenderDataset
 
 from nerf.utils.params_utils import load_params
 
@@ -21,16 +21,16 @@ def setup_datasets(params):
     """
     Sets up the train and val datasets.
     """
-    loader = CustomDataset(params = params)
-    train_dataset, val_dataset, train_spec, val_spec = loader.get_dataset()
+    loader = BlenderDataset(params = params)
+    tf_datasets, num_imgs, img_HW = loader.get_dataset()
 
     if params.data.advance_train_loader.enable:
         skip_count = params.data.advance_train_loader.skip_count
-        train_dataset = train_dataset.skip(skip_count)
+        tf_datasets["train"] = tf_datasets["train"].skip(skip_count)
 
-    return train_dataset, val_dataset, train_spec, val_spec
+    return tf_datasets, num_imgs, img_HW
 
-def setup_model_and_callbacks(params):
+def setup_model_and_callbacks(params, num_imgs, img_HW):
     """
     Sets up the NeRF model and the list of callbacks.
     """
@@ -44,7 +44,10 @@ def setup_model_and_callbacks(params):
     
     # Can use ops.LogValImages only if eager mode is enabled.
     if params.system.run_eagerly and params.system.log_images:
-        val_imgs_logger = ops.LogValImages(params = params, val_spec = val_spec)
+        val_imgs_logger = ops.LogValImages(
+            params = params, height = img_HW[0], 
+            width = img_HW[1], num_val_imgs = num_imgs["val"]
+        )
         callbacks += [val_imgs_logger]
 
     ## Setting up the optimizer and LR scheduler.
@@ -71,18 +74,10 @@ def setup_model_and_callbacks(params):
 
     return nerf, callbacks
 
-if __name__ ==  "__main__":
-
-    # Setting numpy print options for ease of debugging.
-    np.set_printoptions(precision = 5, suppress = True)
-    
-    # Setting up logger.
-    logging.basicConfig(
-        format='[%(asctime)s]:[%(levelname)s]:[%(name)s]: %(message)s', 
-        datefmt='%m/%d/%Y %I:%M:%S %p', level=logging.DEBUG
-    )
-    logger = logging.getLogger()
-    
+def launch():
+    """
+    TODO: Docstring
+    """
     # Setting up params
     path = "./nerf/params/config.yaml"
     params = load_params(path)
@@ -92,11 +87,11 @@ if __name__ ==  "__main__":
         tf.random.set_seed(params.system.tf_seed)
     
     # Getting datasets and specs
-    train_dataset, val_dataset, train_spec, val_spec = setup_datasets(params)
+    tf_datasets, num_imgs, img_HW = setup_datasets(params)
 
     # Setting up some dataset related parameters.
     # Total number of pixels when the entire dataset is repeated 20 times:
-    total_pixels = (400 * 400 * 97 * 20)
+    total_pixels = (400 * 400 * 100 * 20)
     # Total number of steps:
     total_steps = int(total_pixels / params.data.batch_size)
     # Steps per epoch:
@@ -108,7 +103,7 @@ if __name__ ==  "__main__":
     logger.debug(f"Number of Epochs: {num_epochs}")
     
     # Setup model and callbacks.
-    nerf, callbacks = setup_model_and_callbacks(params)
+    nerf, callbacks = setup_model_and_callbacks(params, num_imgs, img_HW)
 
     nerf.fit(
         x = train_dataset, epochs = num_epochs,
@@ -118,3 +113,17 @@ if __name__ ==  "__main__":
         steps_per_epoch = steps_per_epoch,
         initial_epoch = params.system.initial_epoch,
     )
+
+if __name__ ==  "__main__":
+
+    # Setting numpy print options for ease of debugging.
+    np.set_printoptions(precision = 5, suppress = True)
+    
+    # Setting up logger.
+    logging.basicConfig(
+        format='[%(asctime)s]:[%(levelname)s]:[%(name)s]: %(message)s', 
+        datefmt='%m/%d/%Y %I:%M:%S %p', level=logging.DEBUG
+    )
+    logger = logging.getLogger()
+
+    launch()

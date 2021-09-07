@@ -39,29 +39,54 @@ data:
   # is null, no scaling is applied. If scale_imgs is a float value, then 
   # the images and the intrinsic matrices are scaled.
   scale_imgs: 0.5
-  
-  pre_shuffle: True
-  pre_shuffle_seed: 93
+
+  scene_scale_mul: 0.75
+  scene_scale_add: 0.0
+
+  ## TODO: Give this parameter a better name.
+  train_shuffle:
+    enable: True
+    seed: 35 
 
   advance_train_loader:
     enable: False
     skip_count: 32000 # epochs * steps_per_epoch
 
-  # Validation data pipeline is different from the training data pipeline.
-  validation:
-    num_imgs: 3
-    frac_imgs: null
+###############################################################################
+## D1. Blender Dataset Parameters (Only required if using BlenderDataset)
+###############################################################################
 
-  custom_dataset:
+blender_dataset:
+  base_dir: ../lego
+
+  shuffle:
+    enable: ["train"]
+    seed: 83
+
+  val:
+    num: 3
+    frac: null
+  
+  test:
+    num: 3
+    frac: null
+
+###############################################################################
+## D2. Custom Dataset Parameters (Only required if using CustomDataset)
+###############################################################################
+
+custom_dataset:
+  full:
     img_root_dir: ../data/images
     pose_info_path: ../data/pose_info.csv
 
 ###############################################################################
-## D. Miscellaneous Parameters
+## E. Miscellaneous Parameters
 ###############################################################################
 
 preprocessing:
   origin_method: "min_dist_solve"
+  bounds_method: "include_corners"
 
 sampling:
   N_coarse: 64

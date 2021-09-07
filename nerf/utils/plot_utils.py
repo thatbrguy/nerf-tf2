@@ -83,18 +83,13 @@ def plot_scene(c2w_matrices, plot_eye_frustums = True, plot_cam_axes = True):
             ax.plot3D(axes[2, :, 0], axes[2, :, 1], axes[2, :, 2], color = 'blue')
             ax.scatter3D(axes[0,0,0], axes[0,0,1], axes[0,0,2], s = 1.0, c = "black")
 
+    ax.scatter3D([0], [0], [0], s = 1.0, c = "black")
+    ax.set_xlabel('X-Axis')
+    ax.set_ylabel('Y-Axis')
+    ax.set_zlabel('Z-Axis')
+                
     plt.show()
 
 if __name__ == "__main__":
 
-    np.set_printoptions(precision = 4, suppress = True)
-    path = "/path/to/poses_bounds.npy" ## placeholder path for now
-    arr = np.load(path)
-
-    poses = arr[:, :15].reshape(-1, 3, 5)[:, :3, :4]
-    last_row = np.tile([0, 0, 0, 1], (poses.shape[0], 1, 1))
-
-    c2w_matrices = np.concatenate([poses, last_row], axis = 1)
-
-    plot_scene(c2w_matrices, plot_eye_frustums = True, plot_cam_axes = False)
-
+    # plot_scene(c2w_matrices, plot_eye_frustums = True, plot_cam_axes = False)

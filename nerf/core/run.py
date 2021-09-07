@@ -74,18 +74,10 @@ def setup_model_and_callbacks(params, num_imgs, img_HW):
 
     return nerf, callbacks
 
-if __name__ ==  "__main__":
-
-    # Setting numpy print options for ease of debugging.
-    np.set_printoptions(precision = 5, suppress = True)
-    
-    # Setting up logger.
-    logging.basicConfig(
-        format='[%(asctime)s]:[%(levelname)s]:[%(name)s]: %(message)s', 
-        datefmt='%m/%d/%Y %I:%M:%S %p', level=logging.DEBUG
-    )
-    logger = logging.getLogger()
-    
+def launch():
+    """
+    TODO: Docstring
+    """
     # Setting up params
     path = "./nerf/params/config.yaml"
     params = load_params(path)
@@ -112,7 +104,6 @@ if __name__ ==  "__main__":
     
     # Setup model and callbacks.
     nerf, callbacks = setup_model_and_callbacks(params, num_imgs, img_HW)
-    import pdb; pdb.set_trace()  # breakpoint 70716b00 //
 
     nerf.fit(
         x = train_dataset, epochs = num_epochs,
@@ -122,3 +113,17 @@ if __name__ ==  "__main__":
         steps_per_epoch = steps_per_epoch,
         initial_epoch = params.system.initial_epoch,
     )
+
+if __name__ ==  "__main__":
+
+    # Setting numpy print options for ease of debugging.
+    np.set_printoptions(precision = 5, suppress = True)
+    
+    # Setting up logger.
+    logging.basicConfig(
+        format='[%(asctime)s]:[%(levelname)s]:[%(name)s]: %(message)s', 
+        datefmt='%m/%d/%Y %I:%M:%S %p', level=logging.DEBUG
+    )
+    logger = logging.getLogger()
+
+    launch()

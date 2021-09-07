@@ -279,6 +279,46 @@ def reconfigure_scene_scale(old_poses, old_bounds, scene_scale_factor):
 
     return new_poses, new_bounds
 
+def scale_imgs_and_intrinsics(old_imgs, old_intrinsics, scale_factor):
+    """
+    Scales images and intrinsics by the given scaling factor.
+
+    TODO: Elaborate.
+    """
+    if scale_factor is None:
+        new_imgs = old_imgs
+        new_intrinsics = old_intrinsics
+
+    elif scale_factor is not None:
+        sx, sy = scale_factor, scale_factor
+        new_imgs, new_intrinsics = [], []
+
+        ## TODO: Maybe add arg to choose interpolation?
+        for idx in range(len(old_imgs)):
+
+            img = cv2.cvtColor(old_imgs[idx].copy(), cv2.COLOR_RGB2BGR)
+            resized = cv2.resize(
+                img, dsize = None, fx = sx, fy = sy, 
+                interpolation = cv2.INTER_AREA,
+            )
+            new_img = cv2.cvtColor(resized, cv2.COLOR_BGR2RGB)
+
+            temp = old_intrinsics[idx].copy()
+            temp[0, 0], temp[0, 2] = temp[0, 0] * sx, temp[0, 2] * sx
+            temp[1, 1], temp[1, 2] = temp[1, 1] * sy, temp[1, 2] * sy
+            new_intrinsic = temp
+
+            ## TODO: Maybe add validate intrinsic here for sanity?
+            new_imgs.append(new_img)
+            new_intrinsics.append(new_intrinsic)
+
+        new_intrinsics = np.array(new_intrinsics)
+
+    else:
+        raise ValueError("Invalid setting of scale_factor.")
+
+    return new_imgs, new_intrinsics
+
 def get_corner_ray_points(poses, bounds, intrinsics, height, width):
     """
     TODO: Elaborate
@@ -334,65 +374,6 @@ def get_corner_ray_points(poses, bounds, intrinsics, height, width):
     output = output.reshape(-1, 3)
 
     return output
-
-def reconfigure_poses_and_bounds(
-        old_poses, old_bounds, origin_method, 
-        bounds_method, intrinsics = None
-    ):
-    """
-    Given N pose matrices (old_poses), each of which can transform a 
-    point from a camera coordinate system to an arbitrary world 
-    coordinate system (W1), this function does the following operations:
-        
-        1. Configures a new world coordinate system (W2) based based on 
-        the given pose matrices (old_poses).
-
-        2. Returns N new pose matrices (new_poses), each of which can
-        transform a point from a camera coordinate system to the new
-        world coordinate system (W2).
-
-    Args:
-        old_poses       :   A NumPy array of shape (N, 4, 4)
-        old_bounds      :   A NumPy array of shape (N, 2)
-        origin_method   :   A string which is either "average", 
-                            "min_dist_solve" or "min_dist_opt"
-        bounds_method   :   A string which is either "central_ray" 
-                            or "include_corners"
-        intrinsics      :   If bounds_method is "include_corners", a NumPy 
-                            array of shape (N, 3, 3) must be provided. 
-                            Else, None can be provided.
-
-    Returns:
-        new_poses       :   A NumPy array of shape (N, 4, 4)
-    """
-    if bounds_method == "include_corners":
-        assert intrinsics is not None
-
-    # Shape of origin --> (3,)
-    origin = compute_new_world_origin(old_poses, method = origin_method)
-    # Shape of x_basis, y_basis and z_basis --> (3,)
-    x_basis, y_basis, z_basis = compute_new_world_basis(old_poses)
-
-    W2_to_W1_3x4 = np.stack([x_basis, y_basis, z_basis, origin], axis = 1)
-    W2_to_W1_pose = make_4x4(W2_to_W1_3x4)
-    W1_to_W2_pose = np.linalg.inv(W2_to_W1_pose)
-
-    # The matrix old_poses[i] would take a point from the i-th camera 
-    # coordinate system to the old world (W1) coordinate system. The 
-    # matrix W1_to_W2_pose would take a point from the old world 
-    # coordinate system (W1) to the new world coordinate system (W2). 
-    # Hence, the matrix new_poses[i] would take a point from the i-th 
-    # camera coordinate system to the new world world coordinate 
-    # system (W2). 
-    temp_poses = W1_to_W2_pose @ old_poses
-
-    # Scaling poses and bounds so that ... (TODO: Elaborate).
-    new_poses, new_bounds = scale_poses_and_bounds(
-        old_poses = temp_poses, old_bounds = old_bounds, 
-        method = bounds_method, intrinsics = intrinsics 
-    )
-
-    return new_poses, new_bounds
 
 def optimize_min_dist_point(poses):
     """
@@ -557,91 +538,3 @@ def compute_new_world_basis(poses):
     x_basis = normalize(x_basis)
 
     return x_basis, y_basis, z_basis
-
-def scale_poses_and_bounds(old_poses, old_bounds, bounds_method, intrinsics = None):
-    """
-    TODO: Elaborate.
-    
-    Rough idea is that we need to move from the W2 coordinate system to 
-    the SW2 coordinate system. In this coordinate system, the XYZ points 
-    along the central ray for all the cameras will always lie within [-1, 1]. 
-
-    TODO: Should this function ensure this only for the central ray and add 
-    extra scaling, or consider the rays along each camera frustum as well?
-    """
-    assert method in ["central_ray", "frustum"]
-
-    if method == "frustum":
-        assert intrinsics is not None
-        raise NotImplementedError("TODO: Need to implement.")
-
-    elif method == "central_ray":
-        rays_o = old_poses[:, :3, 3]
-        rays_d = old_poses[:, :3, 2]
-        far = old_bounds[:, 1]
-
-        # We want XYZ coordinates of points_far and the origin to be 
-        # within the range [-1, 1]
-        points_far = rays_o + far[:, None] * rays_d
-        points = np.concatenate([rays_o, points_far], axis = 0)
-
-    ## TODO: Explain!
-    projs = np.abs(points).max(axis = 0)
-    largest_proj = projs.max()
-    scale_factor = 1 / largest_proj
-
-    if scale_factor >= 1:
-        # No scaling required for this case.
-        new_poses = old_poses
-        new_bounds = old_bounds
-
-    elif scale_factor < 1:
-        # Poses and bounds are scaled in this case.
-        ## TODO: Check if scaling logic is correct! Also implement 
-        ## additional scaling (to scale more if needed).
-        new_poses = old_poses.copy()
-        new_poses[:, :3, 3] = new_poses[:, :3, 3] * scale_factor
-        
-        new_bounds = old_bounds.copy() * scale_factor
-
-    return new_poses, new_bounds
-
-def scale_imgs_and_intrinsics(old_imgs, old_intrinsics, scale_factor):
-    """
-    Scales images and intrinsics by the given scaling factor.
-
-    TODO: Elaborate.
-    """
-    if scale_factor is None:
-        new_imgs = old_imgs
-        new_intrinsics = old_intrinsics
-
-    elif scale_factor is not None:
-        sx, sy = scale_factor, scale_factor
-        new_imgs, new_intrinsics = [], []
-
-        ## TODO: Maybe add arg to choose interpolation?
-        for idx in range(len(old_imgs)):
-
-            img = cv2.cvtColor(old_imgs[idx].copy(), cv2.COLOR_RGB2BGR)
-            resized = cv2.resize(
-                img, dsize = None, fx = sx, fy = sy, 
-                interpolation = cv2.INTER_AREA,
-            )
-            new_img = cv2.cvtColor(resized, cv2.COLOR_BGR2RGB)
-
-            temp = old_intrinsics[idx].copy()
-            temp[0, 0], temp[0, 2] = temp[0, 0] * sx, temp[0, 2] * sx
-            temp[1, 1], temp[1, 2] = temp[1, 1] * sy, temp[1, 2] * sy
-            new_intrinsic = temp
-
-            ## TODO: Maybe add validate intrinsic here for sanity?
-            new_imgs.append(new_img)
-            new_intrinsics.append(new_intrinsic)
-
-        new_intrinsics = np.array(new_intrinsics)
-
-    else:
-        raise ValueError("Invalid setting of scale_factor.")
-
-    return new_imgs, new_intrinsics

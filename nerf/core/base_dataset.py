@@ -243,6 +243,7 @@ class Dataset(ABC):
             rays_o = rays_o, rays_d = rays_d, near = near, 
             far = far, rgb = rgb,
         )
+        import pdb; pdb.set_trace()  # breakpoint 0f4b98b3 //
 
         return data
 

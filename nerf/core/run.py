@@ -107,8 +107,8 @@ def launch(logger):
     nerf, callbacks = setup_model_and_callbacks(params, num_imgs, img_HW)
 
     nerf.fit(
-        x = train_dataset, epochs = num_epochs,
-        validation_data = val_dataset,
+        x = tf_datasets["train"], epochs = num_epochs,
+        validation_data = tf_datasets["val"],
         validation_freq = params.system.validation_freq,
         callbacks = callbacks,
         steps_per_epoch = steps_per_epoch,

@@ -118,6 +118,7 @@ class Dataset(ABC):
         W2_to_W1_transform = pose_utils.calculate_new_world_pose(
             poses = all_poses, 
             origin_method = self.params.preprocessing.origin_method,
+            basis_method = self.params.preprocessing.basis_method,
         )
 
         for split in self.splits:

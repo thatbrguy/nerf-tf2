@@ -173,7 +173,7 @@ def batched_transform_line_segments(RT_matrices, lines):
 
     return output
 
-def calculate_new_world_pose(poses, origin_method):
+def calculate_new_world_pose(poses, origin_method, basis_method):
     """
     Given N pose matrices (poses), each of which can transform a 
     point from a camera coordinate system to an arbitrary world 
@@ -186,14 +186,26 @@ def calculate_new_world_pose(poses, origin_method):
         poses                   :   A NumPy array of shape (N, 4, 4)
         origin_method           :   A string which is either "average", 
                                     "min_dist_solve" or "min_dist_opt"
+        basis_method            :   A string which is either "identity" 
+                                    or "compute"
 
     Returns:
         W2_to_W1_transform       :   A NumPy array of shape (4, 4)
     """
     # Shape of origin: (3,)
     origin = compute_new_world_origin(poses, method = origin_method)
+    
     # Shape of x_basis, y_basis and z_basis: (3,)
-    x_basis, y_basis, z_basis = compute_new_world_basis(poses)
+    if basis_method == "identity":
+        x_basis = np.array([1.0, 0.0, 0.0])
+        y_basis = np.array([0.0, 1.0, 0.0])
+        z_basis = np.array([0.0, 0.0, 1.0])
+
+    elif basis_method == "compute":
+        x_basis, y_basis, z_basis = compute_new_world_basis(poses)
+
+    else:
+        raise ValueError(f"Invalid basis_method: {basis_method}")
 
     W2_to_W1_3x4 = np.stack([x_basis, y_basis, z_basis, origin], axis = 1)
     W2_to_W1_transform = make_4x4(W2_to_W1_3x4)

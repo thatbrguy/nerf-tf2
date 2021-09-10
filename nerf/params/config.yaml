@@ -87,6 +87,7 @@ custom_dataset:
 preprocessing:
   origin_method: "min_dist_solve"
   bounds_method: "include_corners"
+  basis_method: "identity"
 
 sampling:
   N_coarse: 64

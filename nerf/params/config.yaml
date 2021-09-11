@@ -22,12 +22,12 @@ system:
 
 model:
   save:
-    save_dir: "./models"
+    save_dir: "/content/drive/MyDrive/NerfExpts/save_dir"
     save_optimizer_state: True
   
   load:
-    load_dir: "./trained_models"
-    load_tag: "000999_21.12"
+    load_dir: ""
+    load_tag: ""
     set_weights: False
     skip_optimizer: False
 

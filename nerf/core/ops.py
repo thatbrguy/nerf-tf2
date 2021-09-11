@@ -3,6 +3,8 @@ import logging
 import numpy as np
 import tensorflow as tf
 
+from copy import deepcopy
+from collections import defaultdict
 from tensorflow.keras.metrics import Metric
 from tensorflow.keras.callbacks import Callback
 
@@ -76,10 +78,15 @@ class LogValImages(Callback):
         if len(self.model.val_cache) > 0:
             imgs = self.log_images(epoch, self.model.val_cache)
 
-class CustomModelSaver(Callback):
+class CustomSaver(Callback):
     """
-    This custom callback is used to save the models after 
-    a validation run.
+    This custom callback is used to save a few items after each 
+    validation run is complete. The items that are saved after 
+    each validation run has been completed are:
+
+        1. The weights of the coarse and fine models 
+        2. The weights of the optimizer 
+        3. The collected logs
     """
     def __init__(self, params, save_best_only = False):
         """
@@ -88,6 +95,7 @@ class CustomModelSaver(Callback):
         super().__init__()
         self.params = params
         self.best_score = -1
+        self.collected_logs = defaultdict(list)
         self.save_best_only = save_best_only
 
         self.save_opt_state = self.params.model.save.save_optimizer_state
@@ -107,6 +115,13 @@ class CustomModelSaver(Callback):
         items["names"] = np.array(variable_names)
         np.savez(path, **items)
 
+    def _save_logs(self, path):
+        """
+        Saves the collected logs to a .npz file.
+        """
+        to_save = deepcopy(self.collected_logs)
+        np.savez(path, **to_save)
+
     def _save_everything(self, epoch, val_psnr_score):
         """
         Saves the model weights
@@ -115,22 +130,29 @@ class CustomModelSaver(Callback):
         name = f"{epoch:06d}_{val_psnr_score:.2f}"
         coarse_model_name = f"{name}_coarse.h5"
         fine_model_name = f"{name}_fine.h5"
+        logs_name = f"{name}_logs.npz"
         
         coarse_model_path = os.path.join(self.root, coarse_model_name)
         fine_model_path = os.path.join(self.root, fine_model_name)
+        logs_path = os.path.join(self.root, logs_name)
 
         self.model.coarse_model.save_weights(filepath = coarse_model_path)
         self.model.fine_model.save_weights(filepath = fine_model_path)
+        self._save_logs(logs_path)
 
         if self.save_opt_state:
             opt_save_path =  os.path.join(self.root, f"{name}_optimizer.npz")
             opt_variables = self.model.optimizer.variables()
             self._save_weights(opt_save_path, opt_variables)
 
-    def on_epoch_end(self, epoch, logs = None):
+    def on_epoch_end(self, epoch, logs):
         """
         TODO: Docstring.
         """
+        # Updating self.collected_logs
+        self.collected_logs["train_epoch_idxs"].append(epoch)
+        self.collected_logs["train_psnr_metric"].append(logs["psnr_metric"])
+        
         try:
             val_psnr_score = logs["val_psnr_metric"]
 
@@ -139,12 +161,21 @@ class CustomModelSaver(Callback):
                 f"val_psnr_metric not found for epoch {epoch}. Skipping."
             )
             return
+
+        self.collected_logs["val_epoch_idxs"].append(epoch)
+        self.collected_logs["val_psnr_metric"].append(val_psnr_score)
         
         if self.save_best_only:
             if val_psnr_score > self.best_score:
                 logger.debug(f"Saving model weights for epoch {epoch}.")
-                self._save(epoch, val_psnr_score)
+                self._save_everything(epoch, val_psnr_score)
                 self.best_score = val_psnr_score
+            else:
+                logger.debug(
+                    f"Not saving anything for {epoch} since "
+                    "val_psnr_score <= self.best_score and "
+                    "since self.save_best_only is True"
+                )
 
         else:
             logger.debug(f"Saving model weights for epoch {epoch}.")

@@ -20,6 +20,12 @@ class NeRF(Model):
         super().__init__()
         self.params = params
         self.white_bg = self.params.system.white_bg
+
+        assert not self.white_bg, (
+            "white_bg must set to False. Setting white_bg "
+            "to True is not supported for now as its implementation "
+            "is not fully complete yet."
+        )
         
         self.val_cache = []
         self.mse_loss = tf.keras.losses.MeanSquaredError()

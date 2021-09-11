@@ -35,12 +35,12 @@ def setup_model_and_callbacks(params, num_imgs, img_HW):
     Sets up the NeRF model and the list of callbacks.
     """
     ## Setting up callbacks.
-    model_ckpt = ops.CustomModelSaver(params = params, save_best_only = False)
+    saver = ops.CustomSaver(params = params, save_best_only = False)
     tensorboard = TensorBoard(
         log_dir = params.system.tensorboard_dir, 
         update_freq = "epoch"
     )
-    callbacks = [model_ckpt, tensorboard]
+    callbacks = [saver, tensorboard]
     
     # Can use ops.LogValImages only if eager mode is enabled.
     if params.system.run_eagerly and params.system.log_images:
@@ -53,7 +53,7 @@ def setup_model_and_callbacks(params, num_imgs, img_HW):
     ## Setting up the optimizer and LR scheduler.
     lr_schedule = ExponentialDecay(
         initial_learning_rate = 5e-4,
-        decay_steps = 200000,
+        decay_steps = 500000,
         decay_rate = 0.1,
     )
     optimizer = Adam(learning_rate = lr_schedule)

@@ -4,10 +4,14 @@
 
 system:
   tf_seed: 11
-  white_bg: False
+
+  # NOTE: white_bg must not be set to True. Setting white_bg to True not 
+  # supported for now as its implementation is not completed.
+  white_bg: False 
+  
   run_eagerly: False
   log_images: False
-  steps_per_epoch: 32
+  steps_per_epoch: 128
   validation_freq: 100
   tensorboard_dir: "./logs"
   initial_epoch: 0
@@ -32,13 +36,13 @@ model:
 ###############################################################################
 
 data:
-  batch_size: 4096
-  repeat_count: 20
+  batch_size: 1024
+  repeat_count: 9
   
   # scale_imgs can either be set to null or a float value. If scale_imgs 
   # is null, no scaling is applied. If scale_imgs is a float value, then 
   # the images and the intrinsic matrices are scaled.
-  scale_imgs: 0.5
+  scale_imgs: null
 
   scene_scale_mul: 0.75
   scene_scale_add: 0.0
@@ -50,7 +54,7 @@ data:
 
   advance_train_loader:
     enable: False
-    skip_count: 32000 # epochs * steps_per_epoch
+    skip_count: 0 # epochs * steps_per_epoch
 
 ###############################################################################
 ## D1. Blender Dataset Parameters (Only required if using BlenderDataset)

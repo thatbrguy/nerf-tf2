@@ -127,4 +127,7 @@ if __name__ ==  "__main__":
     )
     logger = logging.getLogger()
 
+    PIL_logger = logging.getLogger("PIL")
+    PIL_logger.setLevel(logging.WARNING)
+
     launch(logger)

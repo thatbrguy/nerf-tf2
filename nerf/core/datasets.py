@@ -2,6 +2,7 @@ import os
 import cv2
 import json
 import yaml
+import imageio
 import logging
 import numpy as np
 import pandas as pd
@@ -19,6 +20,7 @@ class BlenderDataset(Dataset):
     def __init__(self, params):
         super().__init__(params)
         self.params = params
+        self.white_bg = self.params.system.white_bg
         self.data_params = self.params.data
         
         self.blender_dataset_params = self.params.blender_dataset
@@ -170,7 +172,16 @@ class BlenderDataset(Dataset):
         for path in self.img_paths[split]:
             name = os.path.basename(path).split(".")[0]
 
-            img = cv2.cvtColor(cv2.imread(path, 1), cv2.COLOR_BGR2RGB)
+            if self.white_bg:
+                temp = imageio.imread(path, "PNG-PIL").astype(np.float32)
+                rgb = temp[..., :3]
+                alpha = temp[..., 3] / 255.0
+                img = rgb * alpha[..., None] + 255.0 * (1 - alpha[..., None])
+                img = img.astype(np.uint8)
+                
+            else:
+                img = cv2.cvtColor(cv2.imread(path, 1), cv2.COLOR_BGR2RGB)
+
             opengl_pose = self.metadata[split][name]["transform_matrix"]
             classic_cv_pose = self._opengl_to_classic_cv(opengl_pose)
 
@@ -256,7 +267,7 @@ class BlenderDataset(Dataset):
 #     def __init__(self, params):
 #         super().__init__(params)
 #         self.params = params
-#         self.dataset_params = self.params.data.custom_dataset
+#         self.dataset_params = self.params.custom_dataset
 
 #     @classmethod
 #     def camera_model_params_to_intrinsics(cls, camera_model, model_params):

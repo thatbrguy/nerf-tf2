@@ -71,10 +71,19 @@ def normalize(vec):
 
 def rotate_vectors(mat, vectors):
     """
-    TODO: Elaborate.
+    Rotates the given 3D vectors using the rotation matrix 
+    extracted from mat.
 
-    If trasform is (3, 4) or (4, 4), then mat[:3, :3] must 
-    contain the rotation matrix. TODO: Cleanup.
+    Args:
+        mat     :   A NumPy array of shape (3, 3) or (3, 4) 
+                    or (4, 4). In each case mat[:3, :3] must 
+                    contain the rotation matrix.
+        vectors :   A NumPy array of shape (N, 3). Here, N is 
+                    the number of vectors.
+
+    Returns:
+        output  :   A NumPy array of shape (N, 3). Here, N is 
+                    the number of vectors.
     """
     check_1 = mat.shape == (3, 3)
     check_2 = mat.shape == (3, 4)
@@ -93,9 +102,19 @@ def rotate_vectors(mat, vectors):
 
 def transform_points(RT, points):
     """
-    Applies the transformation to the given points.
+    Applies an SE3 transformation to the points.
 
-    TODO: Elaborate.
+    Args:
+        RT      :   A NumPy array of shape (4, 4) or (3, 4). 
+                    RT[:3, :3] should be rotation matrix and 
+                    RT[:3,  3] should be a translation vector.
+        points  :   A NumPy array of shape (N, 3). Here, N is 
+                    the number of points.
+
+    Returns:
+        output  :   A NumPy array of shape (N, 3) with the 
+                    transformed points. Here, N is the number 
+                    of points.
     """
     assert (RT.shape == (4, 4)) or (RT.shape == (3, 4)), (
         "Shape of the RT matrix is invalid. Must be "
@@ -118,8 +137,7 @@ def transform_points(RT, points):
 
 def batched_transform_points(RT_matrices, points):
     """
-    Applies all the RT_matrices on the given points.
-
+    TODO: Elaborate.
     TODO: Support (M, 3, 4) for RT_matrices also.
     """
     assert RT_matrices.shape[1:] == (4, 4), (
@@ -138,12 +156,23 @@ def batched_transform_points(RT_matrices, points):
 def transform_line_segments(RT, lines):
     """
     Transforms line segments.
+
+    The array lines is a collection of line segments with lines[i] 
+    containing the i-th line segment. Each line segment is comprised 
+    of its two end points. This function essentially applies an SE3 
+    transformation to the points of each line segment.
     
     Args:
-        RT      :   TODO, Explain.
-        lines   :   NumPy array of shape (N, 2, 3).
+        RT          :   A NumPy array of shape (4, 4) or (3, 4). 
+                        RT[:3, :3] should be rotation matrix and 
+                        RT[:3,  3] should be a translation vector.
+        lines       :   A NumPy array of shape (N, 2, 3). Here, N is 
+                        the number of line segments.
 
-    TODO: Elaborate
+    Returns:
+        output      :   A NumPy array of shape (N, 3) with the 
+                        transformed line segments. Here, N is the 
+                        number of line segments.
     """
     assert (lines.shape[1] == 2) and (lines.shape[2] == 3)
     N = lines.shape[0]
@@ -156,13 +185,11 @@ def transform_line_segments(RT, lines):
 
 def batched_transform_line_segments(RT_matrices, lines):
     """
-    Transforms line segments.
+    TODO: Elaborate.
     
     Args:
         RT_matrices :   TODO, Explain.
         lines       :   NumPy array of shape (N, 2, 3).
-
-    TODO: Elaborate
     """
     assert (lines.shape[1] == 2) and (lines.shape[2] == 3)
     M, N = RT_matrices.shape[0], lines.shape[0]
@@ -218,7 +245,27 @@ def calculate_scene_scale(
         intrinsics = None, height = None, width = None
     ):
     """
-    TODO: Docstring
+    TODO: Complete this!
+
+    Calculates a scale factor for the 360 inward facing 
+    scene so that the coordinates of the XYZ points that 
+    are to be given to the neural networks can lie within 
+    the range [-1, 1].
+
+    We know the near and far bounds for each camera. We also know 
+    that our scene is a 360-degree inward facing scene. Using 
+    this information, we can attempt to bound the scene such that 
+    the XYZ coordinates of the points that were are interested in 
+    are within the range [-1, 1]
+
+    For the 360 degree inward facing scene, we 
+    know the near and far bounds for each camera. The rays originating from each camera is also bounded.
+
+    One way to ensure this constraint is to 
+    scale the coordinate system of the scene such that the XYZ 
+    points which are given to the model will be between [-1, 1]
+
+    One can also think of this as moving to another coordinate system where the XYZ points which are given to the model
     """
     rays_o = poses[:, :3, 3]
     rays_d = poses[:, :3, 2]

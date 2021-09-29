@@ -4,11 +4,7 @@
 
 system:
   tf_seed: 11
-
-  # NOTE: white_bg must not be set to True. Setting white_bg to True not 
-  # supported for now as its implementation is not completed.
-  white_bg: False 
-  
+  white_bg: True 
   run_eagerly: False
   log_images: False
   steps_per_epoch: 128
@@ -80,7 +76,15 @@ blender_dataset:
 ###############################################################################
 
 custom_dataset:
-  full:
+  train:
+    img_root_dir: ../data/images
+    pose_info_path: ../data/pose_info.csv
+
+  val:
+    img_root_dir: ../data/images
+    pose_info_path: ../data/pose_info.csv
+
+  test:
     img_root_dir: ../data/images
     pose_info_path: ../data/pose_info.csv
 

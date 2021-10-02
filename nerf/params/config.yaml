@@ -7,7 +7,7 @@ system:
   white_bg: True 
   run_eagerly: False
   log_images: False
-  steps_per_epoch: 128
+  steps_per_epoch: 32
   validation_freq: 100
   tensorboard_dir: "./logs"
   initial_epoch: 0
@@ -32,7 +32,7 @@ model:
 ###############################################################################
 
 data:
-  batch_size: 1024
+  batch_size: 4096
   repeat_count: 9
   
   # scale_imgs can either be set to null or a float value. If scale_imgs 
@@ -101,4 +101,4 @@ sampling:
   N_coarse: 64
   N_fine: 128
   perturb: True
-  lin_inv_depth: True
+  lin_inv_depth: False

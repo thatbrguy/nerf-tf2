@@ -4,9 +4,10 @@ import pandas as pd
 
 import argparse
 
-def split_dataset(
+def split_custom_dataset(
         imgs_dir, pose_info_path, out_path,
         val_frac = 0, test_frac = 0, shuffle = False,
+        seed = None,
     ):
     """
     Splits the custom dataset into train, val and test splits.
@@ -26,9 +27,11 @@ def split_dataset(
         shuffle         :   A boolean value which indicates whether 
                             the pose info DataFrame has to be shuffled 
                             before splitting.
+        seed            :   The seed that is passed to random_state 
+                            argument of df.sample if shuffle is True.
     """
-    assert val_frac >= 0 and val_frac < 1
-    assert test_frac >= 0 and test_frac < 1
+    assert val_frac > 0 and val_frac < 1
+    assert test_frac > 0 and test_frac < 1
     train_frac = 1 - (val_frac + test_frac)
 
     df = pd.read_csv(pose_info_path)
@@ -39,7 +42,7 @@ def split_dataset(
     num_val = count - (num_train + num_test)
 
     if shuffle:
-        df = df.sample(frac = 1).reset_index(drop = True)
+        df = df.sample(frac = 1, random_state = seed).reset_index(drop = True)
 
     train_df = df.iloc[:num_train]
     val_df = df.iloc[num_train : (num_train + num_val)]
@@ -101,6 +104,7 @@ def get_args():
     parser.add_argument("--val_frac", required=True, type=float)
     parser.add_argument("--test_frac", required=True, type=float)
     parser.add_argument("--shuffle", required=True, action="store_true")
+    parser.add_argument("--seed", type=str)
 
     args = parser.parse_args()
 
@@ -110,11 +114,12 @@ if __name__ == '__main__':
     
     args = get_args()
 
-    split_dataset(
+    split_custom_dataset(
         imgs_dir = args.imgs_dir,
         pose_info_path = args.pose_info_path,
         out_path = args.out_path,
         val_frac = args.val_frac,
         test_frac =  args.test_frac,
         shuffle =  args.shuffle,
+        seed = args.seed,
     )

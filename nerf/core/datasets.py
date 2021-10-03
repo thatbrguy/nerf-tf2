@@ -240,202 +240,200 @@ class BlenderDataset(Dataset):
 
         return tf_datasets, num_imgs, img_HW
 
-# class CustomDataset(Dataset):
-#     """
-#     Class for handling a custom dataset.
+class CustomDataset(Dataset):
+    """
+    Class for handling a custom dataset.
+    """
+    ## Defining some camera model related class attributes which will 
+    ## be useful for some functions.
 
-#     NOTE: CustomDataset is currently not supported! Please do not 
-#     use CustomDataset until further notice.
-#     """
-#     ## Defining some camera model related class attributes which will 
-#     ## be useful for some functions.
-
-#     # Camera models are as defined in
-#     # https://github.com/colmap/colmap/blob/master/src/base/camera_models.h
-#     SUPPORTED_CAMERA_MODELS = frozenset([
-#         "SIMPLE_PINHOLE", "PINHOLE", "SIMPLE_RADIAL", 
-#         "RADIAL", "OPENCV", "FULL_OPENCV",
-#     ])
+    # Camera models are as defined in
+    # https://github.com/colmap/colmap/blob/master/src/base/camera_models.h
+    SUPPORTED_CAMERA_MODELS = frozenset([
+        "SIMPLE_PINHOLE", "PINHOLE", "SIMPLE_RADIAL", 
+        "RADIAL", "OPENCV", "FULL_OPENCV",
+    ])
     
-#     # Camera models which only have one focal length (f) in their 
-#     # model parameters (in this case the codebase will assume fx == fy == f).
-#     SAME_FOCAL = frozenset(["SIMPLE_PINHOLE", "SIMPLE_RADIAL", "RADIAL"])
+    # Camera models which only have one focal length (f) in their 
+    # model parameters (in this case the codebase will assume fx == fy == f).
+    SAME_FOCAL = frozenset(["SIMPLE_PINHOLE", "SIMPLE_RADIAL", "RADIAL"])
     
-#     # Camera models which provide both fx and fy.
-#     DIFF_FOCAL = frozenset(["PINHOLE", "OPENCV", "FULL_OPENCV"])
+    # Camera models which provide both fx and fy.
+    DIFF_FOCAL = frozenset(["PINHOLE", "OPENCV", "FULL_OPENCV"])
 
-#     def __init__(self, params):
-#         super().__init__(params)
-#         self.params = params
-#         self.dataset_params = self.params.custom_dataset
+    def __init__(self, params):
+        super().__init__(params)
+        self.params = params
+        self.custom_dataset_params = self.params.custom_dataset
+        self._configure_dataset()
 
-#     @classmethod
-#     def camera_model_params_to_intrinsics(cls, camera_model, model_params):
-#         """
-#         Given camera model name and camera model params, this function 
-#         creates and returns an intrinsic matrix.
+    @classmethod
+    def camera_model_params_to_intrinsics(cls, camera_model, model_params):
+        """
+        Given camera model name and camera model params, this function 
+        creates and returns an intrinsic matrix.
 
-#         Camera models are used as defined in
-#         https://github.com/colmap/colmap/blob/master/src/base/camera_models.h
+        Camera models are used as defined in
+        https://github.com/colmap/colmap/blob/master/src/base/camera_models.h
 
-#         The distortion paramters are not used since this function is only 
-#         interested in calculating the intrinsic matrix. Only the focal length 
-#         values and principal offset values are needed to create the intrinsic
-#         matrix.
+        The distortion paramters are not used since this function is only 
+        interested in calculating the intrinsic matrix. Only the focal length 
+        values and principal offset values are needed to create the intrinsic
+        matrix.
 
-#         The created intrinsic matrix is of the form:
+        The created intrinsic matrix is of the form:
 
-#         intrinsic = np.array([
-#             [fx, 0., cx],
-#             [0., fy, cy],
-#             [0., 0., 1.],
-#         ], dtype = np.float64)
+        intrinsic = np.array([
+            [fx, 0., cx],
+            [0., fy, cy],
+            [0., 0., 1.],
+        ], dtype = np.float64)
 
-#         TODO: Args and Returns.
-#         """
-#         logger.warn(
-#             "CustomDataset is currently not supported! Please "
-#             "do not use CustomDataset until further notice."
-#         )
-#         assert camera_model in cls.SUPPORTED_CAMERA_MODELS, \
-#             f"Camera model {camera_model} is not supported."
+        TODO: Args and Returns.
+        """
+        assert camera_model in cls.SUPPORTED_CAMERA_MODELS, \
+            f"Camera model {camera_model} is not supported."
 
-#         if camera_model in cls.SAME_FOCAL:
-#             f, cx, cy = model_params[:3]
-#             fx, fy = f, f
+        if camera_model in cls.SAME_FOCAL:
+            f, cx, cy = model_params[:3]
+            fx, fy = f, f
 
-#         elif camera_model in cls.DIFF_FOCAL:
-#             fx, fy, cx, cy = model_params[:4]
+        elif camera_model in cls.DIFF_FOCAL:
+            fx, fy, cx, cy = model_params[:4]
 
-#         else:
-#             raise RuntimeError(
-#                 "This should not happen. Please check if "
-#                 "SUPPORTED_CAMERA_MODELS, SAME_FOCAL and DIFF_FOCAL "
-#                 "class attributes of the class CustomDataset are "
-#                 "configured correctly."
-#             )
+        else:
+            raise RuntimeError(
+                "This should not happen. Please check if "
+                "SUPPORTED_CAMERA_MODELS, SAME_FOCAL and DIFF_FOCAL "
+                "class attributes of the class CustomDataset are "
+                "configured correctly."
+            )
 
-#         intrinsic = np.array([
-#             [fx, 0., cx],
-#             [0., fy, cy],
-#             [0., 0., 1.],
-#         ], dtype = np.float64)
+        intrinsic = np.array([
+            [fx, 0., cx],
+            [0., fy, cy],
+            [0., 0., 1.],
+        ], dtype = np.float64)
 
-#         return intrinsic
-    
-#     def _load_full_dataset(self):
-#         """
-#         TODO: Elaborate.
+        return intrinsic
 
-#         Loads the images, poses, bounds, intrinsics to memory.
+    def _configure_dataset(self):
+        """
+        This function loads the metadata and sets up the paths to the images.
+        """
+        splits = ["train", "test", "val"]
+        self.metadata = dict()
+        shuffle_params = self.custom_dataset_params.shuffle
         
-#         poses are camera to world transform (RT) matrices.
+        for split in splits:
+            split_params = self.custom_dataset_params[split]
+            csv_path = split_params.pose_info_path
+            df = pd.read_csv(csv_path)
 
-#         N --> Number of images in the dataset. Column 0 in 
-#         bounds is near, column 1 in bounds is far.
+            # Shuffling the DataFrame if shuffle is enabled.
+            if split in shuffle_params.enable:
+                df = df.sample(frac = 1, random_state = shuffle_params.seed)
+                df = df.reset_index(drop = True)
 
-#         Returns:
-#             imgs        :   A list of N NumPy arrays. Each element
-#                             of the list is a NumPy array with shape
-#                             (H_i, W_i, 3) that represents an image.
-#                             Each image can have different height
-#                             and width.
-#             poses       :   A NumPy array of shape (N, 4, 4)
-#             bounds      :   A NumPy array of shape (N, 2)
-#             intrinsics  :   A NumPy array of shape (N, 3, 3)
-#         """
-#         logger.warn(
-#             "CustomDataset is currently not supported! Please "
-#             "do not use CustomDataset until further notice."
-#         )
-#         logger.debug("Loading custom dataset.")
-#         imgs, poses, bounds, intrinsics = [], [], [], []
+            if split in ("test", "val"):
+                frac, num = split_params.frac, split_params.num
 
-#         csv_path = self.dataset_params.pose_info_path
-#         img_root = self.dataset_params.img_root_dir
-#         df = pd.read_csv(csv_path)
+                if (frac is not None) and (num is None):
+                    assert (type(frac) is float) and (frac > 0) and (frac < 1)
+                    num_rows = int(len(df) * frac)
 
-#         for idx, row in enumerate(df.itertuples()):
-#             filename = row.image_name
-#             path = os.path.join(img_root, filename)
+                    assert num_rows <= len(df)
+                    df = df.iloc[:num_rows]
 
-#             img = cv2.imread(path, 1)
-#             img = cv2.cvtColor(img, cv2.COLOR_BGR2RGB)
+                elif (frac is None) and (num is not None):
+                    assert type(num) is int
+                    num_rows = num
 
-#             camera_model = row.camera_model
-#             camera_params = np.array(yaml.safe_load(row.camera_params))
-#             intrinsic = self.camera_model_params_to_intrinsics(
-#                 camera_model = camera_model, 
-#                 model_params = camera_params
-#             )
+                    assert num_rows <= len(df)
+                    df = df.iloc[:num_rows]
 
-#             values = np.array(yaml.safe_load(row.pose)).reshape(3, 4)
-#             RT = pose_utils.make_4x4(values)
+                elif (frac is None) and (num is None):
+                    # Nothing to be done in this case. All the paths 
+                    # will be used.
+                    pass
 
-#             bound = [row.near, row.far]
+                elif (frac is not None) and (num is not None):
+                    ## TODO: redo message.
+                    raise ValueError(
+                        "Either frac could be not None, OR num "
+                        "could be not None."
+                    )
 
-#             imgs.append(img)
-#             poses.append(RT)
-#             bounds.append(bound)
-#             intrinsics.append(intrinsic)
+            self.metadata[split] = df
 
-#             ## Using a smaller dataset for the time being. TODO: Remove this!
-#             # if idx == 10:
-#             #     break
+    def _load_split(self, split):
+        """
+        TODO: Docstring.
+        """
+        imgs, poses, bounds = [], [], []
+        split_params = self.custom_dataset_params[split]
 
-#         poses = np.array(poses)
-#         bounds = np.array(bounds)
-#         intrinsics = np.array(intrinsics)
+        for row in self.metadata[split].itertuples():
+            
+            path = os.path.join(split_params.img_root_dir, row.image_name)
+            img = cv2.cvtColor(cv2.imread(path, 1), cv2.COLOR_BGR2RGB)
 
-#         logger.debug("Loaded custom dataset.")
+            camera_model = row.camera_model
+            camera_params = np.array(yaml.safe_load(row.camera_params))
+            intrinsic = self.camera_model_params_to_intrinsics(
+                camera_model = camera_model, 
+                model_params = camera_params
+            )
 
-#         return imgs, poses, bounds, intrinsics
+            values = np.array(yaml.safe_load(row.pose)).reshape(3, 4)
+            RT = pose_utils.make_4x4(values)
 
-#     def get_dataset(self):
-#         """
-#         TODO: Elaborate.
-#         """
-#         logger.warn(
-#             "CustomDataset is currently not supported! Please "
-#             "do not use CustomDataset until further notice."
-#         )
-#         (
-#             imgs, poses, 
-#             bounds, intrinsics
-#         ) = self._load_full_dataset()
+            bound = [row.near, row.far]
+            
+            imgs.append(img)
+            poses.append(RT)
+            bounds.append(bound)
+            intrinsics.append(intrinsic)
 
-#         train_proc, val_proc = super().prepare_data(
-#             imgs, poses, bounds, intrinsics
-#         )
+        imgs = np.array(imgs)
+        poses = np.array(poses)
+        bounds = np.array(bounds)
+        intrinsics = np.array(intrinsics)
 
-#         (
-#             train_dataset, val_dataset, 
-#             train_spec, val_spec
-#         ) = super().create_tf_dataset(
-#             train_proc, val_proc
-#         )
+        data = ContainerType1(
+            imgs = imgs, poses = poses, 
+            bounds = bounds, intrinsics = intrinsics
+        )
 
-#         return train_dataset, val_dataset, train_spec, val_spec
+        return data
 
-#     def get_reconfigured_data(self):
-#         """
-#         TODO: Elaborate.
-#         """
-#         logger.warn(
-#             "CustomDataset is currently not supported! Please "
-#             "do not use CustomDataset until further notice."
-#         )
-#         (
-#             imgs, poses, 
-#             bounds, intrinsics
-#         ) = self._load_full_dataset()
+    def _load_full_dataset(self):
+        """
+        TODO: Elaborate.
+        """
+        logger.debug("Loading custom dataset.")
+        
+        num_imgs, data_splits = dict(), dict()
+        splits = ["train", "test", "val"]
 
-#         output = super().validate_and_reconfigure_data(
-#             imgs = imgs, poses = poses, 
-#             bounds = bounds, intrinsics = intrinsics,
-#         )
+        for split in splits:
+            data_splits[split] = self._load_split(split = split)
+            num_imgs[split] = len(data_splits[split].imgs)
+    
+        logger.debug("Loaded custom dataset.")
 
-#         return output
+        return data_splits, num_imgs
+
+    def get_dataset(self):
+        """
+        TODO: Elaborate.
+        """
+        data_splits, num_imgs = self._load_full_dataset()
+        processed_splits, img_HW = super().prepare_data(data_splits)
+        
+        tf_datasets = super().create_tf_dataset(processed_splits)
+
+        return tf_datasets, num_imgs, img_HW
 
 if __name__ ==  "__main__":
     pass

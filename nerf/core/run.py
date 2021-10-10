@@ -11,7 +11,7 @@ from tensorflow.keras.optimizers.schedules import ExponentialDecay
 
 from nerf.core import ops
 from nerf.core.model import NeRF
-from nerf.core.datasets import BlenderDataset
+from nerf.core.datasets import BlenderDataset, CustomDataset
 
 from nerf.utils.params_utils import load_params
 
@@ -24,8 +24,14 @@ def setup_datasets(params):
     loader = BlenderDataset(params = params)
     tf_datasets, num_imgs, img_HW = loader.get_dataset()
 
-    if params.data.advance_train_loader.enable:
-        skip_count = params.data.advance_train_loader.skip_count
+    if (type(loader) is not BlenderDataset) and \
+        (params.system.white_bg):
+        raise AssertionError("white_bg is only supported for BlenderDataset")
+
+    if (params.data.dataset_mode == "iterate") and \
+        (params.data.iterate_mode.advance_train_loader.enable):
+
+        skip_count = params.data.iterate_mode.advance_train_loader.skip_count
         tf_datasets["train"] = tf_datasets["train"].skip(skip_count)
 
     return tf_datasets, num_imgs, img_HW
@@ -90,15 +96,25 @@ def launch(logger):
     tf_datasets, num_imgs, img_HW = setup_datasets(params)
 
     # Setting up some dataset related parameters.
-    repeat_count = params.data.repeat_count
-    # Total number of pixels when the entire dataset is repeated repeat_count times:
-    total_pixels = (img_HW[0] * img_HW[1] * num_imgs["train"] * repeat_count)
-    # Total number of steps:
-    total_steps = int(total_pixels / params.data.batch_size)
-    # Steps per epoch:
-    steps_per_epoch = params.system.steps_per_epoch
-    # Number of epochs:
-    num_epochs = int(total_steps / steps_per_epoch)
+    if params.data.dataset_mode == "iterate":
+        repeat_count = params.data.iterate_mode.repeat_count
+        # Total number of pixels when the entire dataset is repeated repeat_count times:
+        total_pixels = (img_HW[0] * img_HW[1] * num_imgs["train"] * repeat_count)
+        # Total number of steps:
+        total_steps = int(total_pixels / params.data.batch_size)
+        # Steps per epoch:
+        steps_per_epoch = params.system.steps_per_epoch
+        # Number of epochs:
+        num_epochs = int(total_steps / steps_per_epoch)
+
+    elif params.data.dataset_mode == "sample":
+        repeat_count = params.data.sample_mode.repeat_count
+        # Total number of steps:
+        total_steps = int(num_imgs["train"] * repeat_count)
+        # Steps per epoch:
+        steps_per_epoch = params.system.steps_per_epoch
+        # Number of epochs:
+        num_epochs = int(total_steps / steps_per_epoch)
 
     logger.debug(f"Number of Steps: {total_steps}")
     logger.debug(f"Number of Epochs: {num_epochs}")

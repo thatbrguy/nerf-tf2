@@ -7,7 +7,11 @@ def make_4x4(RT):
     Converts a 3x4 RT matrix into a 4x4 RT matrix. The last 
     row of the 4x4 matrix will be [0, 0, 0, 1].
 
-    TODO: Args, Returns?
+    Args:
+        RT      :   A NumPy array of shape (3, 4)
+
+    Returns:
+        output  :   A NumPy array of shape (4, 4)
     """
     assert RT.shape == (3, 4)
 
@@ -24,7 +28,11 @@ def make_homogeneous(points):
     Converts a points array of shape (N, 3) to (N, 4). The 
     last column will have ones.
 
-    TODO: Args, Returns?
+    Args:
+        points  :   A NumPy array of shape (N, 3)
+
+    Returns:
+        output  :   A NumPy array of shape (N, 4)
     """
     assert points.shape[1] == 3
 

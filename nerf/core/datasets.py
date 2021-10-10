@@ -234,9 +234,14 @@ class BlenderDataset(Dataset):
         TODO: Elaborate.
         """
         data_splits, num_imgs = self._load_full_dataset()
-        processed_splits, img_HW = super().prepare_data(data_splits)
-        
-        tf_datasets = super().create_tf_dataset(processed_splits)
+
+        if self.params.data.dataset_mode == "iterate":
+            prepared_splits, img_HW = super().prepare_data_iterate_mode(data_splits)
+            tf_datasets = super().create_tf_dataset_iterate_mode(prepared_splits)
+
+        elif self.params.data.dataset_mode == "sample":
+            prepared_splits, img_HW = super().prepare_data_sample_mode(data_splits)
+            tf_datasets = super().create_tf_dataset_sample_mode(prepared_splits)
 
         return tf_datasets, num_imgs, img_HW
 
@@ -370,7 +375,7 @@ class CustomDataset(Dataset):
         """
         TODO: Docstring.
         """
-        imgs, poses, bounds = [], [], []
+        imgs, poses, bounds, intrinsics = [], [], [], []
         split_params = self.custom_dataset_params[split]
 
         for row in self.metadata[split].itertuples():
@@ -429,11 +434,24 @@ class CustomDataset(Dataset):
         TODO: Elaborate.
         """
         data_splits, num_imgs = self._load_full_dataset()
-        processed_splits, img_HW = super().prepare_data(data_splits)
-        
-        tf_datasets = super().create_tf_dataset(processed_splits)
+
+        if self.params.data.dataset_mode == "iterate":
+            prepared_splits, img_HW = super().prepare_data_iterate_mode(data_splits)
+            tf_datasets = super().create_tf_dataset_iterate_mode(prepared_splits)
+
+        elif self.params.data.dataset_mode == "sample":
+            prepared_splits, img_HW = super().prepare_data_sample_mode(data_splits)
+            tf_datasets = super().create_tf_dataset_sample_mode(prepared_splits)
 
         return tf_datasets, num_imgs, img_HW
 
 if __name__ ==  "__main__":
-    pass
+    
+    from nerf.utils.params_utils import load_params
+
+    path = "./nerf/params/config.yaml"
+    params = load_params(path)
+
+    loader = BlenderDataset(params = params)
+    tf_datasets, num_imgs, img_HW = loader.get_dataset()
+    

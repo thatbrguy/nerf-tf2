@@ -37,6 +37,11 @@ class Dataset(ABC):
         self._scale_mul = 1.0 if self._scale_mul is None else self._scale_mul
         self._scale_add = 0.0 if self._scale_add is None else self._scale_add
 
+        assert self.params.data.dataset_mode in ("sample", "iterate")
+        
+        self.sample_mode_params = self.params.data.sample_mode
+        self.iterate_mode_params = self.params.data.iterate_mode
+
     @abstractmethod
     def get_dataset(self):
         """
@@ -247,17 +252,17 @@ class Dataset(ABC):
 
         return data
 
-    def prepare_data(self, data_splits):
+    def prepare_data_iterate_mode(self, data_splits):
         """
         Method that can be used by the subclasses.
 
         TODO: Elaborate.
         """
         processed_splits = {}
+        reconf_data_splits = self.validate_and_reconfigure_data(
+            data_splits = data_splits,
+        )
         for split in self.splits:
-            reconf_data_splits = self.validate_and_reconfigure_data(
-                data_splits = data_splits,
-            )
             processed_splits[split] = self.process_data(reconf_data_splits[split])
 
         # img_HW holds the height and width of the images in the 
@@ -268,12 +273,79 @@ class Dataset(ABC):
             
         return processed_splits, img_HW
 
+    def prepare_data_sample_mode(self, data_splits):
+        """
+        Method that can be used by the subclasses.
+
+        TODO: Elaborate.
+        """
+        out_data_splits = {}
+        reconf_data_splits = self.validate_and_reconfigure_data(
+            data_splits = data_splits,
+        )
+        for split in self.splits:
+            
+            if split == "train":
+                out_data_splits[split] = reconf_data_splits[split]
+
+            else:
+                processed_split = self.process_data(reconf_data_splits[split])
+                out_data_splits[split] = processed_split
+
+        # img_HW holds the height and width of the images in the 
+        # dataset. Since all the images in the dataset will have the 
+        # same shape, we just get the shape of the first image 
+        # in out_data_splits["train"]
+        img_HW = out_data_splits["train"].imgs[0].shape[:2]
+            
+        return out_data_splits, img_HW
+
+    def _sample_mode_map_function(self, img, pose, bounds, intrinsic):
+        """
+        TODO: Docstring.
+        """            
+        K = intrinsic        
+        img_shape = tf.shape(img)
+        H, W = img_shape[0], img_shape[1]
+
+        _rays_o, _rays_d = ray_utils.get_rays_tf(
+            H = H, W = W, intrinsic = K, c2w = pose,
+        )
+        
+        # Diving by 255 so that the range of the rgb 
+        # data is between [0, 1]
+        _rgb = tf.reshape(img, (-1, 3))
+        _rgb = tf.cast(_rgb, tf.float32)
+        _rgb = _rgb / 255.0
+        
+        bounds = tf.broadcast_to(
+            bounds[None, :], shape = (tf.shape(_rays_d)[0], 2)
+        )
+        _near, _far = bounds[:, 0:1], bounds[:, 1:2]
+
+        total_rays = tf.shape(_rgb)[0]
+        idxs = tf.random.uniform(
+            (self.params.data.batch_size,), minval=0, 
+            maxval=total_rays, dtype=tf.int32,
+        )
+
+        rays_o = tf.gather(_rays_o, idxs)
+        rays_d = tf.gather(_rays_d, idxs)
+        near = tf.gather(_near, idxs)
+        far = tf.gather(_far, idxs)
+        rgb = tf.gather(_rgb, idxs)
+        
+        x_vals = (rays_o, rays_d, near, far)
+        y_vals = (rgb,)
+        
+        return x_vals, y_vals
+
     def _shuffle(self, container_type_2):
         """
         TODO: Docstring.
         """
         rng = np.random.default_rng(
-            seed = self.params.data.train_shuffle.seed
+            seed = self.iterate_mode_params.train_shuffle.seed
         )
         perm = rng.permutation(len(container_type_2.rays_o))
 
@@ -301,7 +373,7 @@ class Dataset(ABC):
 
         return x_split, y_split
 
-    def create_tf_dataset(self, processed_splits):
+    def create_tf_dataset_iterate_mode(self, processed_splits):
         """
         Method that can be used by the subclasses.
         
@@ -325,7 +397,7 @@ class Dataset(ABC):
         """
         logger.debug("Creating TensorFlow datasets.")
         
-        if self.params.data.train_shuffle.enable:
+        if self.iterate_mode_params.train_shuffle.enable:
             processed_splits["train"] = self._shuffle(processed_splits["train"])
 
         x_train, y_train = self._separate(processed_splits["train"])
@@ -338,7 +410,7 @@ class Dataset(ABC):
             drop_remainder = True,
         )
         train_dataset = train_dataset.repeat(
-            count = self.params.data.repeat_count
+            count = self.iterate_mode_params.repeat_count
         )
 
         val_dataset = tf.data.Dataset.from_tensor_slices((x_val, y_val))
@@ -353,7 +425,6 @@ class Dataset(ABC):
             drop_remainder = False,
         )
 
-        ## TODO: Return spec of some sort.
         tf_datasets = {
             "train": train_dataset, 
             "test": test_dataset,
@@ -363,3 +434,51 @@ class Dataset(ABC):
 
         return tf_datasets
 
+    def create_tf_dataset_sample_mode(self, processed_splits):
+        """
+        Method that can be used by the subclasses.
+        """
+        logger.debug("Creating TensorFlow datasets.")
+
+        train_imgs = processed_splits["train"].imgs
+        train_poses = processed_splits["train"].poses.astype(np.float32)
+        train_bounds = processed_splits["train"].bounds.astype(np.float32)
+        train_intrinsics = processed_splits["train"].intrinsics.astype(np.float32)
+
+        x_test, y_test = self._separate(processed_splits["test"])
+        x_val, y_val = self._separate(processed_splits["val"])
+
+        train_dataset = tf.data.Dataset.from_tensor_slices(
+            (train_imgs, train_poses, train_bounds, train_intrinsics)
+        )
+        train_dataset = train_dataset.repeat(
+            count = self.sample_mode_params.repeat_count
+        )
+        train_dataset = train_dataset.shuffle(
+            buffer_size = self.sample_mode_params.shuffle_buffer_size
+        )
+        train_dataset = train_dataset.map(self._sample_mode_map_function)
+        train_dataset = train_dataset.prefetch(
+            buffer_size = self.sample_mode_params.prefetch_buffer_size
+        )
+
+        val_dataset = tf.data.Dataset.from_tensor_slices((x_val, y_val))
+        val_dataset = val_dataset.batch(
+            batch_size =  self.params.data.batch_size,
+            drop_remainder = False,
+        )
+
+        test_dataset = tf.data.Dataset.from_tensor_slices((x_test, y_test))
+        test_dataset = test_dataset.batch(
+            batch_size =  self.params.data.batch_size,
+            drop_remainder = False,
+        )
+
+        tf_datasets = {
+            "train": train_dataset, 
+            "test": test_dataset,
+            "val": val_dataset,
+        }
+        logger.debug("Created TensorFlow datasets.")
+
+        return tf_datasets

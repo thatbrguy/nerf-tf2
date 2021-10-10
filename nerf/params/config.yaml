@@ -4,7 +4,7 @@
 
 system:
   tf_seed: 11
-  white_bg: True 
+  white_bg: True # Setting to True is only supported for BlenderDataset!
   run_eagerly: False
   log_images: False
   steps_per_epoch: 32
@@ -32,8 +32,6 @@ model:
 ###############################################################################
 
 data:
-  batch_size: 4096
-  repeat_count: 36
   
   # scale_imgs can either be set to null or a float value. If scale_imgs 
   # is null, no scaling is applied. If scale_imgs is a float value, then 
@@ -42,15 +40,28 @@ data:
 
   scene_scale_mul: 0.75
   scene_scale_add: 0.0
+  
+  batch_size: 4096
+  dataset_mode: "sample" # One among "iterate" or "sample"
 
-  ## TODO: Give this parameter a better name.
-  train_shuffle:
-    enable: True
-    seed: 35 
+  # Parameters specific to dataset_mode "sample"
+  sample_mode:
+    shuffle_buffer_size: 20
+    prefetch_buffer_size: 20
+    repeat_count: 5000
 
-  advance_train_loader:
-    enable: False
-    skip_count: 0 # epochs * steps_per_epoch
+  # Parameters specific to dataset_mode "iterate"
+  iterate_mode:
+    repeat_count: 36
+    
+    ## TODO: Give this parameter a better name.
+    train_shuffle:
+      enable: True
+      seed: 35 
+
+    advance_train_loader:
+      enable: False
+      skip_count: 0 # epochs * steps_per_epoch
 
 ###############################################################################
 ## D1. Blender Dataset Parameters (Only required if using BlenderDataset)

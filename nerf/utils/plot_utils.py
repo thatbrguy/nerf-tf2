@@ -8,7 +8,6 @@ def create_eye_frustum_for_plots(length, width, height):
     """
     TODO: Docstring
     """
-
     L, W, H = length, width, height
 
     O = np.array([0., 0., 0.], dtype = np.float64)

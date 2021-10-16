@@ -12,6 +12,9 @@ system:
   tensorboard_dir: "./logs"
   initial_epoch: 0
 
+eval:
+  save_dir: "/home/br7/Downloads/out"
+
 ###############################################################################
 ## B. Model Functionality Related Parameters
 ###############################################################################
@@ -22,10 +25,10 @@ model:
     save_optimizer_state: True
   
   load:
-    load_dir: ""
-    load_tag: ""
-    set_weights: False
-    skip_optimizer: False
+    load_dir: "/home/br7/Downloads/test"
+    load_tag: "013999_27.65"
+    set_weights: True
+    skip_optimizer: True
 
 ###############################################################################
 ## C. Data Parameters
@@ -42,7 +45,7 @@ data:
   scene_scale_add: 0.0
   
   batch_size: 4096
-  dataset_mode: "sample" # One among "iterate" or "sample"
+  dataset_mode: "iterate" # One among "iterate" or "sample"
 
   # Parameters specific to dataset_mode "sample"
   sample_mode:

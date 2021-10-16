@@ -30,7 +30,7 @@ class NeRF(Model):
         """
         TODO: Docstring.
         """
-        output = self.forward(*inputs)
+        output = self.forward(*inputs[0])
         return output
 
     def forward(self, rays_o, rays_d, near, far):

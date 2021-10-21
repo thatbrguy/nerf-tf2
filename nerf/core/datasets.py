@@ -193,6 +193,7 @@ class BlenderDataset(Dataset):
             poses.append(classic_cv_pose)
             bounds.append(bound)
 
+        # TODO: Review
         H, W = imgs[0].shape[:2]
         cam_angle_x = self.metadata[split]['camera_angle_x']
         focal = 0.5 * W / np.tan(0.5 * float(cam_angle_x))

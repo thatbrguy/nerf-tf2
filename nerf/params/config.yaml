@@ -21,7 +21,7 @@ eval:
 
 model:
   save:
-    save_dir: "/content/drive/MyDrive/NerfExpts/save_dir"
+    save_dir: "/content/drive/MyDrive/NerfExpts/save_dir/model"
     save_optimizer_state: True
   
   load:
@@ -36,6 +36,9 @@ model:
 
 data:
   
+  reconfig:
+    save_dir: "/content/drive/MyDrive/NerfExpts/save_dir/reconfig"
+
   # scale_imgs can either be set to null or a float value. If scale_imgs 
   # is null, no scaling is applied. If scale_imgs is a float value, then 
   # the images and the intrinsic matrices are scaled.

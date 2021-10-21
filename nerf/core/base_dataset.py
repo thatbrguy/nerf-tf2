@@ -38,38 +38,92 @@ class Dataset(ABC):
         self._scale_add = 0.0 if self._scale_add is None else self._scale_add
 
         assert self.params.data.dataset_mode in ("sample", "iterate")
-        
         self.sample_mode_params = self.params.data.sample_mode
         self.iterate_mode_params = self.params.data.iterate_mode
+
+        # self._W2_to_W1_transform and self._adj_scale_factor are only used 
+        # during inference. They are initialized to None here. Their actual 
+        # values will be populated by the function _load_reconfig_params
+        self._W2_to_W1_transform = None
+        self._adj_scale_factor = None
 
     @abstractmethod
     def get_dataset(self):
         """
-        This needs to be implemented by every subclass.
+        This method needs to be implemented by every subclass.
 
-        TODO: Elaborate
+        The get_dataset function implemented in each subclass must 
+        return a tuple of three variables.
+
+        The first variable of the tuple should be tf_datasets. This variable 
+        should be a dictionary. Each key of this dictionary should be a string 
+        denoting a split (i.e. train/val/test). Each value of the dictionary 
+        should be the TF Dataset object for the corresponding split. 
+
+        The second variable of the tuple should be num_imgs. This variable 
+        should be a dictionary. Each key of this dictionary should be a string 
+        denoting a split (i.e. train/val/test). Each value of the dictionary 
+        should be an integer denoting the number of images that are available 
+        for the corresponding split.
+
+        The second variable (num_imgs) is needed because the number of images 
+        that are available for each split will only be known at runtime. 
+        For instance, the number of images available for validation may be 
+        lesser than the total number of validation images depending on certain 
+        parameters in the config file. To let the code accurately know 
+        about the exact number of images available for each split, this 
+        variable needs to be configured.
+
+        The third variable of the tuple should be img_HW. This variable 
+        should be a tuple. img_HW[0] denotes the height of any processed 
+        image of the dataset and img_HW[1] denotes the width of any processed 
+        image of the dataset. The third variable is included to let the code
+        accurately know about the height and width of any processed image.
+
+        TODO: Refactor, review terminology, finish.
         """
         pass
 
     @staticmethod
     def _validate_intrinsic_matrix(K):
         """
-        Code supports intrinsic matrices that are of the form:
+        This function checks if the given intrinsic matrix is of 
+        a valid form.
+        
+        The current codebase only supports intrinsic matrices that 
+        are of the form:
+        
         intrinsic = np.array([
             [fu, 0., cu],
             [0., fv, cv],
             [0., 0., 1.],
         ])
+
+        Args:
+            K   :   A NumPy array of shape (3, 3) representing the 
+                    intrinsic matrix. (TODO: Verify)
         """
         zero_check = np.array([
             K[0, 1], K[1, 0], K[2, 0], K[2, 1],
         ])
         assert K[2, 2] == 1
+        assert K.shape == (3, 3)
         assert np.all(zero_check == 0)
 
     def _validate_all_splits(self, data_splits):
         """
-        TODO: Docstring
+        Checks if the data provided for the train, val and tests splits 
+        is consistent with the requirements of the codebase.
+
+        More specifically, this function checks: 
+            1.  If all the images across all the splits have the 
+                same height and width
+            2.  If all the intrinsic matrices across all the 
+                splits are of the form that is deemed acceptable by 
+                the function _validate_intrinsic_matrix
+
+        Args:
+            TODO
         """
         all_H, all_W = [], []
         for split in self.splits:
@@ -88,6 +142,35 @@ class Dataset(ABC):
         all_H, all_W = np.array(all_H), np.array(all_W)
         assert np.all(all_H == all_H[0])
         assert np.all(all_W == all_W[0])
+
+    def _save_reconfig_params(self, W2_to_W1_transform, adj_scale_factor):
+        """
+        Saves the parameters that were used for reconfiguring the data.
+
+        Specifically, the parameters W2_to_W1_transform and 
+        adj_scale_factor are saved to disk. These parameters can later
+        be used during inference.
+        """
+        to_save = {}
+        root = self.params.data.reconfig.save_dir
+
+        if not os.path.exists(root):
+            os.makedirs(root, exist_ok=True)
+        
+        to_save["W2_to_W1_transform"] = W2_to_W1_transform
+        to_save["adj_scale_factor"] = adj_scale_factor
+        np.savez(os.path.join(root, "reconfig.npz"), **to_save)
+
+    def _load_reconfig_params(self, W2_to_W1_transform, adj_scale_factor):
+        """
+        Loads the parameters that are needed reconfiguring the data 
+        during inference mode from an npz file. 
+        """
+        path = os.path.join(self.params.data.reconfig.save_dir, "reconfig.npz")
+        data = np.load(path)
+        
+        self._W2_to_W1_transform = data["W2_to_W1_transform"]
+        self._adj_scale_factor = data["adj_scale_factor"]
 
     def _reconfigure_imgs_and_intrinsics(self, data_splits):
         """
@@ -342,7 +425,12 @@ class Dataset(ABC):
 
     def _shuffle(self, container_type_2):
         """
-        TODO: Docstring.
+        Given an instance of ContainerType2 (which is container_type_2), 
+        this function performs the following operations:
+
+        1.  Shuffles all the contents of container_type_2
+        2.  Creates a new instances of ContainerType2 called 
+            shuffled_container_type_2 to store the shuffled contents. 
         """
         rng = np.random.default_rng(
             seed = self.iterate_mode_params.train_shuffle.seed
@@ -365,7 +453,9 @@ class Dataset(ABC):
 
     def _separate(self, container_type_2):
         """
-        TODO: Elaborate.
+        Given an instance of ContainerType2 (which is container_type_2), 
+        this function splits the contents of the instance into 
+        x_split and y_split. 
         """
         CT2 = container_type_2
         x_split = (CT2.rays_o, CT2.rays_d, CT2.near, CT2.far)

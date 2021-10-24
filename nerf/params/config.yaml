@@ -4,16 +4,27 @@
 
 system:
   tf_seed: 11
-  white_bg: True # Setting to True is only supported for BlenderDataset!
+  white_bg: False # Setting to True is only supported for BlenderDataset!
   run_eagerly: False
   log_images: False
   steps_per_epoch: 32
   validation_freq: 100
   tensorboard_dir: "./logs"
   initial_epoch: 0
+  dataset_type: "CustomDataset" # One among "BlenderDataset" or "CustomDataset"
 
 eval:
   save_dir: "/home/br7/Downloads/out"
+
+render:
+  radius: 5.0
+  inclination: 50
+  num_cameras: 30
+  img_size: [800, 800] # [H, W]
+  camera_model_name: "" # TODO: Fill
+  camera_model_params: [] # TODO: Fill
+  bounds: null # If null, bounds are auto calcualted.
+  save_dir: ""
 
 ###############################################################################
 ## B. Model Functionality Related Parameters
@@ -21,7 +32,7 @@ eval:
 
 model:
   save:
-    save_dir: "/content/drive/MyDrive/NerfExpts/save_dir/model"
+    save_dir: "../expt_211023/save_dir/model" # "/content/drive/MyDrive/NerfExpts/save_dir/model"
     save_optimizer_state: True
   
   load:
@@ -36,8 +47,11 @@ model:
 
 data:
   
-  reconfig:
-    save_dir: "/content/drive/MyDrive/NerfExpts/save_dir/reconfig"
+  save_scene_metadata:
+    # If save_dir is set to null, then the reconfig parameters will not be saved.
+    save_dir: "../expt_211023/save_dir/reconfig"
+    # If save_poses is set to False, then poses will not be saved.
+    save_poses: False
 
   # scale_imgs can either be set to null or a float value. If scale_imgs 
   # is null, no scaling is applied. If scale_imgs is a float value, then 

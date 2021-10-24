@@ -4,62 +4,14 @@ import logging
 import numpy as np
 import tensorflow as tf
 
-from tensorflow.keras.callbacks import TensorBoard
-from tensorflow.keras.callbacks import ModelCheckpoint
-
-from tensorflow.keras.optimizers import Adam
-from tensorflow.keras.optimizers.schedules import ExponentialDecay
-
 from tqdm import tqdm
 from nerf.core import ops
-from nerf.core.model import NeRF
-from nerf.core.datasets import BlenderDataset, CustomDataset
+from nerf.core.model import setup_model
+from nerf.core.datasets import setup_datasets
 
 from nerf.utils.params_utils import load_params
 
 os.environ["TF_MIN_CPP_LOG_LEVEL"] = "2"
-
-def setup_datasets(params):
-    """
-    Sets up the train and val datasets.
-    """
-    assert params.data.dataset_mode == "iterate"
-    loader = BlenderDataset(params = params)
-    tf_datasets, num_imgs, img_HW = loader.get_dataset()
-
-    if (type(loader) is not BlenderDataset) and \
-        (params.system.white_bg):
-        raise AssertionError("white_bg is only supported for BlenderDataset")
-
-    return tf_datasets, num_imgs, img_HW
-
-def setup_model(params, num_imgs, img_HW):
-    """
-    Sets up the NeRF model.
-    """
-    ## Setting up the optimizer and LR scheduler.
-    lr_schedule = ExponentialDecay(
-        initial_learning_rate = 5e-4,
-        decay_steps = 500000,
-        decay_rate = 0.1,
-    )
-    optimizer = Adam(learning_rate = lr_schedule)
-    psnr_metric = ops.PSNRMetric()
-
-    # Instantiating the model.
-    nerf = NeRF(params = params)
-
-    # Enabling eager mode for ease of debugging. 
-    nerf.compile(
-        optimizer = optimizer, 
-        metrics = [psnr_metric], 
-        run_eagerly = params.system.run_eagerly,
-    )
-
-    assert params.model.load.set_weights
-    nerf.set_everything()
-
-    return nerf
 
 def launch(logger, split):
     """

@@ -6,6 +6,12 @@ from tensorflow.keras.models import Model
 from tensorflow.keras.layers import Layer, Dense, Flatten
 from tensorflow.keras.layers import Input, Concatenate
 
+from tensorflow.keras.callbacks import TensorBoard
+from tensorflow.keras.callbacks import ModelCheckpoint
+
+from tensorflow.keras.optimizers import Adam
+from tensorflow.keras.optimizers.schedules import ExponentialDecay
+
 from nerf.core import ops
 from nerf.utils import ray_utils, pose_utils
 
@@ -23,8 +29,8 @@ class NeRF(Model):
         
         self.val_cache = []
         self.mse_loss = tf.keras.losses.MeanSquaredError()
-        self.coarse_model = get_nerf_model(model_name = "coarse")
-        self.fine_model = get_nerf_model(model_name = "fine")
+        self.coarse_model = get_coarse_or_fine_model(model_name = "coarse")
+        self.fine_model = get_coarse_or_fine_model(model_name = "fine")
 
     def call(self, inputs):
         """
@@ -161,46 +167,6 @@ class NeRF(Model):
         """
         return self(data)
 
-    def render(self, data):
-        """
-        Renders an image.
-
-        Requires eager mode!
-        """
-        pixels = []
-        (intrinsic, c2w, H, W) = data
-        
-        # Here, L denotes the number of pixels in this image.
-        L = H * W
-        far_all = tf.ones(shape = (L, 1), dtype = tf.float32)
-        near_all = tf.zeros(shape = (L, 1), dtype = tf.float32)
-        rays_o_all, rays_d_all = ray_utils.get_rays_tf(H, W, intrinsic, c2w)
-
-        data = (rays_o_all, rays_d_all, near_all, far_all)
-        dataset = tf.data.Dataset.from_tensor_slices(data)
-        dataset = dataset.batch(
-            batch_size = self.params.data.batch_size, 
-            drop_remainder = False,
-        )
-
-        for batch in dataset:
-            (rays_o, rays_d, near, far) = batch
-            
-            # Performing a forward pass.
-            post_proc_CM, post_proc_FM = self.forward(
-                rays_o = rays_o, rays_d = rays_d, 
-                near = near, far = far,
-            )
-            batch_pixels = post_proc_FM["pred_rgb"].numpy()
-            pixels.append(batch_pixels)
-
-        pixels = np.concatenate(pixels, axis = 0)
-        img = np.reshape(pixels, (H, W, 3))
-        img = np.clip(img * 255.0, 0, 255)
-        img = img.astype(np.uint8)
-        
-        return img
-
     def set_everything(self):
         """
         This function can be called AFTER model.compile has been 
@@ -299,16 +265,16 @@ class PositionalEncoder(Layer):
 
         return output
 
-def get_nerf_model(model_name, num_units = 256):
+def get_coarse_or_fine_model(model_name, num_units = 256):
     """
-    Creates and returns a NeRF model.
+    Creates and returns either the coarse model or the fine model.
 
     ## TODO: Verify consistency, indices, check for one off errors etc.
     ## Add comments to explain stuff!
 
     ## NOTE: relu is added to sigma here itself.
     """
-    assert model_name in ["coarse", "fine"]
+    assert model_name in ("coarse", "fine")
     
     xyz = Input(shape = (3,), name = f"{model_name}/xyz")
     rays_d = Input(shape = (3,), name = f"{model_name}/rays_d")
@@ -351,6 +317,57 @@ def get_nerf_model(model_name, num_units = 256):
 
     return model
 
+def setup_model(params):
+    """
+    Sets up the NeRF model
+    """
+    # Setting up the optimizer and LR scheduler.
+    lr_schedule = ExponentialDecay(
+        initial_learning_rate = 5e-4,
+        decay_steps = 500000,
+        decay_rate = 0.1,
+    )
+    optimizer = Adam(learning_rate = lr_schedule)
+    psnr_metric = ops.PSNRMetric()
+
+    # Instantiating the model.
+    nerf = NeRF(params = params)
+    nerf.compile(
+        optimizer = optimizer, 
+        metrics = [psnr_metric], 
+        run_eagerly = params.system.run_eagerly,
+    )
+
+    if params.model.load.set_weights:
+        nerf.set_everything()
+
+    return nerf
+
+def setup_model_and_callbacks(params, num_imgs, img_HW):
+    """
+    Sets up the NeRF model and the list of callbacks.
+    """
+    # Setting up callbacks.
+    saver = ops.CustomSaver(params = params, save_best_only = False)
+    tensorboard = TensorBoard(
+        log_dir = params.system.tensorboard_dir, 
+        update_freq = "epoch"
+    )
+    callbacks = [saver, tensorboard]
+    
+    # Can use ops.LogValImages only if eager mode is enabled.
+    if params.system.run_eagerly and params.system.log_images:
+        val_imgs_logger = ops.LogValImages(
+            params = params, height = img_HW[0], 
+            width = img_HW[1], num_val_imgs = num_imgs["val"]
+        )
+        callbacks += [val_imgs_logger]
+
+    # Setting up the model.
+    nerf = setup_model(params)
+
+    return nerf, callbacks
+
 if __name__ == '__main__':
 
     from nerf.utils.params_utils import load_params
@@ -358,8 +375,8 @@ if __name__ == '__main__':
     path = "./nerf/params/config.yaml"
     params = load_params(path)
 
-    coarse_model = get_nerf_model(model_name = "coarse")
-    fine_model = get_nerf_model(model_name = "fine")
+    coarse_model = get_coarse_or_fine_model(model_name = "coarse")
+    fine_model = get_coarse_or_fine_model(model_name = "fine")
 
     nerf = NeRF(params)
     psnr = ops.PSNRMetric()

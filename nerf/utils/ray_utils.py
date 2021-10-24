@@ -13,10 +13,8 @@ def get_rays(H, W, intrinsic, c2w):
     has the pose matrix "c2w" and intrinsic matrix "intrinsic".
     
     Args:
-        H           :   An integer representing the height of 
-                        the image.
-        W           :   An integer representing the width of 
-                        the image.
+        H           :   An integer representing the height of the image.
+        W           :   An integer representing the width of the image.
         intrinsic   :   A NumPy array of shape (3, 3) representing 
                         the intrinsic matrix.
         c2w         :   A NumPy array of shape (4, 4) representing 

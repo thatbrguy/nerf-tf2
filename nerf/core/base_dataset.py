@@ -1,3 +1,4 @@
+import os
 import logging
 
 import numpy as np
@@ -40,12 +41,6 @@ class Dataset(ABC):
         assert self.params.data.dataset_mode in ("sample", "iterate")
         self.sample_mode_params = self.params.data.sample_mode
         self.iterate_mode_params = self.params.data.iterate_mode
-
-        # self._W2_to_W1_transform and self._adj_scale_factor are only used 
-        # during inference. They are initialized to None here. Their actual 
-        # values will be populated by the function _load_reconfig_params
-        self._W2_to_W1_transform = None
-        self._adj_scale_factor = None
 
     @abstractmethod
     def get_dataset(self):
@@ -143,13 +138,13 @@ class Dataset(ABC):
         assert np.all(all_H == all_H[0])
         assert np.all(all_W == all_W[0])
 
-    def _save_reconfig_params(self, W2_to_W1_transform, adj_scale_factor):
+    def _save_reconfig_params(self, W1_to_W2_transform, adj_scale_factor):
         """
         Saves the parameters that were used for reconfiguring the data.
 
-        Specifically, the parameters W2_to_W1_transform and 
+        Specifically, the parameters W1_to_W2_transform and 
         adj_scale_factor are saved to disk. These parameters can later
-        be used during inference.
+        be used during rendering.
         """
         to_save = {}
         root = self.params.data.reconfig.save_dir
@@ -157,20 +152,21 @@ class Dataset(ABC):
         if not os.path.exists(root):
             os.makedirs(root, exist_ok=True)
         
-        to_save["W2_to_W1_transform"] = W2_to_W1_transform
+        to_save["W1_to_W2_transform"] = W1_to_W2_transform
         to_save["adj_scale_factor"] = adj_scale_factor
         np.savez(os.path.join(root, "reconfig.npz"), **to_save)
 
-    def _load_reconfig_params(self, W2_to_W1_transform, adj_scale_factor):
+    def _load_reconfig_params(self):
         """
-        Loads the parameters that are needed reconfiguring the data 
-        during inference mode from an npz file. 
+        Loads the reconfig parameters from an npz file. 
         """
         path = os.path.join(self.params.data.reconfig.save_dir, "reconfig.npz")
         data = np.load(path)
         
-        self._W2_to_W1_transform = data["W2_to_W1_transform"]
-        self._adj_scale_factor = data["adj_scale_factor"]
+        W1_to_W2_transform = data["W1_to_W2_transform"]
+        adj_scale_factor = data["adj_scale_factor"]
+
+        return W1_to_W2_transform, adj_scale_factor
 
     def _reconfigure_imgs_and_intrinsics(self, data_splits):
         """
@@ -203,7 +199,7 @@ class Dataset(ABC):
         all_poses = [data_splits[x].poses for x in self.splits]
         all_poses = np.concatenate(all_poses, axis = 0)
 
-        W2_to_W1_transform = pose_utils.calculate_new_world_pose(
+        W1_to_W2_transform = pose_utils.calculate_new_world_pose(
             poses = all_poses, 
             origin_method = self.params.preprocessing.origin_method,
             basis_method = self.params.preprocessing.basis_method,
@@ -214,7 +210,7 @@ class Dataset(ABC):
 
             new_poses = pose_utils.reconfigure_poses(
                 old_poses = data.poses, 
-                W2_to_W1_transform = W2_to_W1_transform
+                W1_to_W2_transform = W1_to_W2_transform
             )
             new_data = ContainerType1(
                 imgs = data.imgs, poses = new_poses, 
@@ -222,14 +218,14 @@ class Dataset(ABC):
             )
             reconf_data_splits[split] = new_data
 
-        return reconf_data_splits
+        return reconf_data_splits, W1_to_W2_transform
 
     def _reconfigure_scene_scale(self, data_splits):
         """
         TODO: Docstring
         """
         reconf_data_splits = dict()
-        
+    
         # Currently, we make sure that all images in all splits have the same 
         # height (H) and width (W). Hence, we can take the H, W of an arbitrary 
         # image for our purposes.
@@ -265,7 +261,7 @@ class Dataset(ABC):
             )
             reconf_data_splits[split] = new_data
 
-        return reconf_data_splits
+        return reconf_data_splits, adj_scale_factor
 
     def validate_and_reconfigure_data(self, data_splits):
         """
@@ -274,8 +270,11 @@ class Dataset(ABC):
         self._validate_all_splits(data_splits)
 
         temp_data_step_1 = self._reconfigure_imgs_and_intrinsics(data_splits)
-        temp_data_step_2 = self._reconfigure_poses(temp_data_step_1)
-        output = self._reconfigure_scene_scale(temp_data_step_2)
+        temp_data_step_2, W1_to_W2_transform = self._reconfigure_poses(temp_data_step_1)
+        output, adj_scale_factor = self._reconfigure_scene_scale(temp_data_step_2)
+
+        if self.params.data.reconfig.save_dir is not None:
+            self._save_reconfig_params(W1_to_W2_transform, adj_scale_factor)
 
         return output
 
@@ -572,3 +571,46 @@ class Dataset(ABC):
         logger.debug("Created TensorFlow datasets.")
 
         return tf_datasets
+
+    def create_dataset_for_render(self, H, W, c2w, bounds, intrinsic):
+        """
+        Create a TF Dataset object that can be used for rendering a single image.
+        """
+        self._validate_intrinsic_matrix(K = intrinsic)
+        W1_to_W2_transform, adj_scale_factor = self._load_reconfig_params()
+
+        ## TODO: c2w would be (4, 4) but reconfigure_poses can 
+        ## take (N, 4, 4) as well as (4, 4). Make a note of that.
+        temp_pose = pose_utils.reconfigure_poses(
+            old_poses = c2w, 
+            W1_to_W2_transform = W1_to_W2_transform
+        )
+
+        ## TODO: reconfigure_scene_scale can handle batched data as 
+        ## well as non batched data. Make a note of that somewhere.
+        new_pose, new_bounds = pose_utils.reconfigure_scene_scale(
+            old_poses = temp_pose, old_bounds = bounds, 
+            scene_scale_factor = adj_scale_factor,
+        )
+
+        H, W = img.shape[:2]
+        rays_o, rays_d = ray_utils.get_rays(
+            H = H, W = W, intrinsic = intrinsic, c2w = c2w,
+        )
+
+        bounds_ = np.broadcast_to(bounds[None, :], shape = (rays_d.shape[0], 2))
+        near, far = bounds_[:, 0:1], bounds_[:, 1:2]
+
+        far = far.astype(np.float32)
+        near = near.astype(np.float32)
+        rays_o = rays_o.astype(np.float32)
+        rays_d = rays_d.astype(np.float32)
+
+        data = (rays_o, rays_d, near, far)
+        dataset = tf.data.Dataset.from_tensor_slices((data,))
+        dataset = dataset.batch(
+            batch_size =  self.params.data.batch_size,
+            drop_remainder = False,
+        )
+
+        return dataset

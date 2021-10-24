@@ -217,6 +217,9 @@ def calculate_new_world_pose(poses, origin_method, basis_method):
 
     TODO: Rewrite if needed.
 
+    ## TODO, IMPORTANT: Review if functionality is correct! There 
+    is a chance it is wrong!
+
     Args:
         poses                   :   A NumPy array of shape (N, 4, 4)
         origin_method           :   A string which is either "average", 
@@ -225,7 +228,7 @@ def calculate_new_world_pose(poses, origin_method, basis_method):
                                     or "compute"
 
     Returns:
-        W2_to_W1_transform       :   A NumPy array of shape (4, 4)
+        W1_to_W2_transform       :   A NumPy array of shape (4, 4)
     """
     # Shape of origin: (3,)
     origin = compute_new_world_origin(poses, method = origin_method)
@@ -246,7 +249,7 @@ def calculate_new_world_pose(poses, origin_method, basis_method):
     W2_to_W1_transform = make_4x4(W2_to_W1_3x4)
     W1_to_W2_transform = np.linalg.inv(W2_to_W1_transform)
     
-    return W2_to_W1_transform
+    return W1_to_W2_transform
 
 def calculate_scene_scale(
         poses, bounds, bounds_method, 
@@ -255,25 +258,14 @@ def calculate_scene_scale(
     """
     TODO: Complete this!
 
-    Calculates a scale factor for the 360 inward facing 
-    scene so that the coordinates of the XYZ points that 
-    are to be given to the neural networks can lie within 
-    the range [-1, 1].
+    Calculates a scale factor for the 360 inward facing scene so that 
+    the coordinates of the XYZ points that are to be given to the neural 
+    networks can lie within the range [-1, 1].
 
-    We know the near and far bounds for each camera. We also know 
-    that our scene is a 360-degree inward facing scene. Using 
-    this information, we can attempt to bound the scene such that 
-    the XYZ coordinates of the points that were are interested in 
-    are within the range [-1, 1]
-
-    For the 360 degree inward facing scene, we 
-    know the near and far bounds for each camera. The rays originating from each camera is also bounded.
-
-    One way to ensure this constraint is to 
-    scale the coordinate system of the scene such that the XYZ 
-    points which are given to the model will be between [-1, 1]
-
-    One can also think of this as moving to another coordinate system where the XYZ points which are given to the model
+    We know that our scene is a 360-degree inward facing scene. We also 
+    know the near and far bounds for each camera. Using this information, 
+    we can attempt to bound the scene such that the XYZ coordinates of the 
+    points that were are interested in are within the range [-1, 1]
     """
     rays_o = poses[:, :3, 3]
     rays_d = poses[:, :3, 2]
@@ -312,17 +304,17 @@ def calculate_scene_scale(
 
     return scene_scale_factor
 
-def reconfigure_poses(old_poses, W2_to_W1_transform):
+def reconfigure_poses(old_poses, W1_to_W2_transform):
     """
     TODO: Docstring
     """
     # The matrix old_poses[i] would take a point from the i-th camera 
     # coordinate system to the old world (W1) coordinate system. The 
-    # matrix W2_to_W1_transform would take a point from the old world 
+    # matrix W1_to_W2_transform would take a point from the old world 
     # coordinate system (W1) to the new world coordinate system (W2). 
     # Hence, the matrix new_poses[i] would take a point from the i-th 
     # camera coordinate system to the new world coordinate system (W2). 
-    new_poses = W2_to_W1_transform @ old_poses
+    new_poses = W1_to_W2_transform @ old_poses
 
     return new_poses
 
@@ -605,3 +597,41 @@ def compute_new_world_basis(poses):
     x_basis = normalize(x_basis)
 
     return x_basis, y_basis, z_basis
+
+def create_spherical_path(radius, inclination, num_cameras):
+    """
+    TODO: Docstring.
+    """
+    azimuth = np.linspace(0, 360, num_cameras, endpoint=False, dtype=np.float64)
+    radius = np.full_like(azimuth, radius)
+    inclination = np.full_like(azimuth, inclination)
+
+    azimuth = np.radians(azimuth)
+    inclination = np.radians(inclination)
+
+    point_x = radius * np.sin(inclination) * np.cos(azimuth)
+    point_y = radius * np.sin(inclination) * np.sin(azimuth)
+    point_z = radius * np.cos(inclination)
+
+    cam_origins = np.stack([point_x, point_y, point_z], axis=1)
+
+    z_vec = -1 * cam_origins
+    z_basis = normalize(z_vec)
+
+    temp_x = -1 * radius * np.sin(inclination) * np.sin(azimuth)
+    temp_y = radius * np.sin(inclination) * np.cos(azimuth)
+    temp_z = np.zeros_like(temp_x)
+
+    x_vec = np.stack([temp_x, temp_y, temp_z], axis = 1)
+    x_basis = normalize(x_vec)
+
+    y_vec = np.cross(z_basis, x_basis)
+    y_basis = normalize(y_vec)
+
+    poses = np.stack([x_basis, y_basis, z_basis, cam_origins], axis = -1)
+    
+    last_row = np.zeros((poses.shape[0], 1, 4), dtype = np.float64)
+    poses_4x4 = np.concatenate([poses, last_row], axis = 1)
+    poses_4x4[:, 3, 3] = 1.0
+
+    return poses_4x4

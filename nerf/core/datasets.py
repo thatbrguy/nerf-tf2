@@ -446,13 +446,42 @@ class CustomDataset(Dataset):
 
         return tf_datasets, num_imgs, img_HW
 
+def get_dataset_obj(params):
+    """
+    TODO: Docstring.
+    """
+    if params.system.dataset_type == "BlenderDataset":
+        loader = BlenderDataset(params = params)
+    elif params.system.dataset_type == "CustomDataset":
+        loader = CustomDataset(params = params)
+    else:
+        raise ValueError(f"Invalid dataset type: {params.system.dataset_type}")
+
+    if (type(loader) is not BlenderDataset) and \
+        (params.system.white_bg):
+        raise AssertionError("white_bg is only supported for BlenderDataset")
+
+    return loader
+
+def setup_tf_datasets_for_splits(params):
+    """
+    Sets up the datasets.
+    """
+    loader = get_dataset_obj(params = params)
+    tf_datasets, num_imgs, img_HW = loader.get_dataset()
+
+    if (params.data.dataset_mode == "iterate") and \
+        (params.data.iterate_mode.advance_train_loader.enable):
+
+        skip_count = params.data.iterate_mode.advance_train_loader.skip_count
+        tf_datasets["train"] = tf_datasets["train"].skip(skip_count)
+
+    return tf_datasets, num_imgs, img_HW
+
 if __name__ ==  "__main__":
     
     from nerf.utils.params_utils import load_params
 
     path = "./nerf/params/config.yaml"
     params = load_params(path)
-
-    loader = BlenderDataset(params = params)
-    tf_datasets, num_imgs, img_HW = loader.get_dataset()
-    
+    tf_datasets, num_imgs, img_HW = setup_tf_datasets_for_splits(params)

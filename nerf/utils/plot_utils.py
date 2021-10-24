@@ -40,7 +40,10 @@ def create_xyz_axes_for_plots(length):
 
     return lines
 
-def plot_scene(c2w_matrices, plot_eye_frustums = True, plot_cam_axes = True):
+def _plot_cameras(
+        c2w_matrices, plt_ax, plot_eye_frustums = True, 
+        plot_cam_axes = True, frustum_color = "red",
+    ):
     """
     Returns a 3D plot of the camera poses and other details.
 
@@ -54,41 +57,70 @@ def plot_scene(c2w_matrices, plot_eye_frustums = True, plot_cam_axes = True):
     camera_axes = create_xyz_axes_for_plots(0.3)
 
     # Moving the lines that constitute the eye frustum for each 
-    # camera to the world frame.
+    # camera to the desired world frame.
     eyes_world_frame = pose_utils.batched_transform_line_segments(
         c2w_matrices, eye_frustum
     )
 
     # Moving the lines that constitute the XYZ axes for each 
-    # camera to the world frame.
+    # camera to the desired world frame.
     cam_axes_world_frame = pose_utils.batched_transform_line_segments(
         c2w_matrices, camera_axes
     )
-
-    ## TODO: Keep using ortho?
-    ax = plt.axes(projection = '3d', proj_type = 'ortho')
 
     for eye, axes in zip(eyes_world_frame, cam_axes_world_frame):
 
         # Plotting the lines that constitute the eye frustum.
         if plot_eye_frustums:
             for line in eye:
-                ax.plot3D(line[:, 0], line[:, 1], line[:, 2], color = 'red')
+                plt_ax.plot3D(line[:, 0], line[:, 1], line[:, 2], color = frustum_color)
 
         if plot_cam_axes:
             # Plotting the XYZ axes.
-            ax.plot3D(axes[0, :, 0], axes[0, :, 1], axes[0, :, 2], color = 'red')
-            ax.plot3D(axes[1, :, 0], axes[1, :, 1], axes[1, :, 2], color = 'green')
-            ax.plot3D(axes[2, :, 0], axes[2, :, 1], axes[2, :, 2], color = 'blue')
-            ax.scatter3D(axes[0,0,0], axes[0,0,1], axes[0,0,2], s = 1.0, c = "black")
+            line = plt_ax.plot3D(axes[0, :, 0], axes[0, :, 1], axes[0, :, 2], color = 'red')
+            plt_ax.plot3D(axes[1, :, 0], axes[1, :, 1], axes[1, :, 2], color = 'green')
+            plt_ax.plot3D(axes[2, :, 0], axes[2, :, 1], axes[2, :, 2], color = 'blue')
+            plt_ax.scatter3D(axes[0,0,0], axes[0,0,1], axes[0,0,2], s = 1.0, c = "black")
+
+def plot_scene(
+        gt_poses, W1_to_W2_transform = None, plot_eye_frustums = True, 
+        plot_cam_axes = True, plot_inference = False, inference_poses = None,
+    ):
+    """
+    TODO: Docstring.
+    """
+    if plot_inference:
+        assert inference_poses is not None
+        assert W1_to_W2_transform is not None
+
+    if W1_to_W2_transform is not None:
+        gt_poses = pose_utils.reconfigure_poses(
+            gt_poses, W1_to_W2_transform
+        )
+
+    ## TODO: Keep using ortho?
+    ax = plt.axes(projection = '3d', proj_type = 'ortho')
+    
+    plot_cameras(
+        gt_poses, plot_eye_frustums = True, 
+        plot_cam_axes = True, frustum_color = "red",
+    )
+    if plot_inference:
+        plot_cameras(
+            inference_poses, plot_eye_frustums = True, 
+            plot_cam_axes = True, frustum_color = "green"
+        )
 
     ax.scatter3D([0], [0], [0], s = 1.0, c = "black")
     ax.set_xlabel('X-Axis')
     ax.set_ylabel('Y-Axis')
     ax.set_zlabel('Z-Axis')
+
+    ax.set_xlim(-5, 5)
+    ax.set_ylim(-5, 5)
+    ax.set_zlim(-5, 5)
                 
     plt.show()
 
 if __name__ == "__main__":
-
-    # plot_scene(c2w_matrices, plot_eye_frustums = True, plot_cam_axes = False)
+    pass

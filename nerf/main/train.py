@@ -19,7 +19,6 @@ def launch(logger):
     path = "./nerf/params/config.yaml"
     params = load_params(path)
 
-    # Setting TF seed to enable determinism of TF.
     if params.system.tf_seed is not None:
         tf.random.set_seed(params.system.tf_seed)
     

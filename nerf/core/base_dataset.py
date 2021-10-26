@@ -43,6 +43,13 @@ class Dataset(ABC):
         self.iterate_mode_params = self.params.data.iterate_mode
 
     @abstractmethod
+    def load_data(self):
+        """
+        TODO: Docstring.
+        """
+        pass
+    
+    @abstractmethod
     def get_dataset(self):
         """
         This method needs to be implemented by every subclass.
@@ -156,7 +163,7 @@ class Dataset(ABC):
         to_save["adj_scale_factor"] = adj_scale_factor
         np.savez(os.path.join(root, "reconfig.npz"), **to_save)
 
-    def _load_reconfig_params(self):
+    def load_reconfig_params(self):
         """
         Loads the reconfig parameters from an npz file. 
         """
@@ -530,9 +537,9 @@ class Dataset(ABC):
         logger.debug("Creating TensorFlow datasets.")
 
         train_imgs = processed_splits["train"].imgs
-        train_poses = processed_splits["train"].poses.astype(np.float32)
-        train_bounds = processed_splits["train"].bounds.astype(np.float32)
-        train_intrinsics = processed_splits["train"].intrinsics.astype(np.float32)
+        train_poses = processed_splits["train"].poses
+        train_bounds = processed_splits["train"].bounds
+        train_intrinsics = processed_splits["train"].intrinsics
 
         x_test, y_test = self._separate(processed_splits["test"])
         x_val, y_val = self._separate(processed_splits["val"])
@@ -577,7 +584,7 @@ class Dataset(ABC):
         Create a TF Dataset object that can be used for rendering a single image.
         """
         self._validate_intrinsic_matrix(K = intrinsic)
-        W1_to_W2_transform, adj_scale_factor = self._load_reconfig_params()
+        W1_to_W2_transform, adj_scale_factor = self.load_reconfig_params()
 
         ## TODO: c2w would be (4, 4) but reconfigure_poses can 
         ## take (N, 4, 4) as well as (4, 4). Make a note of that.

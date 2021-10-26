@@ -7,7 +7,7 @@ import tensorflow as tf
 from tqdm import tqdm
 from nerf.core import ops
 from nerf.core.model import setup_model
-from nerf.core.datasets import setup_datasets
+from nerf.core.datasets import get_data
 
 from nerf.utils.params_utils import load_params
 
@@ -21,45 +21,45 @@ def launch(logger, split):
     path = "./nerf/params/config.yaml"
     params = load_params(path)
 
-    # Setting TF seed to enable determinism of TF.
     if params.system.tf_seed is not None:
         tf.random.set_seed(params.system.tf_seed)
+
+    # Getting data
+    data_splits, num_imgs = get_data(params)
+    data = data_splits[split]
     
-    # Getting datasets and specs
-    tf_datasets, num_imgs, img_HW = setup_datasets(params)
+    H, W = data.imgs.shape[:2]
+    zfill = int(np.log10(len(data.imgs)) + 5)
+    psnr_vals = []
 
-    total_pixels = (img_HW[0] * img_HW[1] * num_imgs[split])
-    total_steps = int(np.ceil(total_pixels / params.data.batch_size))
+    # Rendering one image at a time and evaluating it.
+    for i in tqdm(range(len(data.imgs)), desc = "Evaluating"):
+        
+        dataset = loader.create_dataset_for_render(
+            H = H, W = W, c2w = data.poses[i], 
+            bounds = data.bounds[i], intrinsic = data.intrinsic[i]
+        )
+        output = nerf.predict(x = dataset)
 
-    logger.debug(f"Number of Steps: {total_steps}")
-    
-    # Setup model and callbacks.
-    nerf = setup_model(params, num_imgs, img_HW)
-    output = nerf.predict(x = tf_datasets[split], verbose = 1)
+        fine_model_output = output[1]
+        pred_rgb = fine_model_output["pred_rgb"]
 
-    fine_model_output = output[1]
-    pred_rgb = fine_model_output["pred_rgb"]
+        pred_rgb_numpy = pred_rgb.numpy()
+        pred_rgb_numpy = np.clip(pred_rgb_numpy * 255.0, 0.0, 255.0)
+        pred_img = pred_rgb_numpy.reshape(H, W, 3)
 
-    gt_rgb_ = [x[1][0] for x in tf_datasets[split]]
-    gt_rgb = tf.concat(gt_rgb_, axis = 0)
+        psnr = psnr_metric_numpy(
+            data.imgs[i].astype(np.float32), 
+            pred_img.astype(np.float32)
+        )
+        psnr_vals.append(psnr)
 
-    psnr = ops.psnr_metric(gt_rgb, pred_rgb)
-    logger.info(f"PSNR: {psnr}")
+        pred_img = cv2.cvtColor(pred_img.astype(np.uint8), cv2.COLOR_RGB2BGR)
+        filename = {str(i).zfill(zfill)} + ".png"
+        cv2.imwrite(os.path.join(render_params.save_dir, filename), pred_img)
 
-    ## Saving Predictions.
-    if not os.path.exists(params.eval.save_dir):
-        os.makedirs(params.eval.save_dir, exist_ok=True)
-
-    pred_imgs = tf.reshape(pred_rgb, [-1, img_HW[0], img_HW[1], 3])
-    npy_pred_imgs = pred_imgs.numpy()
-    npy_pred_imgs = np.clip(npy_pred_imgs * 255, 0, 255).astype(np.uint8)
-
-    zfill = int(np.log10(num_imgs[split]) + 5)
-    
-    for i in tqdm(range(num_imgs[split]), desc = "Saving Images"):
-        img = cv2.cvtColor(npy_pred_imgs[i], cv2.COLOR_RGB2BGR)
-        path = os.path.join(params.eval.save_dir, str(i).zfill(zfill) + ".png")
-        cv2.imwrite(path, img)
+    mean_psnr = np.mean(psnr)
+    logger.info(f"Mean PSNR: {mean_psnr}")
 
 if __name__ ==  "__main__":
 

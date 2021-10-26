@@ -11,7 +11,7 @@ system:
   validation_freq: 100
   tensorboard_dir: "./logs"
   initial_epoch: 0
-  dataset_type: "CustomDataset" # One among "BlenderDataset" or "CustomDataset"
+  dataset_type: "BlenderDataset" # One among "BlenderDataset" or "CustomDataset"
 
 eval:
   save_dir: "/home/br7/Downloads/out"
@@ -46,12 +46,9 @@ model:
 ###############################################################################
 
 data:
-  
-  save_scene_metadata:
+  reconfig:
     # If save_dir is set to null, then the reconfig parameters will not be saved.
     save_dir: "../expt_211023/save_dir/reconfig"
-    # If save_poses is set to False, then poses will not be saved.
-    save_poses: False
 
   # scale_imgs can either be set to null or a float value. If scale_imgs 
   # is null, no scaling is applied. If scale_imgs is a float value, then 

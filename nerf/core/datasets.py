@@ -201,10 +201,10 @@ class BlenderDataset(Dataset):
         intrinsic = self._create_intrinsic_matrix(H, W, focal)
         intrinsics = [intrinsic.copy() for _ in range(len(imgs))]
 
-        imgs = np.array(imgs)
-        poses = np.array(poses)
-        bounds = np.array(bounds)
-        intrinsics = np.array(intrinsics)
+        imgs = np.array(imgs).astype(np.uint8)
+        poses = np.array(poses).astype(np.float32)
+        bounds = np.array(bounds).astype(np.float32)
+        intrinsics = np.array(intrinsics).astype(np.float32)
 
         data = ContainerType1(
             imgs = imgs, poses = poses, 
@@ -213,7 +213,7 @@ class BlenderDataset(Dataset):
 
         return data
 
-    def _load_full_dataset(self):
+    def load_data(self):
         """
         TODO: Elaborate.
         """
@@ -234,15 +234,15 @@ class BlenderDataset(Dataset):
         """
         TODO: Elaborate.
         """
-        data_splits, num_imgs = self._load_full_dataset()
+        data_splits, num_imgs = self.load_data()
 
         if self.params.data.dataset_mode == "iterate":
-            prepared_splits, img_HW = super().prepare_data_iterate_mode(data_splits)
-            tf_datasets = super().create_tf_dataset_iterate_mode(prepared_splits)
+            prepared_splits, img_HW = self.prepare_data_iterate_mode(data_splits)
+            tf_datasets = self.create_tf_dataset_iterate_mode(prepared_splits)
 
         elif self.params.data.dataset_mode == "sample":
-            prepared_splits, img_HW = super().prepare_data_sample_mode(data_splits)
-            tf_datasets = super().create_tf_dataset_sample_mode(prepared_splits)
+            prepared_splits, img_HW = self.prepare_data_sample_mode(data_splits)
+            tf_datasets = self.create_tf_dataset_sample_mode(prepared_splits)
 
         return tf_datasets, num_imgs, img_HW
 
@@ -401,10 +401,10 @@ class CustomDataset(Dataset):
             bounds.append(bound)
             intrinsics.append(intrinsic)
 
-        imgs = np.array(imgs)
-        poses = np.array(poses)
-        bounds = np.array(bounds)
-        intrinsics = np.array(intrinsics)
+        imgs = np.array(imgs).astype(np.uint8)
+        poses = np.array(poses).astype(np.float32)
+        bounds = np.array(bounds).astype(np.float32)
+        intrinsics = np.array(intrinsics).astype(np.float32)
 
         data = ContainerType1(
             imgs = imgs, poses = poses, 
@@ -413,7 +413,7 @@ class CustomDataset(Dataset):
 
         return data
 
-    def _load_full_dataset(self):
+    def load_data(self):
         """
         TODO: Elaborate.
         """
@@ -434,15 +434,15 @@ class CustomDataset(Dataset):
         """
         TODO: Elaborate.
         """
-        data_splits, num_imgs = self._load_full_dataset()
+        data_splits, num_imgs = self.load_data()
 
         if self.params.data.dataset_mode == "iterate":
-            prepared_splits, img_HW = super().prepare_data_iterate_mode(data_splits)
-            tf_datasets = super().create_tf_dataset_iterate_mode(prepared_splits)
+            prepared_splits, img_HW = self.prepare_data_iterate_mode(data_splits)
+            tf_datasets = self.create_tf_dataset_iterate_mode(prepared_splits)
 
         elif self.params.data.dataset_mode == "sample":
-            prepared_splits, img_HW = super().prepare_data_sample_mode(data_splits)
-            tf_datasets = super().create_tf_dataset_sample_mode(prepared_splits)
+            prepared_splits, img_HW = self.prepare_data_sample_mode(data_splits)
+            tf_datasets = self.create_tf_dataset_sample_mode(prepared_splits)
 
         return tf_datasets, num_imgs, img_HW
 
@@ -463,9 +463,23 @@ def get_dataset_obj(params):
 
     return loader
 
+def get_data(params, return_dataset_obj = False):
+    """
+    TODO: Docstring.
+    """
+    loader = get_dataset_obj(params = params)
+    data_splits, num_imgs = loader.load_data()
+
+    if return_dataset_obj:
+        output = (data_splits, num_imgs, loader)
+    else:
+        output = (data_splits, num_imgs)
+
+    return output
+
 def setup_tf_datasets_for_splits(params):
     """
-    Sets up the datasets.
+    Sets up the datasets. TODO: Rename.
     """
     loader = get_dataset_obj(params = params)
     tf_datasets, num_imgs, img_HW = loader.get_dataset()

@@ -83,17 +83,22 @@ def _plot_cameras(
             plt_ax.scatter3D(axes[0,0,0], axes[0,0,1], axes[0,0,2], s = 1.0, c = "black")
 
 def plot_scene(
-        gt_poses, W1_to_W2_transform = None, plot_eye_frustums = True, 
-        plot_cam_axes = True, plot_inference = False, inference_poses = None,
-    ):
+    plot_gt = False, plot_inference = False, gt_poses = None, 
+    inference_poses = None, W1_to_W2_transform = None, 
+    plot_eye_frustums = True, plot_cam_axes = True, 
+):
     """
     TODO: Docstring.
     """
+    if plot_gt:
+        assert gt_poses is not None
+
     if plot_inference:
         assert inference_poses is not None
         assert W1_to_W2_transform is not None
 
     if W1_to_W2_transform is not None:
+        # inference_poses are assumed to be already in the W2 coordinate system.
         gt_poses = pose_utils.reconfigure_poses(
             gt_poses, W1_to_W2_transform
         )
@@ -101,14 +106,16 @@ def plot_scene(
     ## TODO: Keep using ortho?
     ax = plt.axes(projection = '3d', proj_type = 'ortho')
     
-    plot_cameras(
-        gt_poses, plot_eye_frustums = True, 
-        plot_cam_axes = True, frustum_color = "red",
-    )
+    if plot_gt:
+        _plot_cameras(
+            gt_poses, ax, plot_eye_frustums = plot_eye_frustums, 
+            plot_cam_axes = plot_cam_axes, frustum_color = "red",
+        )
+
     if plot_inference:
-        plot_cameras(
-            inference_poses, plot_eye_frustums = True, 
-            plot_cam_axes = True, frustum_color = "green"
+        _plot_cameras(
+            inference_poses, ax, plot_eye_frustums = plot_eye_frustums, 
+            plot_cam_axes = plot_cam_axes, frustum_color = "green"
         )
 
     ax.scatter3D([0], [0], [0], s = 1.0, c = "black")

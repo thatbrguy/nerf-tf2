@@ -230,8 +230,19 @@ def psnr_metric(y_true, y_pred):
     Creating a metric function instead of a metric class.
 
     NOTE: Do note use this! Only kept here for reference purposes.
+    TODO: Elaborate/Clarify docstring.
     """
     mse = tf.reduce_mean(tf.square(y_true - y_pred))
     psnr = (-10.) * (tf.math.log(mse)/tf.math.log(10.))
+
+    return psnr
+
+def psnr_metric_numpy(y_true, y_pred):
+    """
+    TODO: Docstring.
+    TODO: Check if consistent with psnr_metric function.
+    """
+    mse = np.mean(np.square(y_true - y_pred))
+    psnr = (-10.) * (np.log(mse)/np.log(10.))
 
     return psnr

@@ -213,7 +213,7 @@ class BlenderDataset(Dataset):
 
         return data
 
-    def load_data(self):
+    def get_data_and_metadata_for_splits(self):
         """
         TODO: Elaborate.
         """
@@ -230,19 +230,19 @@ class BlenderDataset(Dataset):
 
         return data_splits, num_imgs
 
-    def get_dataset(self):
+    def get_tf_datasets_and_metadata_for_splits(self):
         """
         TODO: Elaborate.
         """
-        data_splits, num_imgs = self.load_data()
+        data_splits, num_imgs = self.get_data_and_metadata_for_splits()
 
         if self.params.data.dataset_mode == "iterate":
             prepared_splits, img_HW = self.prepare_data_iterate_mode(data_splits)
-            tf_datasets = self.create_tf_dataset_iterate_mode(prepared_splits)
+            tf_datasets = self.create_tf_datasets_iterate_mode(prepared_splits)
 
         elif self.params.data.dataset_mode == "sample":
             prepared_splits, img_HW = self.prepare_data_sample_mode(data_splits)
-            tf_datasets = self.create_tf_dataset_sample_mode(prepared_splits)
+            tf_datasets = self.create_tf_datasets_sample_mode(prepared_splits)
 
         return tf_datasets, num_imgs, img_HW
 
@@ -413,7 +413,7 @@ class CustomDataset(Dataset):
 
         return data
 
-    def load_data(self):
+    def get_data_and_metadata_for_splits(self):
         """
         TODO: Elaborate.
         """
@@ -430,19 +430,19 @@ class CustomDataset(Dataset):
 
         return data_splits, num_imgs
 
-    def get_dataset(self):
+    def get_tf_datasets_and_metadata_for_splits(self):
         """
         TODO: Elaborate.
         """
-        data_splits, num_imgs = self.load_data()
+        data_splits, num_imgs = self.get_data_and_metadata_for_splits()
 
         if self.params.data.dataset_mode == "iterate":
             prepared_splits, img_HW = self.prepare_data_iterate_mode(data_splits)
-            tf_datasets = self.create_tf_dataset_iterate_mode(prepared_splits)
+            tf_datasets = self.create_tf_datasets_iterate_mode(prepared_splits)
 
         elif self.params.data.dataset_mode == "sample":
             prepared_splits, img_HW = self.prepare_data_sample_mode(data_splits)
-            tf_datasets = self.create_tf_dataset_sample_mode(prepared_splits)
+            tf_datasets = self.create_tf_datasets_sample_mode(prepared_splits)
 
         return tf_datasets, num_imgs, img_HW
 
@@ -451,38 +451,40 @@ def get_dataset_obj(params):
     TODO: Docstring.
     """
     if params.system.dataset_type == "BlenderDataset":
-        loader = BlenderDataset(params = params)
+        dataset_obj = BlenderDataset(params = params)
     elif params.system.dataset_type == "CustomDataset":
-        loader = CustomDataset(params = params)
+        dataset_obj = CustomDataset(params = params)
     else:
         raise ValueError(f"Invalid dataset type: {params.system.dataset_type}")
 
-    if (type(loader) is not BlenderDataset) and \
+    if (type(dataset_obj) is not BlenderDataset) and \
         (params.system.white_bg):
         raise AssertionError("white_bg is only supported for BlenderDataset")
 
-    return loader
+    return dataset_obj
 
-def get_data(params, return_dataset_obj = False):
+def get_data_and_metadata_for_splits(params, return_dataset_obj = False):
     """
     TODO: Docstring.
     """
-    loader = get_dataset_obj(params = params)
-    data_splits, num_imgs = loader.load_data()
+    dataset_obj = get_dataset_obj(params = params)
+    data_splits, num_imgs = \
+        dataset_obj.get_data_and_metadata_for_splits()
 
     if return_dataset_obj:
-        output = (data_splits, num_imgs, loader)
+        output = (data_splits, num_imgs, dataset_obj)
     else:
         output = (data_splits, num_imgs)
 
     return output
 
-def setup_tf_datasets_for_splits(params):
+def get_tf_datasets_and_metadata_for_splits(params, return_dataset_obj = False):
     """
     Sets up the datasets. TODO: Rename.
     """
-    loader = get_dataset_obj(params = params)
-    tf_datasets, num_imgs, img_HW = loader.get_dataset()
+    dataset_obj = get_dataset_obj(params = params)
+    tf_datasets, num_imgs, img_HW = \
+        dataset_obj.get_tf_datasets_and_metadata_for_splits()
 
     if (params.data.dataset_mode == "iterate") and \
         (params.data.iterate_mode.advance_train_loader.enable):
@@ -490,7 +492,12 @@ def setup_tf_datasets_for_splits(params):
         skip_count = params.data.iterate_mode.advance_train_loader.skip_count
         tf_datasets["train"] = tf_datasets["train"].skip(skip_count)
 
-    return tf_datasets, num_imgs, img_HW
+    if return_dataset_obj:
+        output = (tf_datasets, num_imgs, img_HW, dataset_obj)
+    else:
+        output = (tf_datasets, num_imgs, img_HW)
+
+    return output
 
 if __name__ ==  "__main__":
     
@@ -498,4 +505,5 @@ if __name__ ==  "__main__":
 
     path = "./nerf/params/config.yaml"
     params = load_params(path)
-    tf_datasets, num_imgs, img_HW = setup_tf_datasets_for_splits(params)
+    tf_datasets, num_imgs, img_HW = \
+        get_tf_datasets_and_metadata_for_splits(params)

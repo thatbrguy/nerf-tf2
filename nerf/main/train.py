@@ -3,10 +3,8 @@ import logging
 import numpy as np
 import tensorflow as tf
 
-from nerf.core import ops
+from nerf.core import ops, datasets
 from nerf.core.model import setup_model_and_callbacks
-
-from nerf.core.datasets import setup_datasets
 from nerf.utils.params_utils import load_params
 
 os.environ["TF_MIN_CPP_LOG_LEVEL"] = "2"
@@ -23,7 +21,8 @@ def launch(logger):
         tf.random.set_seed(params.system.tf_seed)
     
     # Getting datasets and specs
-    tf_datasets, num_imgs, img_HW = setup_datasets(params)
+    tf_datasets, num_imgs, img_HW = \
+        datasets.get_tf_datasets_and_metadata_for_splits(params)
 
     # Setting up some dataset related parameters.
     if params.data.dataset_mode == "iterate":

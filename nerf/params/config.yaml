@@ -8,23 +8,23 @@ system:
   run_eagerly: False
   log_images: False
   steps_per_epoch: 32
-  validation_freq: 100
+  validation_freq: 400
   tensorboard_dir: "./logs"
   initial_epoch: 0
   dataset_type: "BlenderDataset" # One among "BlenderDataset" or "CustomDataset"
 
 eval:
-  save_dir: "/home/br7/Downloads/out"
+  save_dir: "/content/output/eval"
 
 render:
-  radius: 5.0
+  radius: 4.0
   inclination: 50
   num_cameras: 30
   img_size: [800, 800] # [H, W]
-  camera_model_name: "" # TODO: Fill
-  camera_model_params: [] # TODO: Fill
+  camera_model_name: "SIMPLE_PINHOLE"
+  camera_model_params: [1111.111, 400.0, 400.0]
   bounds: null # If null, bounds are auto calcualted.
-  save_dir: ""
+  save_dir: "/content/output/render"
 
 ###############################################################################
 ## B. Model Functionality Related Parameters
@@ -32,14 +32,14 @@ render:
 
 model:
   save:
-    save_dir: "../expt_211023/save_dir/model" # "/content/drive/MyDrive/NerfExpts/save_dir/model"
+    save_dir: "/content/drive/MyDrive/NerfExpts/save_dir/models" 
     save_optimizer_state: True
   
   load:
-    load_dir: "/home/br7/Downloads/test"
+    load_dir: "/content/drive/MyDrive/NerfExpts/save_dir/xxxxx"
     load_tag: "013999_27.65"
     set_weights: True
-    skip_optimizer: True
+    skip_optimizer: False
 
 ###############################################################################
 ## C. Data Parameters
@@ -48,14 +48,14 @@ model:
 data:
   reconfig:
     # If save_dir is set to null, then the reconfig parameters will not be saved.
-    save_dir: "../expt_211023/save_dir/reconfig"
+    save_dir: "/content/drive/MyDrive/NerfExpts/save_dir/metadata"
 
   # scale_imgs can either be set to null or a float value. If scale_imgs 
   # is null, no scaling is applied. If scale_imgs is a float value, then 
   # the images and the intrinsic matrices are scaled.
-  scale_imgs: 0.5
+  scale_imgs: null
 
-  scene_scale_mul: 0.75
+  scene_scale_mul: 0.85
   scene_scale_add: 0.0
   
   batch_size: 4096
@@ -132,9 +132,10 @@ preprocessing:
   origin_method: "min_dist_solve"
   bounds_method: "include_corners"
   basis_method: "identity"
+  manual_rotation: null
 
 sampling:
   N_coarse: 64
   N_fine: 128
   perturb: True
-  lin_inv_depth: False
+  lin_inv_depth: True

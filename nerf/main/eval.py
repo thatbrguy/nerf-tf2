@@ -5,9 +5,8 @@ import numpy as np
 import tensorflow as tf
 
 from tqdm import tqdm
-from nerf.core import ops
+from nerf.core import ops, datasets
 from nerf.core.model import setup_model
-from nerf.core.datasets import get_data
 
 from nerf.utils.params_utils import load_params
 
@@ -25,7 +24,7 @@ def launch(logger, split):
         tf.random.set_seed(params.system.tf_seed)
 
     # Getting data
-    data_splits, num_imgs = get_data(params)
+    data_splits, num_imgs = datasets.get_data_and_metadata_for_splits(params)
     data = data_splits[split]
     
     H, W = data.imgs.shape[:2]
@@ -55,7 +54,7 @@ def launch(logger, split):
         psnr_vals.append(psnr)
 
         pred_img = cv2.cvtColor(pred_img.astype(np.uint8), cv2.COLOR_RGB2BGR)
-        filename = {str(i).zfill(zfill)} + ".png"
+        filename = f"eval_{str(i).zfill(zfill)}.png"
         cv2.imwrite(os.path.join(render_params.save_dir, filename), pred_img)
 
     mean_psnr = np.mean(psnr)

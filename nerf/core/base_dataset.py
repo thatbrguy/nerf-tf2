@@ -43,19 +43,19 @@ class Dataset(ABC):
         self.iterate_mode_params = self.params.data.iterate_mode
 
     @abstractmethod
-    def load_data(self):
+    def get_data_and_metadata_for_splits(self):
         """
         TODO: Docstring.
         """
         pass
     
     @abstractmethod
-    def get_dataset(self):
+    def get_tf_datasets_and_metadata_for_splits(self):
         """
         This method needs to be implemented by every subclass.
 
-        The get_dataset function implemented in each subclass must 
-        return a tuple of three variables.
+        The get_tf_datasets_and_metadata function implemented in each 
+        subclass must return a tuple of three variables.
 
         The first variable of the tuple should be tf_datasets. This variable 
         should be a dictionary. Each key of this dictionary should be a string 
@@ -210,6 +210,7 @@ class Dataset(ABC):
             poses = all_poses, 
             origin_method = self.params.preprocessing.origin_method,
             basis_method = self.params.preprocessing.basis_method,
+            manual_rotation = self.params.preprocessing.manual_rotation,
         )
 
         for split in self.splits:
@@ -469,7 +470,7 @@ class Dataset(ABC):
 
         return x_split, y_split
 
-    def create_tf_dataset_iterate_mode(self, processed_splits):
+    def create_tf_datasets_iterate_mode(self, processed_splits):
         """
         Method that can be used by the subclasses.
         
@@ -530,7 +531,7 @@ class Dataset(ABC):
 
         return tf_datasets
 
-    def create_tf_dataset_sample_mode(self, processed_splits):
+    def create_tf_datasets_sample_mode(self, processed_splits):
         """
         Method that can be used by the subclasses.
         """
@@ -600,12 +601,11 @@ class Dataset(ABC):
             scene_scale_factor = adj_scale_factor,
         )
 
-        H, W = img.shape[:2]
         rays_o, rays_d = ray_utils.get_rays(
-            H = H, W = W, intrinsic = intrinsic, c2w = c2w,
+            H = H, W = W, intrinsic = intrinsic, c2w = new_pose,
         )
 
-        bounds_ = np.broadcast_to(bounds[None, :], shape = (rays_d.shape[0], 2))
+        bounds_ = np.broadcast_to(new_bounds[None, :], shape = (rays_d.shape[0], 2))
         near, far = bounds_[:, 0:1], bounds_[:, 1:2]
 
         far = far.astype(np.float32)

@@ -208,7 +208,7 @@ def batched_transform_line_segments(RT_matrices, lines):
 
     return output
 
-def calculate_new_world_pose(poses, origin_method, basis_method):
+def calculate_new_world_pose(poses, origin_method, basis_method, manual_rotation = None):
     """
     Given N pose matrices (poses), each of which can transform a 
     point from a camera coordinate system to an arbitrary world 
@@ -217,15 +217,21 @@ def calculate_new_world_pose(poses, origin_method, basis_method):
 
     TODO: Rewrite if needed.
 
-    ## TODO, IMPORTANT: Review if functionality is correct! There 
-    is a chance it is wrong!
-
     Args:
         poses                   :   A NumPy array of shape (N, 4, 4)
         origin_method           :   A string which is either "average", 
                                     "min_dist_solve" or "min_dist_opt"
-        basis_method            :   A string which is either "identity" 
-                                    or "compute"
+        basis_method            :   A string which is either "identity",
+                                    "compute" or "manual".
+        manual_rotation         :   This parameter can take a string 
+                                    or None. If basis_method is "manual", 
+                                    then this parameter must be a string 
+                                    and this parameter must be a path that 
+                                    points to a NumPy file which contains 
+                                    a rotation matrix of shape (3, 3). 
+                                    If basis_method is "identity" or "compute", 
+                                    then this parameter is not used and can 
+                                    be left as None.
 
     Returns:
         W1_to_W2_transform       :   A NumPy array of shape (4, 4)
@@ -241,6 +247,13 @@ def calculate_new_world_pose(poses, origin_method, basis_method):
 
     elif basis_method == "compute":
         x_basis, y_basis, z_basis = compute_new_world_basis(poses)
+
+    elif basis_method == "manual":
+        assert manual_rotation is not None
+        matrix = np.load(manual_rotation)
+
+        assert matrix.shape == (3, 3)
+        x_basis, y_basis, z_basis = matrix[:, 0], matrix[:, 1], matrix[:, 2]
 
     else:
         raise ValueError(f"Invalid basis_method: {basis_method}")

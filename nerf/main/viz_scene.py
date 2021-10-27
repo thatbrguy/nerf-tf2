@@ -4,8 +4,8 @@ import argparse
 import numpy as np
 import tensorflow as tf
 
+from nerf.core import datasets
 from nerf.utils import pose_utils, plot_utils
-from nerf.core.datasets import get_data
 from nerf.utils.params_utils import load_params
 
 os.environ["TF_MIN_CPP_LOG_LEVEL"] = "2"
@@ -25,7 +25,8 @@ def launch(
         tf.random.set_seed(params.system.tf_seed)
 
     # Getting data
-    data_splits, num_imgs, loader = get_data(params, return_dataset_obj=True)
+    data_splits, num_imgs, loader =\
+        datasets.get_data_and_metadata_for_splits(params, return_dataset_obj=True)
 
     if plot_gt:
         assert (splits is not None) and (type(splits) is list)
@@ -82,5 +83,7 @@ if __name__ == "__main__":
 
     PIL_logger = logging.getLogger("PIL")
     PIL_logger.setLevel(logging.WARNING)
+    MPL_logger = logging.getLogger("matplotlib")
+    MPL_logger.setLevel(logging.WARNING)
 
     launch(logger, plot_gt = True, plot_inference = True, splits = ["train", "val", "test"])

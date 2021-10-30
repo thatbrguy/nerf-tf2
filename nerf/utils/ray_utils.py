@@ -115,6 +115,7 @@ def create_input_batch_coarse_model(params, rays_o, rays_d, near, far):
     can be fed to the coarse model.
 
     Args:
+        params      : TODO (type, explain)
         rays_o      : TODO (type, explain) with shape (N_rays, 3).
         rays_d      : TODO (type, explain) with shape (N_rays, 3).
         near        : TODO (type, explain) with shape (N_rays, 1).

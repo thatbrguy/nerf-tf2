@@ -12,10 +12,10 @@ os.environ["TF_MIN_CPP_LOG_LEVEL"] = "2"
 
 def launch(
     logger, plot_gt, plot_inference, splits = None, 
-    coord_system = "W2", plot_eye_frustums = True, plot_cam_axes = True
+    coord_system = "W2", plot_eye_pyramids = True, plot_cam_axes = True
 ):
     """
-    TODO: Docstring
+    Launches the visualization run.
     """
     # Setting up params
     path = "./nerf/params/config.yaml"
@@ -25,7 +25,7 @@ def launch(
         tf.random.set_seed(params.system.tf_seed)
 
     # Getting data
-    data_splits, num_imgs, loader =\
+    data_splits, num_imgs, dataset_obj =\
         datasets.get_data_and_metadata_for_splits(params, return_dataset_obj=True)
 
     if plot_gt:
@@ -42,7 +42,6 @@ def launch(
         gt_poses = None
 
     if plot_inference:
-
         render_params = params.render
         assert render_params.num_cameras > 0
         assert coord_system == "W2"
@@ -59,14 +58,14 @@ def launch(
         plot_inference = None
 
     if coord_system == "W2":
-        W1_to_W2_transform, _ = loader.load_reconfig_params()
+        W1_to_W2_transform, _ = dataset_obj.load_reconfig_params()
     elif coord_system == "W1":
         W1_to_W2_transform = None
 
     plot_utils.plot_scene(
         plot_gt = plot_gt, plot_inference = plot_inference, gt_poses = gt_poses, 
         inference_poses = inference_poses, W1_to_W2_transform = W1_to_W2_transform, 
-        plot_eye_frustums = plot_eye_frustums, plot_cam_axes = plot_cam_axes, 
+        plot_eye_pyramids = plot_eye_pyramids, plot_cam_axes = plot_cam_axes, 
     )
 
 if __name__ == "__main__":

@@ -23,10 +23,9 @@ ContainerType2 = namedtuple(
 
 class Dataset(ABC):
     """
-    A class that has methods that are common for all datasets. 
-    This class must not be used directly!
-
-    TODO: Elaborate.
+    This class contains useful functionality that can be used by 
+    other classes which inherit this class. This class also makes 
+    sure that the derived classes has implemented certain methods. 
     """
     def __init__(self, params):
         self.params = params
@@ -45,16 +44,43 @@ class Dataset(ABC):
     @abstractmethod
     def get_data_and_metadata_for_splits(self):
         """
-        TODO: Docstring.
+        This method needs to be implemented by every class that inherits 
+        this class (Dataset).
+
+        The get_data_and_metadata_for_splits function implemented in each 
+        subclass must return a tuple of two variables.
+
+        The first variable of the tuple should be data_splits. This variable 
+        should be a dictionary. Each key of this dictionary should be a string 
+        denoting a split (i.e. train/val/test). Each value of the dictionary 
+        should be an object of type ContainerType1 which contains the data 
+        for that split.
+
+        The second variable of the tuple should be num_imgs. This variable 
+        should be a dictionary. Each key of this dictionary should be a string 
+        denoting a split (i.e. train/val/test). Each value of the dictionary 
+        should be an integer denoting the number of images that are available 
+        for the corresponding split.
+
+        The second variable (num_imgs) is needed because the number of images 
+        that are available for each split will only be known at runtime. 
+        For instance, the number of images available for validation may be 
+        lesser than the total number of validation images depending on certain 
+        parameters in the config file. To let the code accurately know 
+        about the exact number of images available for each split, this 
+        variable needs to be configured.
+
+        TODO: Refactor, review terminology, finish.
         """
         pass
     
     @abstractmethod
     def get_tf_datasets_and_metadata_for_splits(self):
         """
-        This method needs to be implemented by every subclass.
+        This method needs to be implemented by every class that inherits
+        this class (Dataset).
 
-        The get_tf_datasets_and_metadata function implemented in each 
+        The get_tf_datasets_and_metadata_for_splits function implemented in each 
         subclass must return a tuple of three variables.
 
         The first variable of the tuple should be tf_datasets. This variable 
@@ -125,7 +151,11 @@ class Dataset(ABC):
                 the function _validate_intrinsic_matrix
 
         Args:
-            TODO
+            data_splits :   A dictionary. Each key of this dictionary should 
+                            be a string denoting a split (i.e. train/val/test). 
+                            Each value of the dictionary should be an object of 
+                            type ContainerType1 which contains the loaded data 
+                            for that split.
         """
         all_H, all_W = [], []
         for split in self.splits:
@@ -177,7 +207,22 @@ class Dataset(ABC):
 
     def _reconfigure_imgs_and_intrinsics(self, data_splits):
         """
-        TODO: Docstring
+        Resizes the images and adjusts the intrinsics matrices if required 
+        based on the settings in the config file.
+
+        Args:
+            data_splits         :   A dictionary. Each key of this dictionary should 
+                                    be a string denoting a split (i.e. train/val/test). 
+                                    Each value of the dictionary should be an object of 
+                                    type ContainerType1 which contains the data for 
+                                    that split.
+
+        Returns:
+            reconf_data_splits  :   A dictionary. Each key of this dictionary should 
+                                    be a string denoting a split (i.e. train/val/test). 
+                                    Each value of the dictionary should be an object of 
+                                    type ContainerType1 which contains the data for 
+                                    that split.
         """
         reconf_data_splits = dict()
         
@@ -199,14 +244,37 @@ class Dataset(ABC):
 
     def _reconfigure_poses(self, data_splits):
         """
-        TODO: Docstring
+        Reconfigures the pose matrices.
+
+        The poses matrices of the input move a point from a camera coordinate system to 
+        the W1 coordinate system. For each pose matrix in the input, this function 
+        creates a new pose matrix that moves a point from a camera coordinate system 
+        to the W2 coordinate system. (TODO: Rewrite.)
+
+        Args:
+            data_splits         :   A dictionary. Each key of this dictionary should 
+                                    be a string denoting a split (i.e. train/val/test). 
+                                    Each value of the dictionary should be an object of 
+                                    type ContainerType1 which contains the data for 
+                                    that split.
+
+        Returns:
+            reconf_data_splits  :   A dictionary. Each key of this dictionary should 
+                                    be a string denoting a split (i.e. train/val/test). 
+                                    Each value of the dictionary should be an object of 
+                                    type ContainerType1 which contains the data for 
+                                    that split.
+
+            W1_to_W2_transform  :   A NumPy array of shape (4, 4) which can transform a 
+                                    point from the W1 corodinate system to the 
+                                    W2 coordinate system.
         """
         reconf_data_splits = dict()
         
         all_poses = [data_splits[x].poses for x in self.splits]
         all_poses = np.concatenate(all_poses, axis = 0)
 
-        W1_to_W2_transform = pose_utils.calculate_new_world_pose(
+        W1_to_W2_transform = pose_utils.calculate_new_world_transform(
             poses = all_poses, 
             origin_method = self.params.preprocessing.origin_method,
             basis_method = self.params.preprocessing.basis_method,
@@ -230,7 +298,32 @@ class Dataset(ABC):
 
     def _reconfigure_scene_scale(self, data_splits):
         """
-        TODO: Docstring
+        Reconfigures the pose matrices and bounds to adjust the scale of the 
+        scene if required.
+
+        This function calculates the scene scale factor (scene_scale_factor) 
+        using the function pose_utils.calculate_scene_scale. The calculated 
+        scene scale factor can be adjusted using certain parameters defined 
+        in the config file. The adjusted scene scale factor (adj_scale_factor)
+        is then used to reconfigure the poses matrices and bounds.
+
+        Args:
+            data_splits         :   A dictionary. Each key of this dictionary should 
+                                    be a string denoting a split (i.e. train/val/test). 
+                                    Each value of the dictionary should be an object of 
+                                    type ContainerType1 which contains the data for 
+                                    that split.
+
+        Returns:
+            reconf_data_splits  :   A dictionary. Each key of this dictionary should 
+                                    be a string denoting a split (i.e. train/val/test). 
+                                    Each value of the dictionary should be an object of 
+                                    type ContainerType1 which contains the data for 
+                                    that split.
+
+            adj_scale_factor    :   A float value (TODO: check if type is float or numpy)
+                                    denoting the adjusted scale factor.
+
         """
         reconf_data_splits = dict()
     
@@ -246,14 +339,16 @@ class Dataset(ABC):
         all_bounds = np.concatenate(all_bounds, axis = 0)
         all_intrinsics = np.concatenate(all_intrinsics, axis = 0)
 
-        ## TODO: Rename function name
         scene_scale_factor = pose_utils.calculate_scene_scale(
             poses = all_poses, bounds = all_bounds, 
             bounds_method = self.params.preprocessing.bounds_method,
             intrinsics = all_intrinsics, height = H, width = W
         )
 
-        ## TODO: Explain.
+        # The values self._scale_mul and self._scale_add are used to 
+        # adjust the scene scale factor. The adjusted scene scale 
+        # factor (adj_scale_factor) is then used to reconfigure the 
+        # poses matrices and bounds.
         adj_scale_factor = scene_scale_factor * self._scale_mul + self._scale_add
 
         for split in self.splits:
@@ -273,7 +368,36 @@ class Dataset(ABC):
 
     def validate_and_reconfigure_data(self, data_splits):
         """
-        TODO: Docstring.
+        Validates and reconfigures the data.
+
+        This function performs the following steps:
+        1.  Checks if the data provided for the train, val and tests splits 
+            is consistent with the requirements of the codebase.
+
+        2.  Resizes the images and adjusts the intrinsics matrices if required 
+            based on the settings in the config file.
+
+        3.  Reconfigure pose matrices (TODO: rewrite)
+
+        4.  Reconfigures the pose matrices and bounds to adjust the scale of the 
+            scene if required.
+
+        5.  Saves some of the metadata calculated during the above steps to 
+            disk if required.
+
+        Args:
+            data_splits     :   A dictionary. Each key of this dictionary should 
+                                be a string denoting a split (i.e. train/val/test). 
+                                Each value of the dictionary should be an object of 
+                                type ContainerType1 which contains the data for 
+                                that split.
+
+        Returns:
+            output          :   A dictionary. Each key of this dictionary should 
+                                be a string denoting a split (i.e. train/val/test). 
+                                Each value of the dictionary should be an object of 
+                                type ContainerType1 which contains the data for 
+                                that split.
         """
         self._validate_all_splits(data_splits)
 
@@ -288,15 +412,20 @@ class Dataset(ABC):
 
     def process_data(self, data):
         """
-        Creates rays_o, rays_d, near, far, rgb
+        Extracts ray level information from the given scene level data. 
+    
+        Given an object of type ContainerType1 which contains scene level data 
+        (i.e. imgs, poses, bounds, intrinsics), this function extracts ray level 
+        data (i.e. rays_o, rays_d, near, far, rgb). The extracted ray level data 
+        is stored in an object of type ContainerType2.
 
-        TODO: Elaborate.
+        TODO: Describe shapes of rays_o etc.
 
-        Legend:
-            N: Number of images.
-            L: Total number of pixels. 
+        Args:
+            data    :   An object of type ContainerType1
 
-        TODO: Write Args and Returns
+        Returns:
+            output  :   An object of type ContainerType2
         """
         rays_o, rays_d = [], []
         near, far, rgb = [], [], []
@@ -335,18 +464,36 @@ class Dataset(ABC):
         rays_o = np.concatenate(rays_o, axis = 0).astype(np.float32)
         rays_d = np.concatenate(rays_d, axis = 0).astype(np.float32)
 
-        data = ContainerType2(
+        output = ContainerType2(
             rays_o = rays_o, rays_d = rays_d, near = near, 
             far = far, rgb = rgb,
         )
 
-        return data
+        return output
 
     def prepare_data_iterate_mode(self, data_splits):
         """
-        Method that can be used by the subclasses.
+        This function prepares the data for the iterate dataset mode. 
+        This function can be used by the subclasses.
 
-        TODO: Elaborate.
+        Args:
+            data_splits         :   A dictionary. Each key of this dictionary should 
+                                    be a string denoting a split (i.e. train/val/test). 
+                                    Each value of the dictionary should be an object of 
+                                    type ContainerType1 which contains the data for 
+                                    that split.
+
+        Returns:
+            processed_splits    :   A dictionary. Each key of this dictionary should 
+                                    be a string denoting a split (i.e. train/val/test). 
+                                    Each value of the dictionary should be an object of 
+                                    type ContainerType2 which contains the data for 
+                                    that split.
+
+            img_HW              :   A tuple denoting the height and width of the images 
+                                    in the dataset (all images in the dataset have the same 
+                                    height and width). img_HW[0] contains the height and 
+                                    img_HW[1] contains the width.
         """
         processed_splits = {}
         reconf_data_splits = self.validate_and_reconfigure_data(
@@ -365,9 +512,28 @@ class Dataset(ABC):
 
     def prepare_data_sample_mode(self, data_splits):
         """
-        Method that can be used by the subclasses.
+        This function prepares the data for the sample dataset mode. 
+        This function can be used by the subclasses.
 
-        TODO: Elaborate.
+        Args:
+            data_splits         :   A dictionary. Each key of this dictionary should 
+                                    be a string denoting a split (i.e. train/val/test). 
+                                    Each value of the dictionary should be an object of 
+                                    type ContainerType1 which contains the data for 
+                                    that split.
+
+        Returns:
+            processed_splits    :   A dictionary. Each key of this dictionary should 
+                                    be a string denoting a split (i.e. train/val/test). 
+                                    processed_splits["train"] will contain an object of 
+                                    type ContainerType1. processed_splits["val"] and 
+                                    processed_splits["test"] will contain an object 
+                                    of type ContainerType2.
+
+            img_HW              :   A tuple denoting the height and width of the images 
+                                    in the dataset (all images in the dataset have the same 
+                                    height and width). img_HW[0] contains the height and 
+                                    img_HW[1] contains the width.
         """
         out_data_splits = {}
         reconf_data_splits = self.validate_and_reconfigure_data(
@@ -392,7 +558,35 @@ class Dataset(ABC):
 
     def _sample_mode_map_function(self, img, pose, bounds, intrinsic):
         """
-        TODO: Docstring.
+        This is a function that will be used by train_dataset.map 
+        in the function create_tf_datasets_sample_mode
+
+        This function extracts ray level data from the a given image, 
+        pose matrix, bounds and intrinsic matrix. If the image has
+        height H and width W, then H*W rays can be obtained.
+
+        The ray level data is comprised of ray origin, ray direction, 
+        near bound, far bound and rgb colour information for each ray.
+
+        This function randomly (uniformly) selects B rays among 
+        the H*W available rays and returns the corresponding ray 
+        level information for the B rays. Here, B is the batch size.
+
+        TODO: Verify type (TF Tensor) and shapes.
+
+        Args:
+            img         :   A TensorFlow tensor of shape (H, W, 3)
+            pose        :   A TensorFlow tensor of shape (4, 4)
+            bounds      :   A TensorFlow tensor of shape (2,)
+            intrinsic   :   A TensorFlow tensor of shape (3, 3)
+
+        Returns:
+            x_vals      :   A tuple containing rays_o, rays_d, near 
+                            and far. The shape of rays_o and rays_d 
+                            is (B, 3). The shape of near and far 
+                            is (B, 1).
+            y_vals      :   A tuple containing rgb. The shape of 
+                            rgb is (B, 3)
         """            
         K = intrinsic        
         img_shape = tf.shape(img)
@@ -432,11 +626,11 @@ class Dataset(ABC):
 
     def _shuffle(self, container_type_2):
         """
-        Given an instance of ContainerType2 (which is container_type_2), 
+        Given an object of type ContainerType2 (here, container_type_2),
         this function performs the following operations:
 
         1.  Shuffles all the contents of container_type_2
-        2.  Creates a new instances of ContainerType2 called 
+        2.  Creates a new instance of ContainerType2 called 
             shuffled_container_type_2 to store the shuffled contents. 
         """
         rng = np.random.default_rng(
@@ -460,8 +654,8 @@ class Dataset(ABC):
 
     def _separate(self, container_type_2):
         """
-        Given an instance of ContainerType2 (which is container_type_2), 
-        this function splits the contents of the instance into 
+        Given an object of type ContainerType2 (here, container_type_2), 
+        this function splits the contents of the object into 
         x_split and y_split. 
         """
         CT2 = container_type_2
@@ -472,28 +666,28 @@ class Dataset(ABC):
 
     def create_tf_datasets_iterate_mode(self, processed_splits):
         """
-        Method that can be used by the subclasses.
-        
-        Legend:
-            L: Total number of pixels in the dataset.
+        Creates TensorFlow datasets for the iterate dataset mode.
 
+        Given ray level data for each split, this function creates 
+        a TensorFlow (TF) dataset for each split. This function can 
+        be used by the subclasses.
+        
         Args:
-            TODO
+            processed_splits    :   A dictionary. Each key of this dictionary should 
+                                    be a string denoting a split (i.e. train/val/test). 
+                                    Each value of the dictionary should be an object of 
+                                    type ContainerType2 which contains the data for 
+                                    that split.
 
-        Returns: 
-            TODO
-        
-        Shapes:
-            rays_o      :   A NumPy array of shape (L, 3)
-            rays_d      :   A NumPy array of shape (L, 3)    
-            near        :   A NumPy array of shape (L, 1) 
-            far         :   A NumPy array of shape (L, 1)
-            rgb         :   A NumPy array of shape (L, 3)
-
-        TODO: Elaborate
+        Returns:
+            tf_datasets         :   A dictionary. Each key of this dictionary should 
+                                    be a string denoting a split (i.e. train/val/test). 
+                                    Each value of the dictionary should be a TF dataset.
         """
         logger.debug("Creating TensorFlow datasets.")
-        
+
+        # The user can optionally request the train data to be shuffled 
+        # before the train TF dataset is created.
         if self.iterate_mode_params.train_shuffle.enable:
             processed_splits["train"] = self._shuffle(processed_splits["train"])
 
@@ -501,6 +695,7 @@ class Dataset(ABC):
         x_test, y_test = self._separate(processed_splits["test"])
         x_val, y_val = self._separate(processed_splits["val"])
 
+        # Creating the train TF dataset.
         train_dataset = tf.data.Dataset.from_tensor_slices((x_train, y_train))
         train_dataset = train_dataset.batch(
             batch_size =  self.params.data.batch_size,
@@ -510,12 +705,14 @@ class Dataset(ABC):
             count = self.iterate_mode_params.repeat_count
         )
 
+        # Creating the val TF dataset.
         val_dataset = tf.data.Dataset.from_tensor_slices((x_val, y_val))
         val_dataset = val_dataset.batch(
             batch_size =  self.params.data.batch_size,
             drop_remainder = False,
         )
 
+        # Creating the test TF dataset.
         test_dataset = tf.data.Dataset.from_tensor_slices((x_test, y_test))
         test_dataset = test_dataset.batch(
             batch_size =  self.params.data.batch_size,
@@ -533,7 +730,25 @@ class Dataset(ABC):
 
     def create_tf_datasets_sample_mode(self, processed_splits):
         """
-        Method that can be used by the subclasses.
+        Creates TensorFlow datasets for the sample dataset mode.
+
+        Given validated and reconfigured scene level data for the train split, 
+        and ray level data for the val and test splits, this function creates 
+        a TensorFlow (TF) dataset for each split. This function can be used 
+        by the subclasses.
+        
+        Args:
+            processed_splits    :   A dictionary. Each key of this dictionary should 
+                                    be a string denoting a split (i.e. train/val/test). 
+                                    processed_splits["train"] will contain an object of 
+                                    type ContainerType1. processed_splits["val"] and 
+                                    processed_splits["test"] will contain an object 
+                                    of type ContainerType2.
+
+        Returns:
+            tf_datasets         :   A dictionary. Each key of this dictionary should 
+                                    be a string denoting a split (i.e. train/val/test). 
+                                    Each value of the dictionary should be a TF dataset.
         """
         logger.debug("Creating TensorFlow datasets.")
 
@@ -545,6 +760,7 @@ class Dataset(ABC):
         x_test, y_test = self._separate(processed_splits["test"])
         x_val, y_val = self._separate(processed_splits["val"])
 
+        # Creating the train TF dataset.
         train_dataset = tf.data.Dataset.from_tensor_slices(
             (train_imgs, train_poses, train_bounds, train_intrinsics)
         )
@@ -559,12 +775,14 @@ class Dataset(ABC):
             buffer_size = self.sample_mode_params.prefetch_buffer_size
         )
 
+        # Creating the val TF dataset.
         val_dataset = tf.data.Dataset.from_tensor_slices((x_val, y_val))
         val_dataset = val_dataset.batch(
             batch_size =  self.params.data.batch_size,
             drop_remainder = False,
         )
 
+        # Creating the test TF dataset.
         test_dataset = tf.data.Dataset.from_tensor_slices((x_test, y_test))
         test_dataset = test_dataset.batch(
             batch_size =  self.params.data.batch_size,
@@ -582,7 +800,24 @@ class Dataset(ABC):
 
     def create_dataset_for_render(self, H, W, c2w, bounds, intrinsic):
         """
-        Create a TF Dataset object that can be used for rendering a single image.
+        Create a TensorFlow dataset that can be used for rendering a single image. 
+        
+        TODO: Maybe elaborate; also check types and shapes.
+
+        This function can be used by the subclasses.
+
+        Args:
+            H           :   An integer representing the height of the image.
+            W           :   An integer representing the width of the image.
+            c2w         :   A NumPy array of shape (4, 4) representing the 
+                            camera to W1 transformation matrix.
+            bounds      :   A NumPy array of shape (2,) representing the 
+                            near and far bounds.
+            intrinsic   :   A NumPy array of shape (3, 3) representing the 
+                            intrinsic matrix.
+
+        Returns:
+            dataset     :   A TensorFlow dataset.
         """
         self._validate_intrinsic_matrix(K = intrinsic)
         W1_to_W2_transform, adj_scale_factor = self.load_reconfig_params()

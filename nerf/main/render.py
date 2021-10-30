@@ -13,7 +13,10 @@ from nerf.utils.params_utils import load_params
 os.environ["TF_MIN_CPP_LOG_LEVEL"] = "2"
 
 def launch(logger):
-    
+    """
+    Launches the rendering run.
+    """
+    # Setting up params
     path = "./nerf/params/config.yaml"
     params = load_params(path)
 
@@ -26,7 +29,7 @@ def launch(logger):
     if not os.path.exists(render_params.save_dir):
         os.makedirs(render_params.save_dir, exist_ok=True)
     
-    loader = get_dataset_obj(params = params)
+    dataset_obj = get_dataset_obj(params = params)
     nerf = setup_model(params)
     
     # Please refer to the documentation for more information 
@@ -58,7 +61,7 @@ def launch(logger):
     # Rendering one image at a time.
     for i in tqdm(range(render_params.num_cameras), desc = "Rendering Images"):
         
-        dataset = loader.create_dataset_for_render(
+        dataset = dataset_obj.create_dataset_for_render(
             H = H, W = W, c2w = poses[i], 
             bounds = bounds, intrinsic = intrinsic
         )

@@ -208,7 +208,7 @@ def batched_transform_line_segments(RT_matrices, lines):
 
     return output
 
-def calculate_new_world_pose(poses, origin_method, basis_method, manual_rotation = None):
+def calculate_new_world_transform(poses, origin_method, basis_method, manual_rotation = None):
     """
     Given N pose matrices (poses), each of which can transform a 
     point from a camera coordinate system to an arbitrary world 

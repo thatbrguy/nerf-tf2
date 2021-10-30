@@ -487,9 +487,9 @@ def get_tf_datasets_and_metadata_for_splits(params, return_dataset_obj = False):
         dataset_obj.get_tf_datasets_and_metadata_for_splits()
 
     if (params.data.dataset_mode == "iterate") and \
-        (params.data.iterate_mode.advance_train_loader.enable):
+        (params.data.iterate_mode.advance_train_tf_dataset.enable):
 
-        skip_count = params.data.iterate_mode.advance_train_loader.skip_count
+        skip_count = params.data.iterate_mode.advance_train_tf_dataset.skip_count
         tf_datasets["train"] = tf_datasets["train"].skip(skip_count)
 
     if return_dataset_obj:

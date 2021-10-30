@@ -11,7 +11,7 @@ os.environ["TF_MIN_CPP_LOG_LEVEL"] = "2"
 
 def launch(logger):
     """
-    TODO: Docstring
+    Launches the training run.
     """
     # Setting up params
     path = "./nerf/params/config.yaml"
@@ -44,6 +44,9 @@ def launch(logger):
         steps_per_epoch = params.system.steps_per_epoch
         # Number of epochs:
         num_epochs = int(total_steps / steps_per_epoch)
+
+    else:
+        raise ValueError(f"Invalid dataset mode: {params.data.dataset_mode}")
 
     logger.debug(f"Number of Steps: {total_steps}")
     logger.debug(f"Number of Epochs: {num_epochs}")

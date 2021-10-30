@@ -76,7 +76,7 @@ data:
       enable: True
       seed: 35 
 
-    advance_train_loader:
+    advance_train_tf_dataset:
       enable: False
       skip_count: 0 # epochs * steps_per_epoch
 

@@ -1,8 +1,7 @@
 import os
 import shutil
-import pandas as pd
-
 import argparse
+import pandas as pd
 
 def split_custom_dataset(
         imgs_dir, pose_info_path, out_path,
@@ -42,6 +41,7 @@ def split_custom_dataset(
     num_val = count - (num_train + num_test)
 
     if shuffle:
+        assert type(seed) is int
         df = df.sample(frac = 1, random_state = seed).reset_index(drop = True)
 
     train_df = df.iloc[:num_train]
@@ -79,7 +79,6 @@ def split_custom_dataset(
     _copy_files(test_df, imgs_dir, test_imgs_dir)
     _copy_files(val_df, imgs_dir, val_imgs_dir)
 
-
 def _copy_files(df, src_dir, dst_dir):
     """
     Copies the images which are mentioned in the 
@@ -92,7 +91,6 @@ def _copy_files(df, src_dir, dst_dir):
         dst_path =  os.path.join(dst_dir, filename)
         shutil.copyfile(src_path, dst_path)
 
-
 def get_args():
     """
     Gets args from argparse.
@@ -103,17 +101,15 @@ def get_args():
     parser.add_argument("--out_path", required=True, type=str)
     parser.add_argument("--val_frac", required=True, type=float)
     parser.add_argument("--test_frac", required=True, type=float)
-    parser.add_argument("--shuffle", required=True, action="store_true")
-    parser.add_argument("--seed", type=str)
+    parser.add_argument("--shuffle", action="store_true")
+    parser.add_argument("--seed", type=int)
 
     args = parser.parse_args()
-
     return args
 
 if __name__ == '__main__':
     
     args = get_args()
-
     split_custom_dataset(
         imgs_dir = args.imgs_dir,
         pose_info_path = args.pose_info_path,

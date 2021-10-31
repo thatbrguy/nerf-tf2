@@ -8,7 +8,7 @@ import numpy as np
 import pandas as pd
 
 from nerf.utils import pose_utils
-from nerf.core.base_dataset import Dataset, RayLevelData
+from nerf.core.base_dataset import Dataset, SceneLevelData
 
 # Setting up logger.
 logger = logging.getLogger(__name__)
@@ -206,7 +206,7 @@ class BlenderDataset(Dataset):
         bounds = np.array(bounds).astype(np.float32)
         intrinsics = np.array(intrinsics).astype(np.float32)
 
-        data = RayLevelData(
+        data = SceneLevelData(
             imgs = imgs, poses = poses, 
             bounds = bounds, intrinsics = intrinsics
         )
@@ -406,7 +406,7 @@ class CustomDataset(Dataset):
         bounds = np.array(bounds).astype(np.float32)
         intrinsics = np.array(intrinsics).astype(np.float32)
 
-        data = RayLevelData(
+        data = SceneLevelData(
             imgs = imgs, poses = poses, 
             bounds = bounds, intrinsics = intrinsics
         )

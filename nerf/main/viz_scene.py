@@ -21,6 +21,9 @@ def launch(
     path = "./nerf/params/config.yaml"
     params = load_params(path)
 
+    assert type(plot_gt) is bool
+    assert type(plot_inference) is bool
+
     if params.system.tf_seed is not None:
         tf.random.set_seed(params.system.tf_seed)
 
@@ -52,15 +55,18 @@ def launch(
             radius = render_params.radius, 
             num_cameras = render_params.num_cameras,
             inclination = render_params.inclination,
+            manual_rotation = render_params.manual_rotation,
         )
 
     else:
-        plot_inference = None
+        inference_poses = None
 
     if coord_system == "W2":
         W1_to_W2_transform, _ = dataset_obj.load_reconfig_params()
     elif coord_system == "W1":
         W1_to_W2_transform = None
+    else:
+        raise ValueError(f"Invalid setting of coord_system: {coord_system}")
 
     plot_utils.plot_scene(
         plot_gt = plot_gt, plot_inference = plot_inference, gt_poses = gt_poses, 
@@ -85,4 +91,7 @@ if __name__ == "__main__":
     MPL_logger = logging.getLogger("matplotlib")
     MPL_logger.setLevel(logging.WARNING)
 
-    launch(logger, plot_gt = True, plot_inference = True, splits = ["train", "val", "test"])
+    launch(
+        logger, plot_gt = True, plot_inference = True, coord_system = "W2",
+        splits = ["train", "val", "test"]
+    )

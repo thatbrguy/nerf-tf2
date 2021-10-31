@@ -38,6 +38,7 @@ def launch(logger):
         radius = render_params.radius, 
         num_cameras = render_params.num_cameras,
         inclination = render_params.inclination,
+        manual_rotation = render_params.manual_rotation,
     )
     
     intrinsic = CustomDataset.camera_model_params_to_intrinsics(

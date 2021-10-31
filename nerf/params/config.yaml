@@ -11,19 +11,20 @@ system:
   validation_freq: 400
   tensorboard_dir: "./logs"
   initial_epoch: 0
-  dataset_type: "BlenderDataset" # One among "BlenderDataset" or "CustomDataset"
+  dataset_type: "CustomDataset" # One among "BlenderDataset" or "CustomDataset"
 
 eval:
   save_dir: "/content/output/eval"
 
 render:
   radius: 4.0
-  inclination: 50
+  inclination: 30
   num_cameras: 30
   img_size: [800, 800] # [H, W]
   camera_model_name: "SIMPLE_PINHOLE"
   camera_model_params: [1111.111, 400.0, 400.0]
   bounds: null # If null, bounds are auto calcualted.
+  manual_rotation: null
   save_dir: "/content/output/render"
 
 ###############################################################################
@@ -36,8 +37,8 @@ model:
     save_optimizer_state: True
   
   load:
-    load_dir: "/content/drive/MyDrive/NerfExpts/save_dir/xxxxx"
-    load_tag: "013999_27.65"
+    load_dir: ""
+    load_tag: ""
     set_weights: True
     skip_optimizer: False
 
@@ -59,7 +60,7 @@ data:
   scene_scale_add: 0.0
   
   batch_size: 4096
-  dataset_mode: "iterate" # One among "iterate" or "sample"
+  dataset_mode: "sample" # One among "iterate" or "sample"
 
   # Parameters specific to dataset_mode "sample"
   sample_mode:
@@ -131,7 +132,7 @@ custom_dataset:
 preprocessing:
   origin_method: "min_dist_solve"
   bounds_method: "include_corners"
-  basis_method: "identity"
+  basis_method: "compute"
   manual_rotation: null
 
 sampling:

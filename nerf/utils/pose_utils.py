@@ -611,7 +611,7 @@ def compute_new_world_basis(poses):
 
     return x_basis, y_basis, z_basis
 
-def create_spherical_path(radius, inclination, num_cameras):
+def create_spherical_path(radius, inclination, num_cameras, manual_rotation):
     """
     TODO: Docstring.
     """
@@ -646,5 +646,13 @@ def create_spherical_path(radius, inclination, num_cameras):
     last_row = np.zeros((poses.shape[0], 1, 4), dtype = np.float64)
     poses_4x4 = np.concatenate([poses, last_row], axis = 1)
     poses_4x4[:, 3, 3] = 1.0
+
+    if manual_rotation is not None:
+        transform = np.eye(4, dtype = np.float64)
+        
+        matrix = np.load(manual_rotation)
+        transform[:3, :3] = matrix
+
+        poses_4x4 = transform @ poses_4x4
 
     return poses_4x4

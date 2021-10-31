@@ -231,7 +231,7 @@ def plot_scene(
         assert inference_poses is not None
         assert W1_to_W2_transform is not None
 
-    if W1_to_W2_transform is not None:
+    if (W1_to_W2_transform is not None) and (gt_poses is not None):
         # inference_poses are assumed to be already in the W2 coordinate system.
         gt_poses = pose_utils.reconfigure_poses(
             gt_poses, W1_to_W2_transform

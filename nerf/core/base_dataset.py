@@ -11,14 +11,14 @@ from nerf.utils import ray_utils, pose_utils
 # Setting up logger.
 logger = logging.getLogger(__name__)
 
-# Setting up ContainerType1.
-ContainerType1 = namedtuple(
-    'ContainerType1', ("imgs", "poses", "bounds", "intrinsics")
+# Setting up SceneLevelData.
+SceneLevelData = namedtuple(
+    'SceneLevelData', ("imgs", "poses", "bounds", "intrinsics")
 )
 
-# Setting up ContainerType2.
-ContainerType2 = namedtuple(
-    'ContainerType2', ("rays_o", "rays_d", "near", "far", "rgb")
+# Setting up RayLevelData.
+RayLevelData = namedtuple(
+    'RayLevelData', ("rays_o", "rays_d", "near", "far", "rgb")
 )
 
 class Dataset(ABC):
@@ -53,7 +53,7 @@ class Dataset(ABC):
         The first variable of the tuple should be data_splits. This variable 
         should be a dictionary. Each key of this dictionary should be a string 
         denoting a split (i.e. train/val/test). Each value of the dictionary 
-        should be an object of type ContainerType1 which contains the data 
+        should be an object of type SceneLevelData which contains the data 
         for that split.
 
         The second variable of the tuple should be num_imgs. This variable 
@@ -154,7 +154,7 @@ class Dataset(ABC):
             data_splits :   A dictionary. Each key of this dictionary should 
                             be a string denoting a split (i.e. train/val/test). 
                             Each value of the dictionary should be an object of 
-                            type ContainerType1 which contains the loaded data 
+                            type SceneLevelData which contains the loaded data 
                             for that split.
         """
         all_H, all_W = [], []
@@ -214,14 +214,14 @@ class Dataset(ABC):
             data_splits         :   A dictionary. Each key of this dictionary should 
                                     be a string denoting a split (i.e. train/val/test). 
                                     Each value of the dictionary should be an object of 
-                                    type ContainerType1 which contains the data for 
+                                    type SceneLevelData which contains the data for 
                                     that split.
 
         Returns:
             reconf_data_splits  :   A dictionary. Each key of this dictionary should 
                                     be a string denoting a split (i.e. train/val/test). 
                                     Each value of the dictionary should be an object of 
-                                    type ContainerType1 which contains the data for 
+                                    type SceneLevelData which contains the data for 
                                     that split.
         """
         reconf_data_splits = dict()
@@ -234,7 +234,7 @@ class Dataset(ABC):
                 scale_factor = self.params.data.scale_imgs,
             )
 
-            reconf_data = ContainerType1(
+            reconf_data = SceneLevelData(
                 imgs = new_imgs, poses = data.poses, 
                 bounds = data.bounds, intrinsics = new_intrinsics,
             )
@@ -255,14 +255,14 @@ class Dataset(ABC):
             data_splits         :   A dictionary. Each key of this dictionary should 
                                     be a string denoting a split (i.e. train/val/test). 
                                     Each value of the dictionary should be an object of 
-                                    type ContainerType1 which contains the data for 
+                                    type SceneLevelData which contains the data for 
                                     that split.
 
         Returns:
             reconf_data_splits  :   A dictionary. Each key of this dictionary should 
                                     be a string denoting a split (i.e. train/val/test). 
                                     Each value of the dictionary should be an object of 
-                                    type ContainerType1 which contains the data for 
+                                    type SceneLevelData which contains the data for 
                                     that split.
 
             W1_to_W2_transform  :   A NumPy array of shape (4, 4) which can transform a 
@@ -288,7 +288,7 @@ class Dataset(ABC):
                 old_poses = data.poses, 
                 W1_to_W2_transform = W1_to_W2_transform
             )
-            new_data = ContainerType1(
+            new_data = SceneLevelData(
                 imgs = data.imgs, poses = new_poses, 
                 bounds = data.bounds, intrinsics = data.intrinsics,
             )
@@ -311,14 +311,14 @@ class Dataset(ABC):
             data_splits         :   A dictionary. Each key of this dictionary should 
                                     be a string denoting a split (i.e. train/val/test). 
                                     Each value of the dictionary should be an object of 
-                                    type ContainerType1 which contains the data for 
+                                    type SceneLevelData which contains the data for 
                                     that split.
 
         Returns:
             reconf_data_splits  :   A dictionary. Each key of this dictionary should 
                                     be a string denoting a split (i.e. train/val/test). 
                                     Each value of the dictionary should be an object of 
-                                    type ContainerType1 which contains the data for 
+                                    type SceneLevelData which contains the data for 
                                     that split.
 
             adj_scale_factor    :   A float value (TODO: check if type is float or numpy)
@@ -358,7 +358,7 @@ class Dataset(ABC):
                 old_poses = data.poses, old_bounds = data.bounds, 
                 scene_scale_factor = adj_scale_factor,
             )
-            new_data = ContainerType1(
+            new_data = SceneLevelData(
                 imgs = data.imgs, poses = new_poses, 
                 bounds = new_bounds, intrinsics = data.intrinsics,
             )
@@ -389,14 +389,14 @@ class Dataset(ABC):
             data_splits     :   A dictionary. Each key of this dictionary should 
                                 be a string denoting a split (i.e. train/val/test). 
                                 Each value of the dictionary should be an object of 
-                                type ContainerType1 which contains the data for 
+                                type SceneLevelData which contains the data for 
                                 that split.
 
         Returns:
             output          :   A dictionary. Each key of this dictionary should 
                                 be a string denoting a split (i.e. train/val/test). 
                                 Each value of the dictionary should be an object of 
-                                type ContainerType1 which contains the data for 
+                                type SceneLevelData which contains the data for 
                                 that split.
         """
         self._validate_all_splits(data_splits)
@@ -414,18 +414,18 @@ class Dataset(ABC):
         """
         Extracts ray level information from the given scene level data. 
     
-        Given an object of type ContainerType1 which contains scene level data 
+        Given an object of type SceneLevelData which contains scene level data 
         (i.e. imgs, poses, bounds, intrinsics), this function extracts ray level 
         data (i.e. rays_o, rays_d, near, far, rgb). The extracted ray level data 
-        is stored in an object of type ContainerType2.
+        is stored in an object of type RayLevelData.
 
         TODO: Describe shapes of rays_o etc.
 
         Args:
-            data    :   An object of type ContainerType1
+            data    :   An object of type SceneLevelData
 
         Returns:
-            output  :   An object of type ContainerType2
+            output  :   An object of type RayLevelData
         """
         rays_o, rays_d = [], []
         near, far, rgb = [], [], []
@@ -464,7 +464,7 @@ class Dataset(ABC):
         rays_o = np.concatenate(rays_o, axis = 0).astype(np.float32)
         rays_d = np.concatenate(rays_d, axis = 0).astype(np.float32)
 
-        output = ContainerType2(
+        output = RayLevelData(
             rays_o = rays_o, rays_d = rays_d, near = near, 
             far = far, rgb = rgb,
         )
@@ -480,14 +480,14 @@ class Dataset(ABC):
             data_splits         :   A dictionary. Each key of this dictionary should 
                                     be a string denoting a split (i.e. train/val/test). 
                                     Each value of the dictionary should be an object of 
-                                    type ContainerType1 which contains the data for 
+                                    type SceneLevelData which contains the data for 
                                     that split.
 
         Returns:
             processed_splits    :   A dictionary. Each key of this dictionary should 
                                     be a string denoting a split (i.e. train/val/test). 
                                     Each value of the dictionary should be an object of 
-                                    type ContainerType2 which contains the data for 
+                                    type RayLevelData which contains the data for 
                                     that split.
 
             img_HW              :   A tuple denoting the height and width of the images 
@@ -519,16 +519,16 @@ class Dataset(ABC):
             data_splits         :   A dictionary. Each key of this dictionary should 
                                     be a string denoting a split (i.e. train/val/test). 
                                     Each value of the dictionary should be an object of 
-                                    type ContainerType1 which contains the data for 
+                                    type SceneLevelData which contains the data for 
                                     that split.
 
         Returns:
             processed_splits    :   A dictionary. Each key of this dictionary should 
                                     be a string denoting a split (i.e. train/val/test). 
                                     processed_splits["train"] will contain an object of 
-                                    type ContainerType1. processed_splits["val"] and 
+                                    type SceneLevelData. processed_splits["val"] and 
                                     processed_splits["test"] will contain an object 
-                                    of type ContainerType2.
+                                    of type RayLevelData.
 
             img_HW              :   A tuple denoting the height and width of the images 
                                     in the dataset (all images in the dataset have the same 
@@ -624,43 +624,43 @@ class Dataset(ABC):
         
         return x_vals, y_vals
 
-    def _shuffle(self, container_type_2):
+    def _shuffle(self, ray_level_data):
         """
-        Given an object of type ContainerType2 (here, container_type_2),
+        Given an object of type RayLevelData (here, ray_level_data),
         this function performs the following operations:
 
-        1.  Shuffles all the contents of container_type_2
-        2.  Creates a new instance of ContainerType2 called 
-            shuffled_container_type_2 to store the shuffled contents. 
+        1.  Shuffles all the contents of ray_level_data
+        2.  Creates a new instance of RayLevelData called 
+            shuffled_ray_level_data to store the shuffled contents. 
         """
         rng = np.random.default_rng(
             seed = self.iterate_mode_params.train_shuffle.seed
         )
-        perm = rng.permutation(len(container_type_2.rays_o))
+        perm = rng.permutation(len(ray_level_data.rays_o))
 
-        shuffled_rays_o = container_type_2.rays_o[perm]
-        shuffled_rays_d = container_type_2.rays_d[perm]
-        shuffled_near = container_type_2.near[perm]
-        shuffled_far = container_type_2.far[perm]
-        shuffled_rgb = container_type_2.rgb[perm]
+        shuffled_rays_o = ray_level_data.rays_o[perm]
+        shuffled_rays_d = ray_level_data.rays_d[perm]
+        shuffled_near = ray_level_data.near[perm]
+        shuffled_far = ray_level_data.far[perm]
+        shuffled_rgb = ray_level_data.rgb[perm]
 
-        shuffled_container_type_2 = ContainerType2(
+        shuffled_ray_level_data = RayLevelData(
             rays_o = shuffled_rays_o, rays_d = shuffled_rays_d,
             near = shuffled_near, far = shuffled_far,
             rgb = shuffled_rgb,
         )
 
-        return shuffled_container_type_2
+        return shuffled_ray_level_data
 
-    def _separate(self, container_type_2):
+    def _separate(self, ray_level_data):
         """
-        Given an object of type ContainerType2 (here, container_type_2), 
+        Given an object of type RayLevelData (here, ray_level_data), 
         this function splits the contents of the object into 
         x_split and y_split. 
         """
-        CT2 = container_type_2
-        x_split = (CT2.rays_o, CT2.rays_d, CT2.near, CT2.far)
-        y_split = (CT2.rgb,)
+        RLD = ray_level_data
+        x_split = (RLD.rays_o, RLD.rays_d, RLD.near, RLD.far)
+        y_split = (RLD.rgb,)
 
         return x_split, y_split
 
@@ -676,7 +676,7 @@ class Dataset(ABC):
             processed_splits    :   A dictionary. Each key of this dictionary should 
                                     be a string denoting a split (i.e. train/val/test). 
                                     Each value of the dictionary should be an object of 
-                                    type ContainerType2 which contains the data for 
+                                    type RayLevelData which contains the data for 
                                     that split.
 
         Returns:
@@ -741,9 +741,9 @@ class Dataset(ABC):
             processed_splits    :   A dictionary. Each key of this dictionary should 
                                     be a string denoting a split (i.e. train/val/test). 
                                     processed_splits["train"] will contain an object of 
-                                    type ContainerType1. processed_splits["val"] and 
+                                    type SceneLevelData. processed_splits["val"] and 
                                     processed_splits["test"] will contain an object 
-                                    of type ContainerType2.
+                                    of type RayLevelData.
 
         Returns:
             tf_datasets         :   A dictionary. Each key of this dictionary should 
@@ -752,10 +752,10 @@ class Dataset(ABC):
         """
         logger.debug("Creating TensorFlow datasets.")
 
-        train_imgs = processed_splits["train"].imgs
-        train_poses = processed_splits["train"].poses
-        train_bounds = processed_splits["train"].bounds
-        train_intrinsics = processed_splits["train"].intrinsics
+        train_imgs = processed_splits["train"].imgs.astype(np.uint8)
+        train_poses = processed_splits["train"].poses.astype(np.float32)
+        train_bounds = processed_splits["train"].bounds.astype(np.float32)
+        train_intrinsics = processed_splits["train"].intrinsics.astype(np.float32)
 
         x_test, y_test = self._separate(processed_splits["test"])
         x_val, y_val = self._separate(processed_splits["val"])

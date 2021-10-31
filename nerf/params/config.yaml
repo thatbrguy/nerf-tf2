@@ -86,7 +86,7 @@ data:
 ###############################################################################
 
 blender_dataset:
-  base_dir: ../lego
+  base_dir: "../lego"
 
   shuffle:
     enable: ["train"]
@@ -110,18 +110,18 @@ custom_dataset:
     seed: 83
 
   train:
-    img_root_dir: ../data/images
-    pose_info_path: ../data/pose_info.csv
+    img_root_dir: "../data/train"
+    pose_info_path: "../data/train_pose_info.csv"
 
   val:
-    img_root_dir: ../data/images
-    pose_info_path: ../data/pose_info.csv
+    img_root_dir: "../data/val"
+    pose_info_path: "../data/val_pose_info.csv"
     num: 3
     frac: null
 
   test:
-    img_root_dir: ../data/images
-    pose_info_path: ../data/pose_info.csv
+    img_root_dir: "../data/test"
+    pose_info_path: "../data/test_pose_info.csv"
     num: 3
     frac: null
 

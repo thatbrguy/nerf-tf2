@@ -70,8 +70,6 @@ class BlenderDataset(Dataset):
         """
         Transforms a pose in OpenGL format to the Classic CV format. For 
         information about the formats, please refer to the documentation.
-
-        TODO: Elaborate.
         """
         transformation = np.array([
             [ 1.0,  0.0,  0.0,  0.0],
@@ -165,7 +163,14 @@ class BlenderDataset(Dataset):
 
     def _load_split(self, split):
         """
-        TODO: Docstring.
+        Loads the data for the given split.
+
+        Args:
+            split   :   A string which can be one among "train", "val" or "test".
+
+        Returns:
+            data    :   An object of type SceneLevelData containing the loaded data 
+                        for the given split.
         """
         imgs, poses, bounds = [], [], []
 
@@ -215,7 +220,33 @@ class BlenderDataset(Dataset):
 
     def get_data_and_metadata_for_splits(self):
         """
-        TODO: Elaborate.
+        Returns the data and num_imgs for each split of the blender dataset.
+
+        This function overrides the abstractmethod get_data_and_metadata_for_splits 
+        which is in the class Dataset.
+
+        This variable num_imgs is needed because the number of images 
+        that are available for each split will only be known at runtime. 
+        For instance, the number of images available for validation may be 
+        lesser than the total number of validation images depending on certain 
+        parameters in the config file. To let the code accurately know 
+        about the exact number of images available for each split, this 
+        variable needs to be configured.
+
+        Args:
+            split       :   A string which can be one among "train", "val" or "test".
+
+        Returns:
+            data_splits :   A dictionary. Each key of this dictionary should be 
+                            a string denoting a split (i.e. train/val/test). Each 
+                            value of the dictionary should be an object of type 
+                            SceneLevelData which contains the data for that split.
+
+            num_imgs    :   A dictionary. Each key of this dictionary should be a 
+                            string denoting a split (i.e. train/val/test). Each 
+                            value of the dictionary should be an integer denoting 
+                            the number of images that are available for the 
+                            corresponding split.
         """
         logger.debug("Loading blender dataset.")
         
@@ -374,7 +405,14 @@ class CustomDataset(Dataset):
 
     def _load_split(self, split):
         """
-        TODO: Docstring.
+        Loads the data for the given split.
+
+        Args:
+            split   :   A string which can be one among "train", "val" or "test".
+
+        Returns:
+            data    :   An object of type SceneLevelData containing the loaded data 
+                        for the given split.
         """
         imgs, poses, bounds, intrinsics = [], [], [], []
         split_params = self.custom_dataset_params[split]
@@ -415,7 +453,33 @@ class CustomDataset(Dataset):
 
     def get_data_and_metadata_for_splits(self):
         """
-        TODO: Elaborate.
+        Returns the data and num_imgs for each split of the custom dataset.
+
+        This function overrides the abstractmethod get_data_and_metadata_for_splits 
+        which is in the class Dataset.
+
+        This variable num_imgs is needed because the number of images 
+        that are available for each split will only be known at runtime. 
+        For instance, the number of images available for validation may be 
+        lesser than the total number of validation images depending on certain 
+        parameters in the config file. To let the code accurately know 
+        about the exact number of images available for each split, this 
+        variable needs to be configured.
+
+        Args:
+            split       :   A string which can be one among "train", "val" or "test".
+
+        Returns:
+            data_splits :   A dictionary. Each key of this dictionary should be 
+                            a string denoting a split (i.e. train/val/test). Each 
+                            value of the dictionary should be an object of type 
+                            SceneLevelData which contains the data for that split.
+
+            num_imgs    :   A dictionary. Each key of this dictionary should be a 
+                            string denoting a split (i.e. train/val/test). Each 
+                            value of the dictionary should be an integer denoting 
+                            the number of images that are available for the 
+                            corresponding split.
         """
         logger.debug("Loading custom dataset.")
         

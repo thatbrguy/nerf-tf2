@@ -220,7 +220,7 @@ class BlenderDataset(Dataset):
 
     def get_data_and_metadata_for_splits(self):
         """
-        Returns the data and num_imgs for each split of the blender dataset.
+        This function returns data_splits and num_imgs for the blender dataset.
 
         This function overrides the abstractmethod get_data_and_metadata_for_splits 
         which is in the class Dataset.
@@ -263,7 +263,40 @@ class BlenderDataset(Dataset):
 
     def get_tf_datasets_and_metadata_for_splits(self):
         """
-        TODO: Elaborate.
+        This function returns tf_datasets, num_imgs and img_HW for the blender dataset.
+
+        This function overrides the abstractmethod get_tf_datasets_and_metadata_for_splits 
+        which is in the class Dataset.
+
+        This variable num_imgs is needed because the number of images 
+        that are available for each split will only be known at runtime. 
+        For instance, the number of images available for validation may be 
+        lesser than the total number of validation images depending on certain 
+        parameters in the config file. To let the code accurately know 
+        about the exact number of images available for each split, this 
+        variable needs to be configured.
+
+        The variable img_HW is returned to let the code accurately know about 
+        the height and width of any processed image.
+
+        Args:
+            split       :   A string which can be one among "train", "val" or "test".
+
+        Returns:
+            tf_datasets :   A dictionary. Each key of this dictionary should be 
+                            a string denoting a split (i.e. train/val/test). Each 
+                            value of the dictionary should be the TF Dataset object 
+                            for that split.
+
+            num_imgs    :   A dictionary. Each key of this dictionary should be a 
+                            string denoting a split (i.e. train/val/test). Each 
+                            value of the dictionary should be an integer denoting 
+                            the number of images that are available for the 
+                            corresponding split.
+
+            img_HW      :   A tuple. img_HW[0] denotes the height of any processed 
+                            image of the dataset and img_HW[1] denotes the width of 
+                            any processed image of the dataset.
         """
         data_splits, num_imgs = self.get_data_and_metadata_for_splits()
 
@@ -326,7 +359,15 @@ class CustomDataset(Dataset):
             [0., 0., 1.],
         ], dtype = np.float64)
 
-        TODO: Args and Returns.
+        Args:
+            camera_model    :   A string denoting the camera model. The list of supported 
+                                camera models are mentioned in the class variable 
+                                SUPPORTED_CAMERA_MODELS
+            model_params    :   A list or a NumPy array with the parameters for the 
+                                specified camera model.
+
+        Returns:
+            intrinsic       :   A NumPy array of shape (3, 3) with the intrinsic matrix.
         """
         assert camera_model in cls.SUPPORTED_CAMERA_MODELS, \
             f"Camera model {camera_model} is not supported."
@@ -453,7 +494,7 @@ class CustomDataset(Dataset):
 
     def get_data_and_metadata_for_splits(self):
         """
-        Returns the data and num_imgs for each split of the custom dataset.
+        This function returns data_splits and num_imgs for the custom dataset.
 
         This function overrides the abstractmethod get_data_and_metadata_for_splits 
         which is in the class Dataset.
@@ -496,7 +537,40 @@ class CustomDataset(Dataset):
 
     def get_tf_datasets_and_metadata_for_splits(self):
         """
-        TODO: Elaborate.
+        This function returns tf_datasets, num_imgs and img_HW for the custom dataset.
+
+        This function overrides the abstractmethod get_tf_datasets_and_metadata_for_splits 
+        which is in the class Dataset.
+
+        This variable num_imgs is needed because the number of images 
+        that are available for each split will only be known at runtime. 
+        For instance, the number of images available for validation may be 
+        lesser than the total number of validation images depending on certain 
+        parameters in the config file. To let the code accurately know 
+        about the exact number of images available for each split, this 
+        variable needs to be configured.
+
+        The variable img_HW is returned to let the code accurately know about 
+        the height and width of any processed image.
+
+        Args:
+            split       :   A string which can be one among "train", "val" or "test".
+
+        Returns:
+            tf_datasets :   A dictionary. Each key of this dictionary should be 
+                            a string denoting a split (i.e. train/val/test). Each 
+                            value of the dictionary should be the TF Dataset object 
+                            for that split.
+
+            num_imgs    :   A dictionary. Each key of this dictionary should be a 
+                            string denoting a split (i.e. train/val/test). Each 
+                            value of the dictionary should be an integer denoting 
+                            the number of images that are available for the 
+                            corresponding split.
+
+            img_HW      :   A tuple. img_HW[0] denotes the height of any processed 
+                            image of the dataset and img_HW[1] denotes the width of 
+                            any processed image of the dataset.
         """
         data_splits, num_imgs = self.get_data_and_metadata_for_splits()
 
@@ -512,7 +586,16 @@ class CustomDataset(Dataset):
 
 def get_dataset_obj(params):
     """
-    TODO: Docstring.
+    Creates and returns an object of type BlenderDataset or CustomDataset 
+    based on the setting of the dataset type in the config file.
+
+    Args:
+        params      :   The params object as returned by the function load_params.
+                        The function load_params is defined in params_utils.py
+
+    Returns:
+        dataset_obj :   An object of BlenderDataset or CustomDataset based on
+                        the setting of the dataset_type in the config file.
     """
     if params.system.dataset_type == "BlenderDataset":
         dataset_obj = BlenderDataset(params = params)
@@ -529,7 +612,58 @@ def get_dataset_obj(params):
 
 def get_data_and_metadata_for_splits(params, return_dataset_obj = False):
     """
-    TODO: Docstring.
+    Function that enables to user to get the data, num_imgs and optionaly 
+    the dataset object for the desired dataset.
+
+    If return_dataset_obj is False, then this function returns data_splits
+    and num_imgs. If return_dataset_obj is True, then this function returns 
+    data_splits, num_imgs and also the object of the desired dataset.
+
+    This variable num_imgs is needed because the number of images 
+    that are available for each split will only be known at runtime. 
+    For instance, the number of images available for validation may be 
+    lesser than the total number of validation images depending on certain 
+    parameters in the config file. To let the code accurately know 
+    about the exact number of images available for each split, this 
+    variable needs to be configured.
+
+    Args:
+        params              :   The params object as returned by the function load_params. 
+                                The function load_params is defined in params_utils.py
+
+        return_dataset_obj  :   A boolean flag which determines if the object of the 
+                                desired dataset is returned. Default is set to False. 
+                                Please refer to the above explanation for more information 
+                                about this parameter.
+
+    Returns:
+        A tuple named output. output[0] will always contain data_splits. output[1] will 
+        always contain num_imgs. output[2] exists ONLY IF return_dataset_obj is True. 
+        If return_dataset_obj is True, output[2] will contain dataset_obj. 
+        If return_dataset_obj is False, trying to access output[2] will cause an 
+        IndexError since output[2] does not exist in this case.
+
+        Descriptions of the possible contents of the tuple output:
+
+        data_splits         :   A dictionary. Each key of this dictionary should be 
+                                a string denoting a split (i.e. train/val/test). Each 
+                                value of the dictionary should be an object of type 
+                                SceneLevelData which contains the data for that split.
+                                This variable will be present in output[0].
+
+        num_imgs            :   A dictionary. Each key of this dictionary should be a 
+                                string denoting a split (i.e. train/val/test). Each 
+                                value of the dictionary should be an integer denoting 
+                                the number of images that are available for the 
+                                corresponding split. This variable will be present 
+                                in output[1].
+
+        dataset_obj         :   An object of BlenderDataset or CustomDataset based on 
+                                the setting of the dataset_type in the config file. 
+                                This variable will be present in output[2] ONLY IF 
+                                return_dataset_obj is True. If return_dataset_obj is False, 
+                                trying to access output[2] will cause an IndexError since 
+                                output[2] does not exist in this case.
     """
     dataset_obj = get_dataset_obj(params = params)
     data_splits, num_imgs = \
@@ -544,7 +678,64 @@ def get_data_and_metadata_for_splits(params, return_dataset_obj = False):
 
 def get_tf_datasets_and_metadata_for_splits(params, return_dataset_obj = False):
     """
-    Sets up the datasets. TODO: Rename.
+    Function that enables to user to get the tf_datasets, num_imgs, img_HW 
+    and optionaly the dataset object for the desired dataset.
+
+    If return_dataset_obj is False, then this function returns tf_datasets, num_imgs 
+    and img_HW. If return_dataset_obj is True, then this function returns 
+    tf_datasets, num_imgs, img_HW and also the object of the desired dataset.
+
+    This variable num_imgs is needed because the number of images 
+    that are available for each split will only be known at runtime. 
+    For instance, the number of images available for validation may be 
+    lesser than the total number of validation images depending on certain 
+    parameters in the config file. To let the code accurately know 
+    about the exact number of images available for each split, this 
+    variable needs to be configured.
+
+    The variable img_HW is returned to let the code accurately know about 
+    the height and width of any processed image.
+
+    Args:
+        params              :   The params object as returned by the function load_params. 
+                                The function load_params is defined in params_utils.py
+
+        return_dataset_obj  :   A boolean flag which determines if the object of the 
+                                desired dataset is returned. Default is set to False. 
+                                Please refer to the above explanation for more information 
+                                about this parameter.
+
+    Returns:
+        A tuple named output. output[0] will always contain tf_datasets. 
+        output[1] will always contain num_imgs. output[2] will always contain img_HW. 
+        output[3] exists ONLY IF return_dataset_obj is True. If return_dataset_obj 
+        is True, output[3] will contain dataset_obj. If return_dataset_obj is False, 
+        trying to access output[3] will cause an IndexError since output[3] does not 
+        exist in this case.
+
+        tf_datasets         :   A dictionary. Each key of this dictionary should be 
+                                a string denoting a split (i.e. train/val/test). Each 
+                                value of the dictionary should be the TF Dataset object 
+                                for that split. This variable will be present in output[0].
+
+        num_imgs            :   A dictionary. Each key of this dictionary should be a 
+                                string denoting a split (i.e. train/val/test). Each 
+                                value of the dictionary should be an integer denoting 
+                                the number of images that are available for the 
+                                corresponding split. This variable will be present 
+                                in output[1].
+
+        img_HW              :   A tuple. img_HW[0] denotes the height of any processed 
+                                image of the dataset and img_HW[1] denotes the width of 
+                                any processed image of the dataset. This variable will 
+                                be present in output[2].
+
+        dataset_obj         :   An object of BlenderDataset or CustomDataset based on 
+                                the setting of the dataset_type in the config file. 
+                                This variable will be present in output[3] ONLY IF 
+                                return_dataset_obj is True. If return_dataset_obj is False, 
+                                trying to access output[3] will cause an IndexError since 
+                                output[3] does not exist in this case.
     """
     dataset_obj = get_dataset_obj(params = params)
     tf_datasets, num_imgs, img_HW = \

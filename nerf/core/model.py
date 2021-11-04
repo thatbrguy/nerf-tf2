@@ -42,6 +42,16 @@ class NeRF(Model):
     def forward(self, rays_o, rays_d, near, far):
         """
         Performs a forward pass.
+
+        Args:
+            rays_o          :
+            rays_d          :
+            near            :
+            far             :
+
+        Returns:
+            post_proc_CM    :
+            post_proc_FM    :
         """
         # Getting data ready for the coarse model.
         ## TODO: Verify if it is ok for the below line 
@@ -87,7 +97,7 @@ class NeRF(Model):
 
     def train_step(self, data):
         """
-        TODO: Docstring!
+        Custom train step.
 
         Legend:
             CM  : Coarse Model
@@ -131,7 +141,7 @@ class NeRF(Model):
 
     def test_step(self, data):
         """
-        TODO: Docstring!
+        Custom test step.
 
         Legend:
             CM  : Coarse Model
@@ -163,7 +173,9 @@ class NeRF(Model):
 
     def predict_step(self, data):
         """
-        TODO: Check correctness.
+        Custom predict step.
+
+        TODO: Check correctness
         """
         return self(data)
 
@@ -363,7 +375,7 @@ def setup_model_and_callbacks(params, num_imgs, img_HW):
         )
         callbacks += [val_imgs_logger]
 
-    # Setting up the model.
+    # Setting up the NeRF model.
     nerf = setup_model(params)
 
     return nerf, callbacks

@@ -60,8 +60,6 @@ def normalize(vec):
     Returns
         norm_vec    :   A NumPy array with the same shape as 
                         of the input.
-
-    ## TODO: Consider adding EPS only if magnitude < EPS ?
     """
     assert len(vec.shape) <= 2
     EPS = 1e-8
@@ -110,7 +108,7 @@ def rotate_vectors(mat, vectors):
 
 def transform_points(RT, points):
     """
-    Applies an SE3 transformation to the points.
+    Applies an SE3 transformation to the points. (TODO: rewrite)
 
     Args:
         RT      :   A NumPy array of shape (4, 4) or (3, 4). 
@@ -397,9 +395,9 @@ def get_corner_ray_points(poses, bounds, intrinsics, height, width):
 
     NOTE: poses must be new_poses
 
-    intrinsics --> (N, 3, 3)
-    poses --> (N, 4, 4)
-    bounds --> (N, 2)
+    intrinsics: (N, 3, 3)
+    poses: (N, 4, 4)
+    bounds: (N, 2)
     """
     H, W = height, width
 
@@ -555,7 +553,7 @@ def compute_new_world_origin(poses, method):
 
 def compute_new_world_basis(poses):
     """
-    Computed the basis vectors of the new world coordinate system (W2). 
+    Computes the basis vectors of the new world coordinate system (W2). 
     The basis vectors are represented in the current world coordinate 
     system (W1).
 

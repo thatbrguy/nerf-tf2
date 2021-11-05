@@ -110,7 +110,7 @@ def create_input_batch_coarse_model(params, rays_o, rays_d, near, far):
     This function creates data which can be fed to the coarse model as 
     input. TODO: write better!
 
-    TODO: Elaborate!
+    TODO: Elaborate! (metion stratified sampling in docstring/comments?)
 
     Args:
         params      :   The params object as returned by the function load_params. 
@@ -136,35 +136,49 @@ def create_input_batch_coarse_model(params, rays_o, rays_d, near, far):
         t_vals      :   A TensorFlow tensor of shape (N_rays, N_coarse). It is 
                         the "t" in the equation r(t) = o + t * d (TODO: rewrite maybe?)
     """
-    # Shape of vals: (N_rays, N_coarse + 1, 1)
-    ## TODO: Explain the sampling.
-    if not params.sampling.lin_inv_depth: 
+    # We are interested in creating N_coarse bins between the near bound 
+    # and the far bound. To do that, we need N_coarse+1 bin edges (including 
+    # the left most and the right most bin edge).
+
+    if not params.sampling.lin_inv_depth:
+        # In this case, the bin edges are evenly spaced in depth. (todo: rewrite)
+
+        # Shape of vals: (N_rays, N_coarse + 1, 1)
         vals = tf.linspace(
             start = near, stop = far, 
             num = params.sampling.N_coarse + 1, axis = 1
         )
     else:
+        # In this case, the bin edges are evenly spaced in inverse depth. 
+        # A consequence of this is that there are more bins around the near 
+        # bound than around the far bound. (todo: rewrite)
+
         ## TODO: Add eps to avoid avoid division by zero error, or 
         ## ensure elsewhere that division by zero error cannot happen.
+        # Shape of vals: (N_rays, N_coarse + 1, 1)
         vals = 1 / tf.linspace(
             start = (1 / near), stop = (1 / far), 
             num = params.sampling.N_coarse + 1, axis = 1
         )
     
-    # TODO: Explain bin_edges
     # Shape of bin_edges: (N_rays, N_coarse + 1)
     bin_edges = tf.squeeze(vals, axis = 2)
 
-    #################################################
-    ## Stratified Sampling.
-    #################################################
+    # left_edges contains the left edge of each of the N_coarse bins, 
+    # and right_edges contains the right edge of each of the N_coarse bins.
 
     # Shape of left_edges: (N_rays, N_coarse)
     left_edges = bin_edges[:, :-1]
     # Shape of right_edges: (N_rays, N_coarse)
     right_edges = bin_edges[:, 1:]
+
+    # Now, we would like to get a sample of "t" from each of the N_coarse bins 
+    # for each of the N_rays rays. This can be done with or without perturbation. 
     
     if params.sampling.perturb:
+        # In this case, perturbation is enabled. In this case, for each bin, 
+        # a "t" value is randomly selected according to a uniform distribution. TODO: rewrite
+
         # Shape of bin_widths: (N_rays, N_coarse)
         bin_widths = right_edges - left_edges
 
@@ -177,6 +191,9 @@ def create_input_batch_coarse_model(params, rays_o, rays_d, near, far):
         t_vals = left_edges + (u_vals * bin_widths)
 
     elif not params.sampling.perturb:
+        # In this case, perturbation is NOT enabled. In this case, for each bin, 
+        # the middle value of each bin (which is the average of the left bin edge 
+        # and right bin edge for each bin) is taken as the "t" value for that bin.
 
         # Getting the mid point of each bin.
         # Shape of bin_mids: (N_rays, N_coarse)
@@ -226,9 +243,11 @@ def create_input_batch_fine_model(params, rays_o, rays_d, bin_weights, bin_data,
                             origin vectors of the rays.
         rays_d          :   A TensorFlow tensor of shape (N_rays, 3) representing the
                             normalized direction vectors of the rays.
-        bin_weights     :   TODO
+        bin_weights     :   A TensorFlow tensor of shape (N_rays, N_coarse). This value can be 
+                            obtained from the output of create_input_batch_coarse_model
         bin_data        :   TODO
-        t_vals_coarse   :   TODO
+        t_vals_coarse   :   A TensorFlow tensor of shape (N_rays, N_coarse). This value can be 
+                            obtained from the output of create_input_batch_coarse_model
 
     Returns:
         A dictionary called data containing the following:
@@ -240,14 +259,13 @@ def create_input_batch_fine_model(params, rays_o, rays_d, bin_weights, bin_data,
         t_vals      :   A TensorFlow tensor of shape (N_rays, (N_coarse + N_fine)). It is 
                         the "t" in the equation r(t) = o + t * d (TODO: rewrite maybe?)
     """
-    # Extracting useful content from bin_data
     # Shape of left_edges and bin_widths: (N_rays, N_coarse)
     left_edges = bin_data["left_edges"]
     bin_widths = bin_data["bin_widths"]
 
     # Creating pdf from weights.
     # Shape of bin_weights: (N_rays, N_coarse)
-    bin_weights = bin_weights + 1e-5 ## To prevent nans ## TODO: Review.
+    bin_weights = bin_weights + 1e-5 # 1e-5 is added to prevent division by 0 ## TODO: Review.
     
     # Shape of pdf: (N_rays, N_coarse).
     denom = tf.reduce_sum(bin_weights * bin_widths, axis = 1, keepdims = True)
@@ -259,7 +277,7 @@ def create_input_batch_fine_model(params, rays_o, rays_d, bin_weights, bin_data,
     # Shape of agg (output): (N_rays, N_coarse + 1)
     agg = tf.concat([tf.zeros_like(agg[:, 0:1]), agg], axis = -1)
 
-    ## TODO: Use det from params and give it a different name!
+    # TODO: Use det from params and give it a different name!
     det = False
     N_rays = tf.shape(pdf)[0]
     
@@ -294,8 +312,10 @@ def create_input_batch_fine_model(params, rays_o, rays_d, bin_weights, bin_data,
 
     # Shape of t_vals: (N_rays, N_coarse + N_fine) 
     t_vals = tf.concat([t_vals_coarse, t_vals_fine], axis = 1)
-    
-    ## TODO: Mention reason for sorting.
+
+    # t_vals needs to be sorted since the coarse and fine model 
+    # output post processing steps assume that the t_vals are 
+    # in ascending order.
     t_vals = tf.sort(t_vals, axis = 1)
 
     # Getting xyz points using the equation r(t) = o + t * d
@@ -322,79 +342,120 @@ def create_input_batch_fine_model(params, rays_o, rays_d, bin_weights, bin_data,
 def sigma_to_alpha(sigma, diffs):
     """
     Computes alpha.
-    TODO: Elaborate.
+
+    Note:
+        Currently support for adding noise to sigma before computing 
+        alpha is not available. TODO: Consider adding support.
+
     
     Args:
-        sigma   : TODO (type, explain) with shape (N_rays, N_samples)
-        diffs   : TODO (type, explain) with shape (N_rays, N_samples)
+        sigma   : A TensorFlow tensor with shape (N_rays, N_samples)
+        diffs   : A TensorFlow tensor with shape (N_rays, N_samples)
 
     Returns:
-        alpha   : TODO (type, explain) with shape (N_rays, N_samples)
+        alpha   : A TensorFlow tensor with shape (N_rays, N_samples)
     """
-    ## TODO: Add noise to sigma based on parameter setting?
     alpha = 1 - tf.exp(-sigma * diffs)
     return alpha
 
 def compute_weights(sigma, t_vals, N_samples):
     """
-    Computes weights. A weight value w_i is the product of T_i 
-    and alpha_i. TODO: Elaborate.
-    
-    This function can be used for both the coarse and fine 
-    models. If used for the coarse model, these weight values also serve as 
-    the weight of each bin. TODO: Elaborate and refactor this.
+    Computes weights.
+
+    Let:
+        1.  weights[k, i] be the weight value of the "t" value i for ray k.
+
+        2.  T[k, i] be the approximated accumulated transmittance (computed
+            as per equation 3 of the paper) of the "t" value i for ray k.
+
+        3.  alpha[k, i] be the alpha value (computed using the 
+            function sigma_to_alpha) of the "t" value i for ray k.
+
+    Then, weights[i, j] is the product of T[i, j] and alpha[i, j].
+    Please refer to equation 3 of the NeRF paper for more information.
+
+    This function can be used for both the coarse and fine models.
+    If this function is used for the coarse model, then these weight 
+    values can also be used as the weight values of the bins of the rays.
 
     Args:
-        sigma       : TODO (type, explain) with shape (N_rays * N_samples, 1)
-        t_vals      : TODO (type, explain) with shape (N_rays, N_samples)
-        N_samples   : TODO (type, explain)
+        sigma       :   A TensorFlow tensor with shape (N_rays * N_samples, 1)
+        t_vals      :   A TensorFlow tensor with shape (N_rays, N_samples)
+        N_samples   :   A TensorFlow tensor whose value is either N_coarse 
+                        or (N_coarse + N_fine). The value should be N_coarse
+                        if this function is used for the coarse model. The 
+                        value should be (N_coarse + N_fine) if this function
+                        is used for the fine model.
 
     Returns:
-        weights     : TODO (type, explain) with shape (N_rays, N_samples)
+        weights     :   A TensorFlow tensor with shape (N_rays, N_samples)
     """
     EPS = 1e-10
     INF = 1e10
-    
+
     # Shape of diffs: (N_rays, N_samples - 1)
     diffs = t_vals[:, 1:] - t_vals[:, :-1]
 
-    ## TODO: Should it be INF or can we just provide the far bound value?
     N_rays = tf.shape(diffs)[0]
     last_val_array = tf.fill((N_rays, 1), INF)
 
     # Shape of diffs_: (N_rays, N_samples)
-    # NOTE: We do not need to multiply diffs_ with the magnitude 
-    # of the ray_d vectors. TODO: Elaborate.
     diffs_ = tf.concat([diffs, last_val_array], axis = -1)
+
+    # TODO: Explain why elements in diffs_ is NOT multipled with the norm 
+    # of the corresponding vector in rays_d.
 
     # Shape of sigma_: (N_rays, N_samples)
     sigma_ = tf.reshape(tf.squeeze(sigma), (-1, N_samples))
     # Shape of alpha: (N_rays, N_samples)
     alpha = sigma_to_alpha(sigma_, diffs_)
 
-    # TODO: Provide explanation to the following somewhere if possible.
     # Shape of weights: (N_rays, N_samples).
+    # TODO: Provide explanation for the below line of code.
     weights = alpha * tf.math.cumprod(1 - alpha + EPS, axis = 1, exclusive = True)
-    
+
     return weights
 
 def post_process_model_output(sample_rgb, sigma, t_vals, white_bg = False):
     """
-    TODO: Docstring.
-    
-    N_samples: (N_coarse) or (N_coarse + N_fine)
+    Computes the expected color and expected depth for each ray.
 
-    Args:
-        sample_rgb      : TODO (type, explain) with shape (N_rays * N_samples, 3)
-        sigma           : TODO (type, explain) with shape (N_rays * N_samples, 1)
-        t_vals          : TODO (type, explain) with shape (N_rays, N_samples)
-        white_bg        : TODO (type, explain)
+    Given the predictions of the coarse model or the fine model for
+    each "t" value of each ray, this function computes the expected
+    color and expected depth for each ray. This function can be used
+    for both the coarse model and the fine model.
 
-    Returns:
-        TODO
+    We use N_samples to refer to either N_coarse or (N_coarse + N_fine). 
+    The value of N_samples should be N_coarse if this function is used for 
+    the coarse model. The value should be (N_coarse + N_fine) if this function
+    is used for the fine model.
+
+    Do note that pred_depth is the depth as measured in the W3 coordinate system.
+    The W3 coordinate system is a scaled version of the W2 coordinate system. 
+    To get the depth as measured in the W2 coordinate system, the scale must 
+    be accounted for. This will be taken care of in render.py and eval.py 
+    (TODO: Add depth prediction for render.py and eval.py)
 
     TODO: Check consistent nomenclature usage across the codebase (Ex: when to 
     use "bin" and when to use "sample".)
+
+    Args:
+        sample_rgb      :   A TensorFlow tensor with shape (N_rays * N_samples, 3)
+        sigma           :   A TensorFlow tensor with shape (N_rays * N_samples, 1)
+        t_vals          :   A TensorFlow tensor with shape (N_rays, N_samples)
+        white_bg        :   A boolean which indicates with a white background 
+                            should be assumed. Default is set to False.
+
+    Returns:
+        A dictionary called post_proc_model_outputs containing the following:
+
+        weights         :   A TensorFlow tensor with shape (N_rays, N_samples) 
+                            representing the weights computed by the function 
+                            compute_weights
+        pred_rgb        :   A TensorFlow tensor with shape (N_rays, 3) representing 
+                            the expected color for each ray.
+        pred_depth      :   A TensorFlow tensor with shape (N_rays,) representing
+                            the expected depth for each ray.
     """
     post_proc_model_outputs = dict()
     N_samples = tf.shape(t_vals)[1]
@@ -415,13 +476,7 @@ def post_process_model_output(sample_rgb, sigma, t_vals, white_bg = False):
     acc_map = tf.reduce_sum(weights, axis = 1)
 
     if white_bg:
-        # RGB colors are between [0, 1] in pred_rgb. I think the 
-        # below equation assumes that pred_rgb is "pre-multiplied" 
-        # (i.e. multiplied with a "mask" already). White background 
-        # has color value of 1 in all three channels and so
-        # (1 - acc_map[:, None]) * 1 = (1 - acc_map[:, None]).
-        ## TODO: Verify, clarify, elaborate, move explanation 
-        ## to somewhere else maybe etc.
+        # TODO: Provide explanation for the below line of code.
         pred_rgb = pred_rgb + (1 - acc_map[:, None]) 
 
     post_proc_model_outputs["weights"] = weights
@@ -431,5 +486,4 @@ def post_process_model_output(sample_rgb, sigma, t_vals, white_bg = False):
     return post_proc_model_outputs
 
 if __name__ == '__main__':
-
-    rays_o, rays_d = get_rays(H = 500, W = 500, focal = 250, c2w = np.eye(4))
+    pass

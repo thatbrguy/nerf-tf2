@@ -14,14 +14,15 @@ logger = logging.getLogger(__name__)
 class LogValImages(Callback):
     """
     This custom callback is used to convert the pixel wise RGB 
-    predictions to images, and then log the images to tensorboard.
-
-    The TensorBoard Callback MUST also be used for this callback to work!
+    predictions to images, and then to log the images to tensorboard.
+    
+    IMPORTANT:
+        1.  The TensorBoard callback MUST also be used for this 
+            callback to work.
+        2.  This callback works ONLY IF eager mode is 
+            enabled AND IF image logging is enabled.
     """
     def __init__(self, params, height, width, num_val_imgs):
-        """
-        TODO: Docstring.
-        """
         super().__init__()
         self.params = params
         self.img_width = width
@@ -33,10 +34,11 @@ class LogValImages(Callback):
     def log_images(self, epoch, pred_batches):
         """
         Given a list of predictions of RGB values of pixels, this 
-        function combines them into images based on the information 
-        provided by self.val_spec.
+        function combines them into images.
         """
-        # Shape of pred_pixels --> (L, 3)
+        # Shape of pred_pixels: (L, 3)
+        # L = N * H * W, where N is the number of images, H is the height 
+        # of each image and W is the width of each image.
         pred_pixels = tf.concat(pred_batches, axis = 0)
         H, W = self.height, self.width
         start = 0
@@ -72,7 +74,7 @@ class LogValImages(Callback):
 
     def on_epoch_end(self, epoch, logs = None):
         """
-        TODO: Docstring.
+        Function to be called at the end of each epoch.
         """
         # No action is taken if val_cache has no elements present.
         if len(self.model.val_cache) > 0:
@@ -89,9 +91,6 @@ class CustomSaver(Callback):
         3. The collected logs
     """
     def __init__(self, params, save_best_only = False):
-        """
-        TODO: Docstring.
-        """
         super().__init__()
         self.params = params
         self.best_score = -1
@@ -124,9 +123,8 @@ class CustomSaver(Callback):
 
     def _save_everything(self, epoch, val_psnr_score):
         """
-        Saves the model weights
+        Saves the model weights.
         """
-        ## TODO: Print and see how the names look.
         name = f"{epoch:06d}_{val_psnr_score:.2f}"
         coarse_model_name = f"{name}_coarse.h5"
         fine_model_name = f"{name}_fine.h5"
@@ -147,7 +145,7 @@ class CustomSaver(Callback):
 
     def on_epoch_end(self, epoch, logs):
         """
-        TODO: Docstring.
+        Function to be called at the end of each epoch.
         """
         # Updating self.collected_logs
         self.collected_logs["train_epoch_idxs"].append(epoch)
@@ -183,9 +181,7 @@ class CustomSaver(Callback):
 
 class PSNRMetric(Metric):
     """
-    Computes PSNR
-
-    TODO: Elaborate functionality for all functions
+    Custom metric to computes PSNR.
     """
     def __init__(self, name = "psnr_metric", **kwargs):
         super().__init__(name = name, **kwargs)
@@ -200,9 +196,15 @@ class PSNRMetric(Metric):
 
     def update_state(self, y_true, y_pred, sample_weight = None):
         """
-        IMPORTANT: sample_weight has no effect.
+        Updates the states.
+    
+        For information about the arguments of this function, refer to:
+            https://www.tensorflow.org/guide/keras/train_and_evaluate#custom_metrics
 
-        TODO: Elaborate functionality.
+        On each call of this function, self.sq_error and self.count is updated.
+        Overall, self.sq_error keeps track of the sum squared error so far, and
+        self.count keeps track of the number of elements for which the sum
+        squared error has been computed so far.
         """
         sq_error = tf.reduce_sum(tf.square(y_true - y_pred))
         count = tf.cast(tf.shape(y_true)[0], tf.float32)
@@ -222,15 +224,15 @@ class PSNRMetric(Metric):
         return psnr
 
     def reset_states(self):
+        """
+        Resets the states to their initial values.
+        """
         self.sq_error.assign(0.0)
         self.count.assign(0.0)
 
 def psnr_metric(y_true, y_pred):
     """
-    Creating a metric function instead of a metric class.
-
-    NOTE: Do note use this! Only kept here for reference purposes.
-    TODO: Elaborate/Clarify docstring.
+    A function to compute PSNR. The inputs must be TensorFlow tensors.
     """
     mse = tf.reduce_mean(tf.square(y_true - y_pred))
     psnr = (-10.) * (tf.math.log(mse)/tf.math.log(10.))
@@ -239,7 +241,7 @@ def psnr_metric(y_true, y_pred):
 
 def psnr_metric_numpy(y_true, y_pred):
     """
-    TODO: Docstring.
+    A function to compute PSNR. The inputs must be NumPy arrays.
     TODO: Check if consistent with psnr_metric function.
     """
     mse = np.mean(np.square(y_true - y_pred))

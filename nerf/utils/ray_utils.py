@@ -107,10 +107,21 @@ def get_rays_tf(H, W, intrinsic, c2w):
 
 def create_input_batch_coarse_model(params, rays_o, rays_d, near, far):
     """
-    This function creates data which can be fed to the coarse model as 
-    input. TODO: write better!
+    Creates the input data required for the coarse model.
 
-    TODO: Elaborate! (metion stratified sampling in docstring/comments?)
+    This function returns a dictionary which contains the input required for 
+    the coarse model (xyz_inputs and dir_inputs) as well as some additional 
+    information (bin_data and t_vals). The additional information is useful
+    for some downstream functionality.
+
+    An important operation performed in this function is the creation of bins
+    along each ray. The bins are created for the purpose of stratified sampling.
+    N_coarse number of bins are created for each ray. One "t" value is sampled
+    in each of the N_coarse bins for each rays. The "t" values are used for the
+    creation of the XYZ coordinates that are to be input to the coarse model.
+
+    The information regarding the created bins is stored in the dictionary
+    bin_data. The sampled "t" values are stored in t_vals.
 
     Args:
         params      :   The params object as returned by the function load_params. 
@@ -134,14 +145,15 @@ def create_input_batch_coarse_model(params, rays_o, rays_d, near, far):
         bin_data    :   A dictionary containing various items relevant to the bins. 
                         Please refer to the code for more information.
         t_vals      :   A TensorFlow tensor of shape (N_rays, N_coarse). It is 
-                        the "t" in the equation r(t) = o + t * d (TODO: rewrite maybe?)
+                        the "t" in the equation r(t) = o + t * d
     """
     # We are interested in creating N_coarse bins between the near bound 
     # and the far bound. To do that, we need N_coarse+1 bin edges (including 
-    # the left most and the right most bin edge).
+    # the left most bin edge and the right most bin edge).
 
     if not params.sampling.lin_inv_depth:
-        # In this case, the bin edges are evenly spaced in depth. (todo: rewrite)
+        # In this case, the distance between any two adjacent bin edges
+        # are the same.
 
         # Shape of vals: (N_rays, N_coarse + 1, 1)
         vals = tf.linspace(
@@ -149,12 +161,12 @@ def create_input_batch_coarse_model(params, rays_o, rays_d, near, far):
             num = params.sampling.N_coarse + 1, axis = 1
         )
     else:
-        # In this case, the bin edges are evenly spaced in inverse depth. 
-        # A consequence of this is that there are more bins around the near 
-        # bound than around the far bound. (todo: rewrite)
+        # In this case, the inverse distance between any two adjacent 
+        # bin edges are the same. The consequence of this setting will 
+        # be explain in the docs soon (TODO: add explanation in docs).
 
-        ## TODO: Add eps to avoid avoid division by zero error, or 
-        ## ensure elsewhere that division by zero error cannot happen.
+        # TODO: Add eps to avoid avoid division by zero error, or 
+        # ensure elsewhere that division by zero error cannot happen.
         # Shape of vals: (N_rays, N_coarse + 1, 1)
         vals = 1 / tf.linspace(
             start = (1 / near), stop = (1 / far), 
@@ -174,10 +186,12 @@ def create_input_batch_coarse_model(params, rays_o, rays_d, near, far):
 
     # Now, we would like to get a sample of "t" from each of the N_coarse bins 
     # for each of the N_rays rays. This can be done with or without perturbation. 
-    
+
     if params.sampling.perturb:
-        # In this case, perturbation is enabled. In this case, for each bin, 
-        # a "t" value is randomly selected according to a uniform distribution. TODO: rewrite
+        # In this case, perturbation is enabled. In this case, for each bin,
+        # a "t" value in the bin (including the left bin edge but
+        # excluding the right bin edge) is randomly selected
+        # according to a uniform distribution.
 
         # Shape of bin_widths: (N_rays, N_coarse)
         bin_widths = right_edges - left_edges
@@ -232,22 +246,46 @@ def create_input_batch_coarse_model(params, rays_o, rays_d, near, far):
 
 def create_input_batch_fine_model(params, rays_o, rays_d, bin_weights, bin_data, t_vals_coarse):
     """
-    Creates batch of inputs for the fine model.
+    Creates the input data required for the fine model.
 
-    TODO: Elaborate!
+    This function returns a dictionary which contains the input required for 
+    the coarse model (xyz_inputs and dir_inputs) as well as some additional 
+    information (t_vals). The additional information is useful for some 
+    downstream functionality.
+
+    This function implements inverse transform sampling to sample N_fine "t" values
+    from a piece-wise constant PDF. The piece-wise constant PDF is created using the
+    bin weights. The implementation of the inverse transform sampling is different 
+    from the official codebase. A blog post explaining this implementation will be
+    created in the future.
+
+    The "t" values that are used for creating the inputs to fine model are a combination
+    of the "t" values used for the coarse model AND the "t" values sampled from the 
+    piece-wise constant PDF. Hence, a total of (N_coarse + N_fine) "t" values are used
+    for creating the input to the fine model.
 
     Args:
         params          :   The params object as returned by the function load_params. 
                             The function load_params is defined in params_utils.py
+
         rays_o          :   A TensorFlow tensor of shape (N_rays, 3) representing the
                             origin vectors of the rays.
+
         rays_d          :   A TensorFlow tensor of shape (N_rays, 3) representing the
                             normalized direction vectors of the rays.
-        bin_weights     :   A TensorFlow tensor of shape (N_rays, N_coarse). This value can be 
-                            obtained from the output of create_input_batch_coarse_model
-        bin_data        :   TODO
-        t_vals_coarse   :   A TensorFlow tensor of shape (N_rays, N_coarse). This value can be 
-                            obtained from the output of create_input_batch_coarse_model
+
+        bin_weights     :   The computed bin weights. This value can be obtained from
+                            the output of the function post_process_model_output
+                            when post_process_model_output is used to post process
+                            the coarse model predictions.
+
+        bin_data        :   A dictionary containing information about the bins along 
+                            each ray. This value can be obtained from the output of the 
+                            function create_input_batch_coarse_model
+
+        t_vals_coarse   :   A TensorFlow tensor of shape (N_rays, N_coarse). This value 
+                            can be obtained from the output of the function 
+                            create_input_batch_coarse_model
 
     Returns:
         A dictionary called data containing the following:
@@ -257,7 +295,7 @@ def create_input_batch_fine_model(params, rays_o, rays_d, bin_weights, bin_data,
         dir_inputs  :   A TensorFlow tensor of shape (N_rays * (N_coarse + N_fine), 3) 
                         which can be used as the direction vectors input for the coarse model.
         t_vals      :   A TensorFlow tensor of shape (N_rays, (N_coarse + N_fine)). It is 
-                        the "t" in the equation r(t) = o + t * d (TODO: rewrite maybe?)
+                        the "t" in the equation r(t) = o + t * d
     """
     # Shape of left_edges and bin_widths: (N_rays, N_coarse)
     left_edges = bin_data["left_edges"]
@@ -347,7 +385,6 @@ def sigma_to_alpha(sigma, diffs):
         Currently support for adding noise to sigma before computing 
         alpha is not available. TODO: Consider adding support.
 
-    
     Args:
         sigma   : A TensorFlow tensor with shape (N_rays, N_samples)
         diffs   : A TensorFlow tensor with shape (N_rays, N_samples)

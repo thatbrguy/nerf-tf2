@@ -17,9 +17,10 @@ from nerf.utils import ray_utils, pose_utils
 
 class NeRF(Model):
     """
-    Model to define custom fit, evaluate and predict operations.
+    Implementation of the NeRF model.
 
-    This class implements both coarse and fine models.
+    The NeRF class is implemented via sub-classing tf.keras.models.Model.
+    This class creates the coarse model and the fine model on initialization.
     """
     def __init__(self, params):
 
@@ -34,7 +35,21 @@ class NeRF(Model):
 
     def call(self, inputs):
         """
-        TODO: Docstring.
+        Custom call implementation.
+
+        Args:
+            inputs  :   A tuple. Only inputs[0] is used by this function. 
+                        inputs[0] is a tuple containing 4 TensorFlow tensors.
+                        The 4 TensorFlow tensors are rays_o, rays_d, near, far.
+                        For more information about these tensors, please refer
+                        to the function forward in this class.
+
+        Returns:
+            output  :   A tuple containing two dictionaries. The first dictionary
+                        contains the post processed output of the coarse model.
+                        The second dictionary contains the post processed output
+                        of the fine model. For more information about these outputs,
+                        please refer to the function forward in this class.
         """
         output = self.forward(*inputs[0])
         return output
@@ -44,14 +59,28 @@ class NeRF(Model):
         Performs a forward pass.
 
         Args:
-            rays_o          :
-            rays_d          :
-            near            :
-            far             :
+            rays_o          :   A TensorFlow tensor of shape (N_rays, 3) representing the
+                                origin vectors of the rays.
+
+            rays_d          :   A TensorFlow tensor of shape (N_rays, 3) representing the
+                                normalized direction vectors of the rays.
+
+            near            :   A TensorFlow tensor of shape (N_rays, 1) representing the 
+                                near bound for each ray.
+
+            far             :   A TensorFlow tensor of shape (N_rays, 1) representing the 
+                                far bound for each ray.
 
         Returns:
-            post_proc_CM    :
-            post_proc_FM    :
+            post_proc_CM    :   A dictionary containing the post processed output of the
+                                coarse model. Please refer to the function 
+                                post_process_model_output in ray_utils.py for more 
+                                information about the contents of the dictionary.
+
+            post_proc_FM    :   A dictionary containing the post processed output of the
+                                fine model. Please refer to the function 
+                                post_process_model_output in ray_utils.py for more 
+                                information about the contents of the dictionary.
         """
         # Getting data ready for the coarse model.
         ## TODO: Verify if it is ok for the below line 
@@ -99,9 +128,20 @@ class NeRF(Model):
         """
         Custom train step.
 
+        Reference: 
+            https://www.tensorflow.org/guide/keras/customizing_what_happens_in_fit
+
         Legend:
             CM  : Coarse Model
             FM  : Fine Model
+
+        Args:
+            data    :   A tuple. The tuple data contains two tuples. 
+                        data[0] contains the tensors rays_o, rays_d,
+                        near, far. data[1] contains the tensor rgb.
+
+        Returns:
+            A dictionary mapping the metric names to the current values.
         """
         (rays_o, rays_d, near, far), (rgb,) = data
         
@@ -143,9 +183,20 @@ class NeRF(Model):
         """
         Custom test step.
 
+        Reference: 
+            https://www.tensorflow.org/guide/keras/customizing_what_happens_in_fit
+
         Legend:
             CM  : Coarse Model
             FM  : Fine Model
+
+        Args:
+            data    :   A tuple. The tuple data contains two tuples. 
+                        data[0] contains the tensors rays_o, rays_d,
+                        near, far. data[1] contains the tensor rgb.
+
+        Returns:
+            A dictionary mapping the metric names to the current values.
         """
         (rays_o, rays_d, near, far), (rgb,) = data
         
@@ -175,7 +226,13 @@ class NeRF(Model):
         """
         Custom predict step.
 
-        TODO: Check correctness
+        Args:
+            data    :   A tuple. The tuple data contains two tuples. 
+                        data[0] contains the tensors rays_o, rays_d,
+                        near, far. data[1] contains the tensor rgb.
+
+        Returns:
+            Please refer to the Returns section of the function call.
         """
         return self(data)
 
@@ -231,21 +288,21 @@ class NeRF(Model):
 
 class PositionalEncoder(Layer):
     """
-    TODO: 
+    An implementation of the Positional Encoding layer.
 
-    1.  Add docstring and verify code!
-    2.  Consider adding a parameter so that the user can 
-        multiply ((2 ** exponents) * np.pi) with that parameter. 
-        This can be used to control the periodicity of the sin 
-        and cos functions.
-    3.  Allow the user to decide if they want to concatenate 
-        the input with the positional encoded values. Curently 
-        it is concatenated.
+    There are some discrepancies between the definition of the position 
+    encoding layer in the NeRF paper and the implementation in the official
+    NeRF codebase. You may refer to the following issue for some information:
+        https://github.com/bmild/nerf/issues/12
+
+    For this implementation (this class) the following decisions were made:
+        1. Include the pi term.
+        2. Concatenate the input to the computed sin and cost terms.
+    
+    Please refer to the code in this class for more clarity. A clearer description
+    will be added in the future.
     """
     def __init__(self, L, name = None):
-        """
-        TODO: Docstring
-        """
         super().__init__(trainable = False, name = name)
 
         self.L = L
@@ -255,13 +312,13 @@ class PositionalEncoder(Layer):
 
     def build(self, input_shape):
         """
-        TODO: Docstring
+        Custom build implementation.
         """
         self.last_dim = input_shape[1] * self.L * 2
 
     def call(self, x):
         """
-        TODO: Docstring
+        Custom call implementation.
         """
         expanded = tf.expand_dims(x, axis = -1) * self.multipliers
         
@@ -269,9 +326,6 @@ class PositionalEncoder(Layer):
         sin_ = tf.math.sin(expanded)
 
         intermediate = tf.stack([sin_, cos_], axis = -1)
-
-        ## TODO: Check if Flatten can be used.
-        # output = Flatten()(intermediate)
         sincos = tf.reshape(intermediate, (-1, self.last_dim))
         output = tf.concat([x, sincos], axis = -1)
 
@@ -281,10 +335,20 @@ def get_coarse_or_fine_model(model_name, num_units = 256):
     """
     Creates and returns either the coarse model or the fine model.
 
-    ## TODO: Verify consistency, indices, check for one off errors etc.
-    ## Add comments to explain stuff!
+    Args:
+        model_name  :   A string which is either "coarse" or "fine".
+                        If the string is "coarse", then the coarse
+                        model is created and returned. If the string 
+                        is "fine", then the fine model is created 
+                        and returned.
 
-    ## NOTE: relu is added to sigma here itself.
+        num_units   :   An integer denoting the number of units 
+                        each dense layer except the last layer
+                        should have. The last dense layer will
+                        have num_unis // 2 units.
+
+    Returns:
+        model       :   The coarse model or the fine model.
     """
     assert model_name in ("coarse", "fine")
     
@@ -331,7 +395,19 @@ def get_coarse_or_fine_model(model_name, num_units = 256):
 
 def setup_model(params):
     """
-    Sets up the NeRF model
+    Sets up the NeRF model.
+
+    This function first sets up the optimizer, the learning rate scheduler and the
+    metric. This function then compiles the model. After the model is compiled,
+    then weights are optionally set from saved files if weighy setting is enabled
+    in the config file.
+
+    Args:
+        params  :   The params object as returned by the function load_params. 
+                    The function load_params is defined in params_utils.py
+
+    Returns:
+        nerf    :   An instance of NeRF.
     """
     # Setting up the optimizer and LR scheduler.
     lr_schedule = ExponentialDecay(
@@ -358,6 +434,32 @@ def setup_model(params):
 def setup_model_and_callbacks(params, num_imgs, img_HW):
     """
     Sets up the NeRF model and the list of callbacks.
+
+    This function first sets up the callbacks. Then, this function 
+    calls setup_model to setup the NeRF model.
+
+    The callbacks that are always setup are ops.CustomSaver and TensorBoard. 
+    The callback ops.LogValImages is setup ONLY WHEN eager mode is 
+    enabled AND image logging is enabled. Unfortunately ops.LogValImages
+    does not work in graph mode.
+
+    Args:
+        params      :   The params object as returned by the function load_params. 
+                        The function load_params is defined in params_utils.py
+
+        num_imgs    :   A dictionary. Each key of this dictionary should be a 
+                        string denoting a split (i.e. train/val/test). Each 
+                        value of the dictionary should be an integer denoting 
+                        the number of images that are available for the 
+                        corresponding split.
+
+        img_HW      :   A tuple. img_HW[0] denotes the height of any processed
+                        image of the dataset and img_HW[1] denotes the width of
+                        any processed image of the dataset.
+
+    Returns:
+        nerf        :   An instance of NeRF.
+        callbacks   :   A list containing the configured callbacks.
     """
     # Setting up callbacks.
     saver = ops.CustomSaver(params = params, save_best_only = False)

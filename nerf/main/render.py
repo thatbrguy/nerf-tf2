@@ -63,8 +63,8 @@ def launch(logger):
     for i in tqdm(range(render_params.num_cameras), desc = "Rendering Images"):
         
         dataset = dataset_obj.create_dataset_for_render(
-            H = H, W = W, c2w = poses[i], 
-            bounds = bounds, intrinsic = intrinsic
+            H = H, W = W, c2w = poses[i], bounds = bounds,
+            intrinsic = intrinsic, reconfig_poses = False
         )
         output = nerf.predict(x = dataset)
 

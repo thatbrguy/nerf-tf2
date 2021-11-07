@@ -798,7 +798,7 @@ class Dataset(ABC):
 
         return tf_datasets
 
-    def create_dataset_for_render(self, H, W, c2w, bounds, intrinsic):
+    def create_dataset_for_render(self, H, W, c2w, bounds, intrinsic, reconfig_poses):
         """
         Create a TensorFlow dataset that can be used for rendering a single image. 
         
@@ -807,17 +807,25 @@ class Dataset(ABC):
         This function can be used by the subclasses.
 
         Args:
-            H           :   An integer representing the height of the image.
-            W           :   An integer representing the width of the image.
-            c2w         :   A NumPy array of shape (4, 4) representing the 
-                            camera to W1 transformation matrix.
-            bounds      :   A NumPy array of shape (2,) representing the 
-                            near and far bounds.
-            intrinsic   :   A NumPy array of shape (3, 3) representing the 
-                            intrinsic matrix.
+            H               :   An integer representing the height of the image.
+            W               :   An integer representing the width of the image.
+            c2w             :   A NumPy array of shape (4, 4) representing the
+                                camera to world transformation matrix. The "world"
+                                here could refer to the W1 or W2 coordinate system.
+                                The choice of W1 or W2 is determined by the
+                                reconfig_poses argument.
+            bounds          :   A NumPy array of shape (2,) representing the 
+                                near and far bounds.
+            intrinsic       :   A NumPy array of shape (3, 3) representing the 
+                                intrinsic matrix.
+            reconfig_poses  :   A boolean which denotes if poses have to be
+                                reconfigured. If True, c2w is assumed to be a
+                                camera to W1 transformation matrix. If False,
+                                c2w is assumed to be a camera to W2 
+                                transformation matrix.
 
         Returns:
-            dataset     :   A TensorFlow dataset.
+            dataset         :   A TensorFlow dataset.
         """
         self._validate_intrinsic_matrix(K = intrinsic)
         W1_to_W2_transform, adj_scale_factor = self.load_reconfig_params()

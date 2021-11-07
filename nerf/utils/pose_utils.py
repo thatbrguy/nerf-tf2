@@ -158,13 +158,13 @@ def batched_transform_points(arrs, points):
     Returns:
         output  :   A NumPy array of shape (M, N, 3)
     """
-    assert RT_matrices.shape[1:] == (4, 4), (
-        "Shape of the RT matrix is invalid. Must be (M, 4, 4)"
+    assert arrs.shape[1:] == (4, 4), (
+        "Shape of arrs is invalid. Must be (M, 4, 4)"
     )
     assert points.shape[1] == 3
 
     homogeneous_pts = make_homogeneous(points)
-    output = (RT_matrices @ homogeneous_pts.T).transpose(0, 2, 1)
+    output = (arrs @ homogeneous_pts.T).transpose(0, 2, 1)
 
     # Removing the last column which will be all ones.
     output = output[..., :3]
@@ -401,6 +401,9 @@ def reconfigure_poses(old_poses, W1_to_W2_transform):
     """
     Reconfigures the poses.
 
+    TODO: Updated description to mention this function works for 
+    both batched and non-batched modes
+
     The matrix old_poses[i] would take a point from the i-th camera 
     coordinate system to the old world (W1) coordinate system. The 
     matrix W1_to_W2_transform would take a point from the old world 
@@ -423,6 +426,9 @@ def reconfigure_scene_scale(old_poses, old_bounds, scene_scale_factor):
     """
     Reconfigures the scene scale.
 
+    TODO: Updated description to mention this function works for 
+    both batched and non-batched modes
+
     Given a scale factor, this function calculates new poses and bounds.
     The old poses are assumed to be camera to W2 transformation matrices.
     The new poses will be camera to W3 transformation matrices. Do note
@@ -433,13 +439,13 @@ def reconfigure_scene_scale(old_poses, old_bounds, scene_scale_factor):
     same as the old poses and old bounds respectively.
 
     Args:
-        old_poses           :   A NumPy array of shape (N, 4, 4)
-        old_bounds          :   A NumPy array of shape (N, 2)
+        old_poses           :   A NumPy array of shape (N, 4, 4) or (4, 4)
+        old_bounds          :   A NumPy array of shape (N, 2) or (2,)
         scene_scale_factor  :   A TODO type denoting the scale factor of
                                 the scene.
 
     Returns:
-        new_poses           :   A NumPy array of shape (N, 4, 4)
+        new_poses           :   A NumPy array of shape (N, 4, 4) or (4, 4)
     """
     if scene_scale_factor >= 1:
         # No scaling required for this case.

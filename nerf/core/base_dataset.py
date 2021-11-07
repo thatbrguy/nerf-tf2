@@ -830,15 +830,14 @@ class Dataset(ABC):
         self._validate_intrinsic_matrix(K = intrinsic)
         W1_to_W2_transform, adj_scale_factor = self.load_reconfig_params()
 
-        ## TODO: c2w would be (4, 4) but reconfigure_poses can 
-        ## take (N, 4, 4) as well as (4, 4). Make a note of that.
-        temp_pose = pose_utils.reconfigure_poses(
-            old_poses = c2w, 
-            W1_to_W2_transform = W1_to_W2_transform
-        )
+        if reconfig_poses:
+            temp_pose = pose_utils.reconfigure_poses(
+                old_poses = c2w, 
+                W1_to_W2_transform = W1_to_W2_transform
+            )
+        else:
+            temp_pose = c2w
 
-        ## TODO: reconfigure_scene_scale can handle batched data as 
-        ## well as non batched data. Make a note of that somewhere.
         new_pose, new_bounds = pose_utils.reconfigure_scene_scale(
             old_poses = temp_pose, old_bounds = bounds, 
             scene_scale_factor = adj_scale_factor,

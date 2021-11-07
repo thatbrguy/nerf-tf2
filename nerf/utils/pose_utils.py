@@ -2,24 +2,24 @@ import cv2
 import numpy as np
 import tensorflow as tf
 
-def make_4x4(RT):
+def make_4x4(arr):
     """
-    Converts a 3x4 RT matrix into a 4x4 RT matrix. The last 
-    row of the 4x4 matrix will be [0, 0, 0, 1].
+    Converts a 3x4 matrix into a 4x4 matrix. The last row of
+    the 4x4 matrix will be [0, 0, 0, 1].
 
     Args:
-        RT      :   A NumPy array of shape (3, 4)
+        arr     :   A NumPy array of shape (3, 4)
 
     Returns:
         output  :   A NumPy array of shape (4, 4)
     """
-    assert RT.shape == (3, 4)
+    assert arr.shape == (3, 4)
 
     # The last row of np.eye(4) is [0, 0, 0, 1]. Hence, we 
     # create np.eye(4) and overwrite the first three rows of 
-    # it with the RT matrix to get our desired output.
+    # it with arr to get our desired output.
     output = np.eye(4)
-    output[:3, :] = RT
+    output[:3, :] = arr
 
     return output
 
@@ -75,14 +75,14 @@ def normalize(vec):
 
     return norm_vec
 
-def rotate_vectors(mat, vectors):
+def rotate_vectors(arr, vectors):
     """
     Rotates the given 3D vectors using the rotation matrix 
-    extracted from mat.
+    extracted from arr.
 
     Args:
-        mat     :   A NumPy array of shape (3, 3) or (3, 4) 
-                    or (4, 4). In each case mat[:3, :3] must 
+        arr     :   A NumPy array of shape (3, 3) or (3, 4) 
+                    or (4, 4). In each case arr[:3, :3] must 
                     contain the rotation matrix.
         vectors :   A NumPy array of shape (N, 3). Here, N is 
                     the number of vectors.
@@ -91,29 +91,27 @@ def rotate_vectors(mat, vectors):
         output  :   A NumPy array of shape (N, 3). Here, N is 
                     the number of vectors.
     """
-    check_1 = mat.shape == (3, 3)
-    check_2 = mat.shape == (3, 4)
-    check_3 = mat.shape == (4, 4)
+    check_1 = arr.shape == (3, 3)
+    check_2 = arr.shape == (3, 4)
+    check_3 = arr.shape == (4, 4)
 
     assert np.any([check_1, check_2, check_3]), (
-        "Shape of mat is invalid. Must be "
+        "Shape of arr is invalid. Must be "
         "either (3, 3), (3, 4) or (4, 4)"
     )
     assert vectors.shape[1] == 3
 
-    transform = mat[:3, :3]
+    transform = arr[:3, :3]
     output = (transform @ vectors.T).T
 
     return output
 
-def transform_points(RT, points):
+def transform_points(arr, points):
     """
-    Applies an SE3 transformation to the points. (TODO: rewrite)
+    Applies a given transformation to the points.
 
     Args:
-        RT      :   A NumPy array of shape (4, 4) or (3, 4). 
-                    RT[:3, :3] should be rotation matrix and 
-                    RT[:3,  3] should be a translation vector.
+        arr     :   A NumPy array of shape (4, 4) or (3, 4).
         points  :   A NumPy array of shape (N, 3). Here, N is 
                     the number of points.
 
@@ -122,16 +120,16 @@ def transform_points(RT, points):
                     transformed points. Here, N is the number 
                     of points.
     """
-    assert (RT.shape == (4, 4)) or (RT.shape == (3, 4)), (
-        "Shape of the RT matrix is invalid. Must be "
-        "either (3, 4) or (4, 4)"
-    )
     assert points.shape[1] == 3
 
-    if RT.shape == (3, 4):
-        transform = make_4x4(RT)
-    elif RT.shape == (4, 4):
-        transform = RT
+    if arr.shape == (3, 4):
+        transform = make_4x4(arr)
+    elif arr.shape == (4, 4):
+        transform = arr
+    else:
+        raise ValueError(
+            "Shape of arr is invalid. Must be either (3, 4) or (4, 4)"
+        )
 
     homogeneous_pts = make_homogeneous(points)
     output = (transform @ homogeneous_pts.T).T
@@ -141,10 +139,24 @@ def transform_points(RT, points):
 
     return output
 
-def batched_transform_points(RT_matrices, points):
+def batched_transform_points(arrs, points):
     """
-    TODO: Elaborate.
-    TODO: Support (M, 3, 4) for RT_matrices also.
+    Applies a batch of transformations to the given points.
+
+    The variable arrs should contain M transformation matrices. 
+    Hence, shape of arrs should be (M, 4, 4). Each transformation
+    matrix is applied to all the points.
+    
+    TODO: verify shapes.
+
+    Args:
+        arrs    :   A NumPy array of shape (M, 4, 4). Here, M
+                    is the number of transformation matrices.
+        points  :   A NumPy array of shape (N, 3). Here, N is 
+                    the number of points.
+    
+    Returns:
+        output  :   A NumPy array of shape (M, N, 3)
     """
     assert RT_matrices.shape[1:] == (4, 4), (
         "Shape of the RT matrix is invalid. Must be (M, 4, 4)"
@@ -159,24 +171,24 @@ def batched_transform_points(RT_matrices, points):
 
     return output
 
-def transform_line_segments(RT, lines):
+def transform_line_segments(arr, lines):
     """
     Transforms line segments.
 
-    The array lines is a collection of line segments with lines[i] 
-    containing the i-th line segment. Each line segment is comprised 
-    of its two end points. This function essentially applies an SE3 
-    transformation to the points of each line segment.
+    The array lines is a collection of line segments with lines[i]
+    containing the i-th line segment. Each line segment is comprised
+    of its two end points. This function applies a transformation
+    to the points of each line segment.
+
+    TODO: verify shapes.
     
     Args:
-        RT          :   A NumPy array of shape (4, 4) or (3, 4). 
-                        RT[:3, :3] should be rotation matrix and 
-                        RT[:3,  3] should be a translation vector.
+        arr         :   A NumPy array of shape (4, 4) or (3, 4).
         lines       :   A NumPy array of shape (N, 2, 3). Here, N is 
                         the number of line segments.
 
     Returns:
-        output      :   A NumPy array of shape (N, 3) with the 
+        output      :   A NumPy array of shape (N, 2, 3) with the 
                         transformed line segments. Here, N is the 
                         number of line segments.
     """
@@ -184,36 +196,52 @@ def transform_line_segments(RT, lines):
     N = lines.shape[0]
     points = lines.reshape(-1, 3)
 
-    out_points = transform_points(RT, points)
+    out_points = transform_points(arr, points)
     output = out_points.reshape(N, 2, 3)
 
     return output
 
-def batched_transform_line_segments(RT_matrices, lines):
+def batched_transform_line_segments(arrs, lines):
     """
-    TODO: Elaborate.
+    Applies a batch of transformations to the given line segments.
+
+    The array lines is a collection of line segments with lines[i]
+    containing the i-th line segment. Each line segment is comprised
+    of its two end points. This function applies a batch of 
+    transformations to the points of each line segment.
+
+    TODO: verify shapes.
     
     Args:
-        RT_matrices :   TODO, Explain.
-        lines       :   NumPy array of shape (N, 2, 3).
+        arrs        :   A NumPy array of shape (M, 4, 4). Here, M
+                        is the number of transformation matrices.
+        lines       :   A NumPy array of shape (N, 2, 3)
+
+    Returns:
+        output      :   A NumPy array of shape (M, N, 2, 3)
     """
     assert (lines.shape[1] == 2) and (lines.shape[2] == 3)
-    M, N = RT_matrices.shape[0], lines.shape[0]
+    M, N = arrs.shape[0], lines.shape[0]
     points = lines.reshape(-1, 3)
 
-    out_points = batched_transform_points(RT_matrices, points)
+    out_points = batched_transform_points(arrs, points)
     output = out_points.reshape(M, N, 2, 3)
 
     return output
 
 def calculate_new_world_transform(poses, origin_method, basis_method, manual_rotation = None):
     """
-    Given N pose matrices (poses), each of which can transform a 
-    point from a camera coordinate system to an arbitrary world 
-    coordinate system (W1), this function configures a new world 
-    coordinate system (W2) based on the given pose matrices (poses).
+    Computes the transformation between W1 coordinate system and 
+    the W2 coordinate system.
 
-    TODO: Rewrite if needed.
+    Given N pose matrices (poses), each of which can transform a
+    point from a camera coordinate system to the W1 world coordinate
+    system, this function configures a new world coordinate system (W2). 
+    This function computes and returns the transformation needed to go
+    from the W1 coordinate system to the W2 coordinate system.
+
+    For more information about the various coordinate systems, please
+    refer to the documentation.
 
     Args:
         poses                   :   A NumPy array of shape (N, 4, 4)
@@ -267,16 +295,50 @@ def calculate_scene_scale(
         intrinsics = None, height = None, width = None
     ):
     """
-    TODO: Complete this!
-
     Calculates a scale factor for the 360 inward facing scene so that 
     the coordinates of the XYZ points that are to be given to the neural 
     networks can lie within the range [-1, 1].
 
-    We know that our scene is a 360-degree inward facing scene. We also 
-    know the near and far bounds for each camera. Using this information, 
-    we can attempt to bound the scene such that the XYZ coordinates of the 
-    points that were are interested in are within the range [-1, 1]
+    We would like to constuct a new coordinate system W3 such that the 
+    XYZ points in the new W3 coordinate system which are of interest to us
+    "attempts" to satisfy a constraint. By "of interest to us" we refer 
+    to only the XYZ points in the W3 coordinate system which are to be 
+    given as input to the neural networks.
+
+    The constraint is that the X, Y, Z components of any point in the 
+    W3 coordinate system that is of interest to us should be within
+    the range [-1, 1]. This is a requirement for the positional 
+    encoding layer.
+
+    We could "attempt" to satisfy this constraint by simply scaling
+    the W2 coordinate system. Hence, we would like to create a new 
+    coordinate system W3 which is just a scaled version of the W2
+    coordinate system. This function attempts to calculate just the
+    scale factor.
+
+    The key word to note is "attempts" to satisfy the constraint. 
+    In practice, it would be better to further adjust the calculated
+    scale factor to be careful. To adjust the calculated scale factor,
+    some hyperparameters are available in the config file. This 
+    function DOES NOT perform the adjustment. This adjustment is performed
+    in TODO function in TODO file.
+
+    Please read through the code and comments in this function to understand 
+    the exact methods used to calculate the scale factor. 
+    
+    Args:
+        poses               :   A NumPy array of shape (N, 4, 4) denoting the
+                                camera to W2 transformation matrices.
+        bounds              :   A NumPy array of shape (N, 2).
+        bounds_method       :   A string which is either "include_corners" 
+                                or "central_ray"
+        intrinsics          :   A NumPy array of shape (N, 3, 3)
+        height              :   An integer denoting the height of the images.
+        width               :   An integer denoting the width of the images.
+
+
+    Returns:
+        scene_scale_factor  :   The computed scene scale factor.
     """
     rays_o = poses[:, :3, 3]
     rays_d = poses[:, :3, 2]
@@ -284,6 +346,11 @@ def calculate_scene_scale(
 
     points_far = rays_o + far[:, None] * rays_d
 
+    # We would like the X, Y, Z components of each point in the array points
+    # to be within the range [-1, 1] in the W3 coodinate system. Do note that
+    # the array points contains points which are in the W2 coordinate system.
+    # The bounds_method controls what kind of points are to be included in
+    # the points array.
     if bounds_method == "include_corners":
         check_1 = intrinsics is not None
         check_2 = height is not None
@@ -294,44 +361,85 @@ def calculate_scene_scale(
             poses = poses, bounds = bounds, 
             intrinsics = intrinsics, height = height, width = width
         )
-
-        # We want XYZ coordinates of points_far, rays_o and corner_points 
-        # to be within the range [-1, 1]
         points = np.concatenate([rays_o, points_far, corner_points], axis = 0)
 
     elif bounds_method == "central_ray":
-        
-        # We want XYZ coordinates of points_far and the origin to be 
-        # within the range [-1, 1]
         points = np.concatenate([rays_o, points_far], axis = 0)
 
     else:
         raise ValueError(f"Invalid bounds_method: {bounds_method}")
 
-    ## TODO: Explain!
+    # To find the scale factor, first we find the largest absolute X, Y and Z
+    # components among all the points. Then, we select largest value (let's call
+    # this largest value largest_proj) among the largest absolute X, Y and Z components.
+    # The reciprocal of largest_proj gives us the scale factor.
     projs = np.abs(points).max(axis = 0)
     largest_proj = projs.max()
     scene_scale_factor = 1 / largest_proj
+
+    # For more intuition, imagine a cube whose centroid is at the origin of the 
+    # W2 coordinate system, and whose side length is 2*largest_proj. We say that
+    # all points in the points array lie within/on this cube. Each component of any 
+    # of this cube's vertices would be +largest_proj or -largest_proj. Now, imagine
+    # scaling the coordinate system such that the side length of the cube is now 2*1.
+    # Each component of any of this cube's vertices in the scaled coordinate system 
+    # would be +1 or -1. But do not that our points are within the cube. Hence, we 
+    # "attempted" to satisfy the constraint that is mentioned in the docstring! 
+    # And hence, 1/largest_proj is the required scaling factor.
+
+    # The word "attempted" is used above because we are only using the array points 
+    # to calculate largest_proj. We hope that those points are sufficient to calculate 
+    # a good scale factor. But if they are not sufficient, the constraint may not be 
+    # satisfied. For our use case, just the points array should be mostly sufficient. 
+    # For safety though, it is recommended to adjust the scale factor by setting 
+    # the necessary hyperparameters in the config yaml file. The adjusted is done
+    # elsewhere in the code.
 
     return scene_scale_factor
 
 def reconfigure_poses(old_poses, W1_to_W2_transform):
     """
-    TODO: Docstring
-    """
-    # The matrix old_poses[i] would take a point from the i-th camera 
-    # coordinate system to the old world (W1) coordinate system. The 
-    # matrix W1_to_W2_transform would take a point from the old world 
-    # coordinate system (W1) to the new world coordinate system (W2). 
-    # Hence, the matrix new_poses[i] would take a point from the i-th 
-    # camera coordinate system to the new world coordinate system (W2). 
-    new_poses = W1_to_W2_transform @ old_poses
+    Reconfigures the poses.
 
+    The matrix old_poses[i] would take a point from the i-th camera 
+    coordinate system to the old world (W1) coordinate system. The 
+    matrix W1_to_W2_transform would take a point from the old world 
+    coordinate system (W1) to the new world coordinate system (W2). 
+    Hence, the matrix new_poses[i] would take a point from the i-th 
+    camera coordinate system to the new world coordinate system (W2). 
+    
+    Args:
+        old_poses           : A NumPy array of shape (N, 4, 4) or (4, 4)
+        W1_to_W2_transform  : A NumPy array of shape (4, 4)
+
+
+    Returns:
+        new_poses           :   A NumPy array of shape (N, 4, 4) or (4, 4)
+    """
+    new_poses = W1_to_W2_transform @ old_poses
     return new_poses
 
 def reconfigure_scene_scale(old_poses, old_bounds, scene_scale_factor):
     """
-    TODO: Elaborate
+    Reconfigures the scene scale.
+
+    Given a scale factor, this function calculates new poses and bounds.
+    The old poses are assumed to be camera to W2 transformation matrices.
+    The new poses will be camera to W3 transformation matrices. Do note
+    that the W3 coordinate system is just a scaled version of the
+    W2 coordinate system. The new bounds are also calculated.
+
+    If the scale factor is >= 1, then the new poses and new bounds are
+    same as the old poses and old bounds respectively.
+
+    Args:
+        old_poses           :   A NumPy array of shape (N, 4, 4)
+        old_bounds          :   A NumPy array of shape (N, 2)
+        scene_scale_factor  :   A TODO type denoting the scale factor of
+                                the scene.
+
+    Returns:
+        new_poses           :   A NumPy array of shape (N, 4, 4)
     """
     if scene_scale_factor >= 1:
         # No scaling required for this case.
@@ -339,8 +447,7 @@ def reconfigure_scene_scale(old_poses, old_bounds, scene_scale_factor):
         new_bounds = old_bounds
 
     elif scene_scale_factor < 1:
-        # Poses and bounds are scaled in this case.
-        ## TODO: Verify logic!
+        # Poses and bounds are reconfigured in this case.
         scale_transform = np.eye(4) * scene_scale_factor
         scale_transform[3, 3] = 1
 
@@ -352,18 +459,33 @@ def reconfigure_scene_scale(old_poses, old_bounds, scene_scale_factor):
 def scale_imgs_and_intrinsics(old_imgs, old_intrinsics, scale_factor):
     """
     Scales images and intrinsics by the given scaling factor.
+    
+    The user can choose to optionally scale the images by a scale factor
+    for training purposes. If the images are scaled, then the intrinsic
+    matrices also have to be adjusted.
 
-    TODO: Elaborate.
+    Args:
+        old_imgs        :   A NumPy array of shape (N, H, W, 3)
+        old_intrinsics  :   A NumPy array of shape (N, 3, 3)
+        scale_factor    :   Can take None or a float value. If None is
+                            provided, no scaling is formed. If a float
+                            value is provided, scaling is performed.
+
+    Returns:
+        new_imgs        :   A NumPy array of shape (N, H, W, 3)
+        new_intrinsics  :   A NumPy array of shape (N, 3, 3)
     """
     if scale_factor is None:
+        # No scaling is performed in this case.
         new_imgs = old_imgs
         new_intrinsics = old_intrinsics
 
     elif scale_factor is not None:
+        # Scaling is performed in this case.
         sx, sy = scale_factor, scale_factor
         new_imgs, new_intrinsics = [], []
 
-        ## TODO: Maybe add arg to choose interpolation?
+        # TODO: Maybe add arg to choose interpolation?
         for idx in range(len(old_imgs)):
 
             img = cv2.cvtColor(old_imgs[idx].copy(), cv2.COLOR_RGB2BGR)
@@ -378,11 +500,11 @@ def scale_imgs_and_intrinsics(old_imgs, old_intrinsics, scale_factor):
             temp[1, 1], temp[1, 2] = temp[1, 1] * sy, temp[1, 2] * sy
             new_intrinsic = temp
 
-            ## TODO: Maybe add validate intrinsic here for sanity?
             new_imgs.append(new_img)
             new_intrinsics.append(new_intrinsic)
 
         new_intrinsics = np.array(new_intrinsics)
+        new_imgs = np.array(new_imgs)
 
     else:
         raise ValueError("Invalid setting of scale_factor.")
@@ -391,17 +513,26 @@ def scale_imgs_and_intrinsics(old_imgs, old_intrinsics, scale_factor):
 
 def get_corner_ray_points(poses, bounds, intrinsics, height, width):
     """
-    TODO: Elaborate
+    Given N cameras, we get N corresponding images. Each image has
+    4 corners. This function computes the corresponding XYZ points
+    in the W2 frame for each corner for each image.
 
-    NOTE: poses must be new_poses
+    The poses must be camera to W2 transformation matrices.
+    TODO: Verify types
 
-    intrinsics: (N, 3, 3)
-    poses: (N, 4, 4)
-    bounds: (N, 2)
+    Args:
+        poses       :   A NumPy array of shape (N, 4, 4)
+        bounds      :   A NumPy array of shape (N, 2)
+        intrinsics  :   A NumPy array of shape (N, 3, 3)
+        height      :   An integer denoting the height of the images.
+        width       :   An integer denoting the width of the images.
+
+    Returns:
+        output      :   A NumPy array of shape (N * 4, 3) 
     """
     H, W = height, width
 
-    # Shape of rays_0: (N, 3)
+    # Shape of rays_o: (N, 3)
     rays_o = poses[:, :3, 3]
     # Shape of far: (N, 1)
     far = bounds[:, 1:2]
@@ -450,10 +581,17 @@ def optimize_min_dist_point(poses):
     Optimizes a 3D point such that the perpendicular distance from that 
     point to each of N lines is as small as as possible.
     
-    TODO: 
-        1.  Elaborate explanation.
-        2.  Move some hyperparams to the param file if this function 
-            will be used in the future.
+    IMPORTANT NOTE:
+        This function is just a prototype. It is highly recommended to 
+        use the function solve_min_dist_point instead.
+    
+    TODO: Verify shapes
+
+    Args:
+        poses   :   A NumPy array of shape (N, 4, 4)
+
+    Returns:
+        output  :   A NumPy array of shape (3,)
     """
     # Initializing the point with all zeros.
     point = tf.Variable([[0., 0., 0.]], dtype = tf.float64)
@@ -463,8 +601,7 @@ def optimize_min_dist_point(poses):
     origins = poses[:, :3, 3]
     directions = normalize(poses[:, :3, 2])
 
-    # Converting origins and directions to TF constants. 
-    # (TODO: Should I call them eager tensors?)
+    # Converting origins and directions to TF constants.
     tf_origins = tf.constant(origins)
     tf_directions = tf.constant(directions)
     
@@ -496,7 +633,16 @@ def solve_min_dist_point(poses):
     This function uses linear algebra to solve for a point in 3D space 
     that has the smallest perpendicular distance to each of N lines.
     
-    TODO: Elaborate.
+    A blog post explaining the theory will be written in the future.
+
+    Reference:
+        https://math.stackexchange.com/questions/61719/finding-the-intersection-point-of-many-lines-in-3d-point-closest-to-all-lines
+
+    Args:
+        poses       :   A NumPy array of shape (N, 4, 4)
+
+    Returns:
+        output  :   A NumPy array of shape (3,)
     """
     origins = poses[:, :3, 3]
     directions = normalize(poses[:, :3, 2])
@@ -518,14 +664,20 @@ def solve_min_dist_point(poses):
 
 def compute_new_world_origin(poses, method):
     """
-    Computes the origin of a new world coordinate system given 
+    Computes the origin of the new world coordinate system (W2) given 
     N pose matrices.
 
     Each of the N pose matrices can transform a point from a camera 
     coordinate system to a arbitrary world coordinate system (W1). 
     In this function, we want to compute the origin of a new 
     world coordinate system (W2).
-    
+
+    The origin of the new world coordinate system (W2) is represented
+    in the W1 coordinate system.
+
+    The argument "method" describes the method using which the origin
+    is computed. The recommended method is "min_dist_solve"
+
     Args:
         poses       :   A NumPy array of shape (N, 4, 4)
         method      :   A string which is either "average", 
@@ -533,8 +685,9 @@ def compute_new_world_origin(poses, method):
 
     Returns:
         origin      :   A NumPy array of shape (3,) which denotes 
-                        the location of the new world world coordinate 
-                        system (W2).
+                        the location of the origin of the new world 
+                        coordinate system (W2) in the W1 coordinate
+                        system.
     """
     if method == "average":
         cam_locs = poses[:, :3, 3]
@@ -611,7 +764,33 @@ def compute_new_world_basis(poses):
 
 def create_spherical_path(radius, inclination, num_cameras, manual_rotation):
     """
-    TODO: Docstring.
+    Computes a sequence of poses that trace a path on a sphere.
+
+    The poses are camera to world transformation matrices. It is up to the
+    user to define what "world" coordinate system means here. This function 
+    assumes that a sphere of the specified radius is centered at the world
+    origin. The poses are created such that the Z-Axis of the camera 
+    coordinate systems point towards the world origin.
+
+    The argument manual_rotation can take None or a string. If a string
+    is provided, then it must be a path to a NumPy file which contains 
+    a rotation matrix. In that case, the NumPy array is loaded, and then 
+    the rotation is applied to the calculated poses. This can enable the
+    user to control the path traced by the poses. If manual_rotation 
+    is None, then no additional rotation is applied (the calculated 
+    poses are returned as such)
+
+    Further elaboration would be provided in the future.
+
+    Args:
+        radius          :   A float denoting the radius of the sphere.
+        inclination     :   A float denoting the inclination in degrees.
+        num_cameras     :   An integer denoting the number of cameras.
+        manual_rotation :   Can take None or or a string. Please refer
+                            to the docstring for more information.
+
+    Returns:
+        poses_4x4       :   A NumPy array of shape (N, 4, 4)
     """
     azimuth = np.linspace(0, 360, num_cameras, endpoint=False, dtype=np.float64)
     radius = np.full_like(azimuth, radius)

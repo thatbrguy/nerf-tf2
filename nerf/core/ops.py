@@ -182,6 +182,8 @@ class CustomSaver(Callback):
 class PSNRMetric(Metric):
     """
     Custom metric to computes PSNR.
+
+    TODO: mention that this class is to be used with the model
     """
     def __init__(self, name = "psnr_metric", **kwargs):
         super().__init__(name = name, **kwargs)

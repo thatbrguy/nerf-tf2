@@ -17,8 +17,17 @@ TODO
 ## Performance Analysis
 TODO
 
-## Installation and Data Preparation
+## Setup and Data Preparation
+
+### Installing Dependencies
 TODO
+
+### Data Preparation
+This codebase currently supports two types of datasets:
+1. The synthetic blender datasets which are mentioned in the official implementation.
+2. Custom datasets which represent an "360 degree inward-facing" scene.
+
+For instructions on preparing your dataset, please refer to the document TODO.
 
 ## Usage
 TODO

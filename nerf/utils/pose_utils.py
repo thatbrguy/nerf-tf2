@@ -621,8 +621,7 @@ def optimize_min_dist_point(poses):
             factor_2 = tf.reduce_sum(factor_1 * factor_1, axis = 1)
             factor_3 = tf.reduce_sum(factor_1 * tf_directions, axis = 1) ** 2
             
-            ## loss is the sum of the squared distance to 
-            ## each line.
+            # loss is the sum of the squared distance to each line.
             loss = tf.reduce_sum(factor_2 - factor_3)
 
         gradient = tape.gradient(loss, point)
@@ -645,7 +644,7 @@ def solve_min_dist_point(poses):
         https://math.stackexchange.com/questions/61719/finding-the-intersection-point-of-many-lines-in-3d-point-closest-to-all-lines
 
     Args:
-        poses       :   A NumPy array of shape (N, 4, 4)
+        poses   :   A NumPy array of shape (N, 4, 4)
 
     Returns:
         output  :   A NumPy array of shape (3,)

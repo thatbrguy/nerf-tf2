@@ -303,7 +303,7 @@ def create_input_batch_fine_model(params, rays_o, rays_d, bin_weights, bin_data,
 
     # Creating pdf from weights.
     # Shape of bin_weights: (N_rays, N_coarse)
-    bin_weights = bin_weights + 1e-5 # 1e-5 is added to prevent division by 0 ## TODO: Review.
+    bin_weights = bin_weights + 1e-5 # 1e-5 is added to prevent potential division by 0 errors.
     
     # Shape of pdf: (N_rays, N_coarse).
     denom = tf.reduce_sum(bin_weights * bin_widths, axis = 1, keepdims = True)
@@ -339,11 +339,11 @@ def create_input_batch_fine_model(params, rays_o, rays_d, bin_weights, bin_data,
     pdf_ = tf.gather(pdf, piece_idxs, axis = 1, batch_dims = 1)
     left_edges_ = tf.gather(left_edges, piece_idxs, axis = 1, batch_dims = 1)
 
-    ## Instead of setting denom to 1, trying new logic! TODO: rewite
+    # Creating mask so that the edge case that happens when elements of
+    # pdf_ is less than 1e-8 can be handled.
     mask = tf.where(pdf_ < 1e-8, tf.zeros_like(pdf_), tf.ones_like(pdf_))
     pdf_ = tf.maximum(pdf_, 1e-8)
 
-    # Getting samples. TODO: Elaborate.
     # Shape of t_vals_fine: (N_rays, N_coarse)
     t_vals_fine = (((u_vals - agg_) / pdf_) * mask) + left_edges_
     t_vals_fine = tf.stop_gradient(t_vals_fine)

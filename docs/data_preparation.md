@@ -15,19 +15,40 @@ Setting up a blender dataset is very simple. Please follow the below instruction
 3. Set the parameters in `nerf/params/config.yaml` appropriately by following the instructions given above each parameter in the file.
 
 ## 2. Custom Dataset (360-Degree Inward-Facing)
+Setting up a custom dataset for a 360-degree inward-facing scene is more involved. This section describes the data preparation process for this dataset type.
 
-For any custom 360-degree inward-facing dataset, we require the following items: images, poses, bounds and intrinsics. TODO: rewrite. Collectively, we will refer to the images, poses, bounds and intrinsics as "information about the scene".
+### 2.1 Introduction
+For any custom 360-degree inward-facing dataset, we require images, poses, bounds (near and far bounds) and intrinsics. Collectively, we will refer to the images, poses, bounds and intrinsics as "information about the scene".
+
+In one case, the user may only have the images, and may not have the remaining information about the scene. In another case, the user may already have prepared all the information about the scene. This section describes how to prepare the data for **both** cases.
 
 The codebase requires the information about the scene to be structured in a specific format. We will refer to this format as the "360-degree inward-facing custom dataset format". The format is as follows:
 1. All the images should be stored in a single directory.
-2. The information regarding the poses, bounds and intrinsics should be organized in a CSV file in the format specified in section 2.1 (Pose Info Format).
+2. The information regarding the poses, bounds and intrinsics should be organized in a CSV file in the format specified in section 2.4 (Pose Info Format).
 
-In some cases, the user might only have a set of images and would have no information about poses, bounds and intrinsics. In that case, the user can consider using the colmap-utils repository to extract.
+### 2.2 Setting up the information about the scene
 
-If the user already has all the information about the scene, then the user could just organize the information into the format required by the codebase.
+In some cases, the user may only have the images, and may not have the remaining information about the scene (let us call this **Case 1**). In another case, the user may already have prepared all the information about the scene (let us call this **Case 2**). Let us explore how to set up the information about the scene for each case separately.
 
-## 2.1 Pose Info Format
+#### 2.2.1 Case 1
+In this case, the user only has the images and does not have the remaining information about the scene. In this case, the user has to rely on some remaining codebase to estimate the remaining information about the scene.
+
+In this case, the user can consider using [colmap-utils](https://github.com/thatbrguy/colmap_utils) for estimating the remaining information about the scene. The remaining information about the scene estimated by [colmap-utils](https://github.com/thatbrguy/colmap_utils) will be in the Pose Info Format (section 2.4) and hence would be compatible with this codebase.
+
+If the user wishes to use an alternative approach to estimate the remaining information about the scene, they are free to do so. In that case, once the remaining information about the scene is estimated, the user should follow the instructions in **Case 2**. This is because, the estimated remaining information about the scene may not in the Pose Pose Info Format (section 2.4) that is required.
+
+#### 2.2.2 Case 2
+In this case, the user has already prepared all the information about the scene. In this case, the user should: 
+1. Place all the images in one directory. This is done to satisfy the first requirement of the 360-degree inward-facing custom dataset format.
+2. Organize the remaining information about the scene (poses, intrinsics, bounds) as per the format in section 2.4 (Pose Info Format). This is done to satisfy the second requirement of the 360-degree inward-facing custom dataset format.
+
+### 2.3 Creating train, val and test splits
+TODO
+
+### 2.4 Pose Info Format
 The information regarding poses, bounds and intrinsics should be organized in a CSV file in a specific format. This format is referred to as the "pose info format".
+
+The CSV file should contain... TODO
 
 | image_name | camera_model  | camera_params                                            | pose                                                         | near             | far              |
 | ---------- | ------------- | -------------------------------------------------------- | ------------------------------------------------------------ | ---------------- | ---------------- |

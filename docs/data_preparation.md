@@ -7,9 +7,12 @@ This codebase currently supports two types of datasets:
 The following section elaborates how to prepare the dataset for the about two types.
 
 ## 1. Blender Dataset
+The following blender datasets can be accessed through a link in the GitHub repository of the [official implementation](https://github.com/bmild/nerf#running-code): `chair`, `drums`, `ficus`, `hotdog`, `lego`, `materials`, `mic` and `ship`.  
+
 Setting up a blender dataset is very simple. Please follow the below instructions:
 
-1. Download the desired blender dataset from the GitHub repository of the [official implementation](https://github.com/bmild/nerf#running-code).
+1. Download the desired blender dataset from the GitHub repository of the [official implementation](https://github.com/bmild/nerf#running-code). 
+	- For example, if you are interested in the `lego` dataset, please download the entire `lego` folder which should be available inside the folder `nerf_synthetic`
 2. Place your desired blender dataset somewhere on your local disk and make note of the path to your blender dataset.
 	- For example, if you are interested in the `lego` blender dataset, and you have downloaded and placed the lego dataset at `/path/to/datasets`, then the path the `lego` dataset would be `/path/to/datasets/lego`
 3. Set the parameters in `nerf/params/config.yaml` appropriately by following the instructions given above each parameter in the file.
@@ -33,7 +36,9 @@ In some cases, the user may only have the images, and may not have the remaining
 #### 2.2.1 Case 1
 In this case, the user only has the images and does not have the remaining information about the scene. In this case, the user has to rely on some remaining codebase to estimate the remaining information about the scene.
 
-In this case, the user can consider using [colmap-utils](https://github.com/thatbrguy/colmap_utils) for estimating the remaining information about the scene. The remaining information about the scene estimated by [colmap-utils](https://github.com/thatbrguy/colmap_utils) will be in the Pose Info Format (section 2.4) and hence would be compatible with this codebase.
+In this case, the user can consider using [colmap-utils](https://github.com/thatbrguy/colmap_utils) for estimating the remaining information about the scene. The remaining information about the scene estimated by [colmap-utils](https://github.com/thatbrguy/colmap_utils) will be in the Pose Info Format (section 2.4) and hence would be compatible with this codebase. 
+
+(TODO: clarify that the structure will be compatible, but the values inside in some cases may not be; for example this codebase only supports certain camera models etc).
 
 If the user wishes to use an alternative approach to estimate the remaining information about the scene, they are free to do so. In that case, once the remaining information about the scene is estimated, the user should follow the instructions in **Case 2**. This is because, the estimated remaining information about the scene may not in the Pose Pose Info Format (section 2.4) that is required.
 
@@ -48,7 +53,52 @@ TODO
 ### 2.4 Pose Info Format
 The information regarding poses, bounds and intrinsics should be organized in a CSV file in a specific format. This format is referred to as the "pose info format".
 
-The CSV file should contain... TODO
+The CSV file should contain 6 columns. The columns are `image_name`, `camera_model`, `camera_params`, `pose`, `near` and `far`. Each row of the CSV file contains information regarding poses, bounds and intrinsics corresponding to the image mentioned in the same row.
+
+A description of the data that should be present in each row for each column is given below:
+1. `image_name`: 
+	
+	- Each row belonging to this column should contain a string denoting the name of the image.
+2. `camera_model`: 
+	- Each row belonging to this column should contain a string denoting a compatible camera model corresponding to the image. 
+	- This codebase supports a subset of the camera models which are defined in [colmap](#TODO). The exact camera models which are supported in this codebase are: `SIMPLE_PINHOLE`, `PINHOLE`, `SIMPLE_RADIAL`, `RADIAL`, `OPENCV` and `FULL_OPENCV`.
+	- The camera model, along with its corresponding camera params are used to construct the intrinsic matrix.
+	- For more information regarding the camera models, please refer to the following file in the [colmap repository](#TODO).
+3. `camera_params`:
+	- Each row belonging to this column should contain a string denoting the camera parameters for the given camera model.
+	- The first character of this string should be `[` and the last character of this string should be `]`. The characters in between the first and last characters of this string should contain comma separated values denoting the parameters for the given model. Inside the codebase, this string is parsed into a python list using `yaml.safe_load`.
+		- For the exact values that are to be provided for a given camera model, please refer to this [file](https://github.com/colmap/colmap/blob/master/src/base/camera_models.h) in the colmap repository.
+	- For example, if the corresponding camera model is `SIMPLE_PINHOLE`, then according to this [file](https://github.com/colmap/colmap/blob/master/src/base/camera_models.h) in the colmap repository, the parameters of the given model are `f`, `cx` and `cy`. Suppose we know that `f` is `500.0`, `cx` is `250.0` and `cy` is `200.0`, then the string that contains the camera parameters in our desired format is `[500.0, 250.0, 200.0]`
+4. `pose`:
+	
+	- Each row belonging to this column should contain a string denoting the camera to world transformation matrix for the camera corresponding to the image.
+	
+	- The first character of this string should be `[` and the last character of this string should be `]`. The characters in between the first and last characters of this string should contain comma separated values denoting the "**flattened pose matrix**". Inside the codebase, this string is parsed into a python list using `yaml.safe_load`.
+	
+	- A pose matrix is defined as the array `RT` of shape `(3, 4)` where `RT[:3, :3]` is a rotation matrix and `RT[:3, 3]` is a translation vector. On flattening `RT`, we would get a vector of shape `(12,)`. The **flattened pose matrix** are just these 12 values.
+	
+	  - The below example shows a NumPy array `RT` and its flattened version: 
+	
+	    ```python
+	    >>> RT
+	    array([[ 1. ,  0. ,  0. , -1.2],
+	           [ 0. ,  1. ,  0. ,  3.4],
+	           [ 0. ,  0. ,  1. , -7.2]])
+	    >>> 
+	    >>> RT.flatten()
+	    array([ 1. ,  0. ,  0. , -1.2,  0. ,  1. ,  0. ,  3.4,  0. ,  0. ,  1. ,
+	           -7.2])
+	    ```
+	
+	  - For the above example, the string containing the flattened pose matrix in our desired format is `[ 1. ,  0. , 0. , -1.2,  0. ,  1. ,  0. ,  3.4,  0. ,  0. ,  1. , -7.2]`
+5. `near`:
+	
+	-  Each row belonging to this column should contain the near bound for the camera corresponding to the image.
+6. `far`:
+	
+	-  Each row belonging to this column should contain the far bound for the camera corresponding to the image.
+
+An example of a table with two rows created in the "pose info format" is shown below:
 
 | image_name | camera_model  | camera_params                                            | pose                                                         | near             | far              |
 | ---------- | ------------- | -------------------------------------------------------- | ------------------------------------------------------------ | ---------------- | ---------------- |

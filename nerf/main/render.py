@@ -5,7 +5,7 @@ import numpy as np
 import tensorflow as tf
 
 from tqdm import tqdm
-from nerf.utils import pose_utils
+from nerf.utils import pose_utils, ray_utils
 from nerf.core.model import setup_model
 from nerf.core.datasets import get_dataset_obj, CustomDataset
 from nerf.utils.params_utils import load_params
@@ -26,8 +26,18 @@ def launch(logger):
     if params.system.tf_seed is not None:
         tf.random.set_seed(params.system.tf_seed)
 
-    if not os.path.exists(render_params.save_dir):
-        os.makedirs(render_params.save_dir, exist_ok=True)
+    rgb_dir = os.path.join(render_params.save_dir, "rgb")
+    depth_type_1_dir = os.path.join(render_params.save_dir, "depth_type_1")
+    depth_type_2_dir = os.path.join(render_params.save_dir, "depth_type_2")
+
+    if not os.path.exists(rgb_dir):
+        os.makedirs(rgb_dir, exist_ok=True)
+
+    if not os.path.exists(depth_type_1_dir):
+        os.makedirs(depth_type_1_dir, exist_ok=True)
+
+    if not os.path.exists(depth_type_2_dir):
+        os.makedirs(depth_type_2_dir, exist_ok=True)
     
     dataset_obj = get_dataset_obj(params = params)
     nerf = setup_model(params)
@@ -45,6 +55,8 @@ def launch(logger):
         camera_model = render_params.camera_model_name,
         model_params = render_params.camera_model_params,
     )
+
+    _, adj_scale_factor = dataset_obj.load_reconfig_params()
     
     # If bounds is not specified in the config file, then default 
     # bounds are assumed. The default near bound is 25% of the 
@@ -68,15 +80,31 @@ def launch(logger):
         )
         output = nerf.predict(x = dataset)
 
+        # Getting the relevant info from the output of the fine model.
         fine_model_output = output[1]
         pred_rgb = fine_model_output["pred_rgb"]
+        pred_depth = fine_model_output["pred_depth"]
+        name = f"render_{str(i).zfill(zfill)}"
 
+        # Post-processing and saving the RGB information.
         pred_rgb = np.clip(pred_rgb * 255.0, 0.0, 255.0)
         pred_img = pred_rgb.reshape(H, W, 3).astype(np.uint8)
 
         pred_img = cv2.cvtColor(pred_img, cv2.COLOR_RGB2BGR)
-        filename = f"render_{str(i).zfill(zfill)}.png"
-        cv2.imwrite(os.path.join(render_params.save_dir, filename), pred_img)
+        cv2.imwrite(os.path.join(rgb_dir, f"{name}.png"), pred_img)
+
+        # Post-processing and saving the depth information.
+        depth_type_1 = ray_utils.create_depth_map(
+            pred_depth, H, W, adj_scale_factor, map_type = "type_1",
+            intrinsic = None, C_to_W2 = None
+        )
+        depth_type_2 = ray_utils.create_depth_map(
+            pred_depth, H, W, adj_scale_factor, map_type = "type_2",
+            intrinsic = intrinsic, C_to_W2 = poses[i]
+        )
+
+        np.save(os.path.join(depth_type_1_dir, f"{name}.npy"), depth_type_1)
+        np.save(os.path.join(depth_type_2_dir, f"{name}.npy"), depth_type_2)
 
 if __name__ == '__main__':
 

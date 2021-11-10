@@ -105,6 +105,35 @@ def get_rays_tf(H, W, intrinsic, c2w):
     
     return rays_o, rays_d
 
+def create_depth_map(
+    pred_depth, H, W, scale_factor, map_type, 
+    intrinsic = None, C_to_W2 = None
+):
+    """
+    Creates a depth map
+
+    TODO: Finish docstring!
+    """
+    depth_scale_corrected = pred_depth * (1 / scale_factor)
+    
+    if map_type == "type_1":
+        depth_map = depth_scale_corrected.reshape(H, W)
+
+    elif map_type == "type_2":
+        rays_o, rays_d = get_rays(H, W, intrinsic, C_to_W2)
+        points_W2 = rays_o + rays_d * depth_scale_corrected[:, None]
+
+        W2_to_C = np.linalg.inv(C_to_W2)
+        points_cam = pose_utils.transform_points(W2_to_C, points_W2)
+
+        z_vals = points_cam[:, 2]
+        depth_map = z_vals.reshape(H, W)
+
+    else:
+        raise ValueError(f"Invalid map_type: {map_type}")
+
+    return depth_map
+
 def create_input_batch_coarse_model(params, rays_o, rays_d, near, far):
     """
     Creates the input data required for the coarse model.

@@ -79,7 +79,7 @@ A description of the data that should be present in each row for each column is 
 	- For example, if the corresponding camera model is `SIMPLE_PINHOLE`, then according to this [file](https://github.com/colmap/colmap/blob/master/src/base/camera_models.h) in the colmap repository, the parameters of the given model are `f`, `cx` and `cy`. Suppose we know that `f` is `500.0`, `cx` is `250.0` and `cy` is `200.0`, then the string that contains the camera parameters in our desired format is `[500.0, 250.0, 200.0]`
 4. `pose`:
 	
-	- Each row belonging to this column should contain a string denoting the camera to world transformation matrix for the camera corresponding to the image.
+	- Each row belonging to this column should contain a string denoting the **camera to world transformation matrix** for the camera corresponding to the image.
 	
 	- The first character of this string should be `[` and the last character of this string should be `]`. The characters in between the first and last characters of this string should contain comma separated values denoting the "**flattened pose matrix**". Inside the codebase, this string is parsed into a python list using `yaml.safe_load`.
 	

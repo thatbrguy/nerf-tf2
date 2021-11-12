@@ -7,14 +7,14 @@ In this codebase, a "coordinate system format" is used to describe how the axes 
 
 In this codebase, we would like define two camera coordinate system formats. They are:
 
-2. The Classic Computer Vision (Classic CV) Coordinate System Format
+1. The Classic Computer Vision (Classic CV) Coordinate System Format
 2. The OpenGL Coordinate System Format.
 
 A diagramatic represtation of both formats is shown in Fig. 1. below:
 
-<img src="media/camera_coordinate_system_formats.png" alt="camera_coordinate_system_formats" style="zoom: 33%;" />
+<img src="../media/camera_coordinate_system_formats.png" alt="camera_coordinate_system_formats" />
 
-<div style="text-align:center"><i>Fig. 1: On the left, the Classic CV coordinate system format is shown. On the right, the OpenGL coordinate system format is shown.</i></div>
+<p align="center"><i>Fig. 1: On the left, the Classic CV coordinate system format is shown. On the right, the OpenGL coordinate system format is shown.</i></p>
 
 The two important points that are to be noted are:
 
@@ -28,16 +28,20 @@ In **some parts** of the codebase however, the OpenGL format maybe used. Notably
 ## B. Coordinate Systems in the Code
 Many different types of coordinate systems are mentioned in the codebase. In many places in the codebase, transformations between coordinate systems are used. This section provides information about the various coordinate systems that are mentioned in the codebase.
 
-> TODO: Elaborate the reasoning behind having these different world coordinate systems.
-
 ### 1. World 1 Coordinate System (W1)
-This is the world coordinate system of the dataset.
+This is the world coordinate system of the dataset prepared by the user.
 
 ### 2. World 2 Coordinate System (W2)
-For a given dataset representing a 360-degree inward-facing sene, the codebase sets up a new world coordinate system called W2. The position and orientation of this new world coordinate system W2 may be different from W1 (however in some cases, it may be the same as well in some cases). This new world coordinate system W2 has the same scale as of W1.
+For a given dataset representing a 360-degree inward-facing sene, the codebase sets up a new world coordinate system called W2. The position and orientation of this new world coordinate system W2 may be different from W1 (however in some cases, it may be the same as well). This new world coordinate system W2 has the same scale as of W1.
+
+Do note that origin of the W1 coordinate system could be at any arbitrary location (with respect to the various cameras in the scene) and hence it may be difficult to work with directly. We would like the origin of the W2 coordinate system to lie somewhere near the center of the 360-degree inward-facing scene.
+
+The codebase offers several strategies to setup the position and orientation of the W2 coordinate system. 
 
 ### 3. World 3 Coordinate System (W3)
 Given the newly setup W2 coordinate system, the codebase also setups another coordinate system called W3. The W3 coordinate system is just a scaled version of the W2 coordinate system.
+
+The scaling is necessary to satisfy a requirement of the positional encoding layer. Please refer to the docstring of the function `calculate_scene_scale` in `nerf/utils/pose_utils.py` for more information.
 
 ### 4. Camera Coordinate System (C)
 Every camera in the dataset has its own camera coordiante system.

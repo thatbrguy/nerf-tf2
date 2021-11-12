@@ -7,14 +7,17 @@ In this codebase, a "coordinate system format" is used to describe how the axes 
 
 In this codebase, we would like define two camera coordinate system formats. They are:
 
-1. The OpenGL Coordinate System Format.
-2. The Classic Computer Vision (Classic CV) Coordinate System Format.
+2. The Classic Computer Vision (Classic CV) Coordinate System Format
+2. The OpenGL Coordinate System Format.
 
 A diagramatic represtation of both formats is shown in Fig. 1. below:
 
-> TODO: add diagram
+<img src="media/camera_coordinate_system_formats.png" alt="camera_coordinate_system_formats" style="zoom: 33%;" />
+
+<div style="text-align:center"><i>Fig. 1: On the left, the Classic CV coordinate system format is shown. On the right, the OpenGL coordinate system format is shown.</i></div>
 
 The two important points that are to be noted are:
+
 1. Both coordinate system formats are right-handed.
 2. In the Classic CV coodinate system format, the positive direction of the Z-Axis **enters** the image plane. In the OpenGL coordinate coordinate system format, the positive direction of the Z-Axis **leaves** the image plane.
 

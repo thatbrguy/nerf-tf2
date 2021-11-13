@@ -197,7 +197,7 @@ class Dataset(ABC):
         """
         Loads the reconfig parameters from an npz file. 
         """
-        path = os.path.join(self.params.data.reconfig.save_dir, "reconfig.npz")
+        path = os.path.join(self.params.data.reconfig.load_dir, "reconfig.npz")
         data = np.load(path)
         
         W1_to_W2_transform = data["W1_to_W2_transform"]

@@ -318,7 +318,7 @@ class CustomDataset(Dataset):
     ## be useful for some functions.
 
     # Camera models are as defined in
-    # https://github.com/colmap/colmap/blob/master/src/base/camera_models.h
+    # https://github.com/colmap/colmap/blob/8bfff64843aea6c648ed7dfa5c28dd5b9d766b3b/src/base/camera_models.h
     SUPPORTED_CAMERA_MODELS = frozenset([
         "SIMPLE_PINHOLE", "PINHOLE", "SIMPLE_RADIAL", 
         "RADIAL", "OPENCV", "FULL_OPENCV",

@@ -127,16 +127,31 @@ model:
 ###############################################################################
 
 data:
+
+  # reconfig contains parameters that control where some metadata will be saved to and loaded from.
   reconfig:
-    # If save_dir is set to null, then the reconfig parameters will not be saved. TODO: finish
+    
+    # save_dir can take either a null or a string. If a string is provided, then it must be a path to 
+    # a directory where the metadata calculated during some pre-processing steps will be saved to. 
+    # If null, then the metadata calculated during pre-processing will not be saved.
     save_dir: "/content/drive/MyDrive/NerfExpts/save_dir/metadata"
+
+    # load_dir can take a string which denotes a path to a directory where the metadata calculated 
+    # during a previous run can be loaded from. 
+    load_dir: "/content/drive/MyDrive/NerfExpts/save_dir/metadata"
 
   # scale_imgs can either be set to null or a float value. If scale_imgs 
   # is null, no scaling is applied. If scale_imgs is a float value, then 
   # the images and the intrinsic matrices are scaled.
   scale_imgs: null
 
-  # TODO:finish
+  # In the function _reconfigure_scene_scale in the class Dataset in nerf/core/base_dataset.py, 
+  # the scene scale factor is calculated. An adjusted scene scale factor is calculated in the same 
+  # function by first multiplying the calculated scene scale factor with a multiplying factor, and 
+  # then adding an additive factor to the result. The parameter scene_scale_mul serves as the 
+  # multiplying factor and the parameter scene_scale_add serves as the additive factor. Please 
+  # refer to the adjusted scene scale factor calculation in _reconfigure_scene_scale in the 
+  # class Dataset in nerf/core/base_dataset.py for more clarity.
   scene_scale_mul: 0.85
   scene_scale_add: 0.0
 

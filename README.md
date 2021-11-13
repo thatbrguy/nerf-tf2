@@ -2,13 +2,17 @@
 
 An unofficial implementation of NeRF in TensorFlow 2 for 360-degree inward-facing scenes *(forward-facing scenes are currently not supported -- will add support sometime late December 2021).*
 
-## 1. Features and Highlights
-- Contains a full implementation of the NeRF model for 360-degree inward-facing scenes.
-- TODO: write about the NeRF class implementation
-- TODO: finish this section
+## 1. Highlights
+- Contains an implementation of NeRF for 360-degree inward-facing scenes with both the coarse and fine models.
+- The NeRF model class in this codebase is implemented via subclassing the `Model` class from `tf.keras.models`. The object of the NeRF class in this codebase supports the `fit`, `evaluate` and `predict` methods.
+- This codebases uses `tf.data.Dataset` based data pipelines to interact with the NeRF model.
+- TODO mention the TF version(s)
 
 ## 2. Important Notes
-TODO
+
+### 2.1 General Important Notes
+- Currently this codebase does not guarantee determinism. Please be aware of this limitation while conducting your experiments.
+- TODO mention the TF version(s)
 
 ### 2.1. Major Differences
 - The camera coordinate system format used in this implementation and the official implementation is the camera coordinate system format.

@@ -69,9 +69,9 @@ A description of the data that should be present in each row for each column is 
 	- Each row belonging to this column should contain a string denoting the name of the image.
 2. `camera_model`: 
 	- Each row belonging to this column should contain a string denoting a compatible camera model corresponding to the image. 
-	- This codebase supports a subset of the camera models which are defined in [colmap](#TODO). The exact camera models which are supported in this codebase are: `SIMPLE_PINHOLE`, `PINHOLE`, `SIMPLE_RADIAL`, `RADIAL`, `OPENCV` and `FULL_OPENCV`.
+	- This codebase supports a subset of the camera models which are defined in [colmap](https://github.com/colmap/colmap). The exact camera models which are supported in this codebase are: `SIMPLE_PINHOLE`, `PINHOLE`, `SIMPLE_RADIAL`, `RADIAL`, `OPENCV` and `FULL_OPENCV`.
 	- The camera model, along with its corresponding camera params are used to construct the intrinsic matrix.
-	- For more information regarding the camera models, please refer to the following file in the [colmap repository](#TODO).
+	- For more information regarding the camera models, please refer to the following file in the [colmap repository](https://github.com/colmap/colmap/blob/8bfff64843aea6c648ed7dfa5c28dd5b9d766b3b/src/base/camera_models.h).
 3. `camera_params`:
 	- Each row belonging to this column should contain a string denoting the camera parameters for the given camera model.
 	- The first character of this string should be `[` and the last character of this string should be `]`. The characters in between the first and last characters of this string should contain comma separated values denoting the parameters for the given model. Inside the codebase, this string is parsed into a python list using `yaml.safe_load`.
@@ -79,7 +79,7 @@ A description of the data that should be present in each row for each column is 
 	- For example, if the corresponding camera model is `SIMPLE_PINHOLE`, then according to this [file](https://github.com/colmap/colmap/blob/master/src/base/camera_models.h) in the colmap repository, the parameters of the given model are `f`, `cx` and `cy`. Suppose we know that `f` is `500.0`, `cx` is `250.0` and `cy` is `200.0`, then the string that contains the camera parameters in our desired format is `[500.0, 250.0, 200.0]`
 4. `pose`:
 	
-	- Each row belonging to this column should contain a string denoting the **camera to world transformation matrix** for the camera corresponding to the image.
+	- Each row belonging to this column should contain a string denoting the **camera to world transformation matrix** for the camera corresponding to the image. The camera to world transformation matrix must be in the **Classic CV format** (please refer to [coordinate_systems.md](docs/coordinate_systems.md) for information about the Classic CV format).
 	
 	- The first character of this string should be `[` and the last character of this string should be `]`. The characters in between the first and last characters of this string should contain comma separated values denoting the "**flattened pose matrix**". Inside the codebase, this string is parsed into a python list using `yaml.safe_load`.
 	

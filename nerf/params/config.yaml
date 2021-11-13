@@ -2,29 +2,82 @@
 ## A. General Parameters 
 ###############################################################################
 
+# system contains parameters that are used across many scripts, and also contains 
+# some parameters that are used only in nerf/main/train.py
 system:
-  tf_seed: 11
-  white_bg: False # Setting to True is only supported for BlenderDataset!
-  run_eagerly: False
-  log_images: False
-  steps_per_epoch: 32
-  validation_freq: 400
-  tensorboard_dir: "./logs"
-  initial_epoch: 0
-  dataset_type: "CustomDataset" # One among "BlenderDataset" or "CustomDataset"
 
+  # TODO: explain
+  tf_seed: 11
+
+  # white_bg can be set to True only for the BlenderDataset. For the CustomDataset, only False can be set.
+  white_bg: False
+
+  # The run_eagerly argument to be given to nerf.compile in the function setup_model in nerf/core/model.py.
+  run_eagerly: False
+
+  # TODO: explain
+  log_images: False
+
+  # steps_per_epoch determines the number of batches to be processed per epoch during training.
+  steps_per_epoch: 32
+
+  # validation_freq determines the number of training epochs to be run before a new validation run is performed.
+  validation_freq: 400
+
+  # tensorboard_dir denotes the path where the tensor board logs should be saved to.
+  tensorboard_dir: "./logs"
+
+  # initial_epoch denotes the epoch at which to start training.
+  initial_epoch: 0
+
+  # dataset_type should be a string which is either "BlenderDataset" or "CustomDataset"
+  dataset_type: "CustomDataset"
+
+# eval contains parameters that are used in nerf/main/eval.py
 eval:
+
+  # save_dir mentions the path to the directory where output created during evaluation should be saved.
   save_dir: "/content/output/eval"
 
+# render contains parameters that are used in nerf/main/render.py and nerf/main/viz_scene.py
 render:
+
+  # Please refer to the function create_spherical_path in nerf/core/pose_utils.py for information on how 
+  # this parameter radius is used.
   radius: 4.0
+
+  # Please refer to the function create_spherical_path in nerf/core/pose_utils.py for information on how 
+  # this parameter inclination is used.
   inclination: 30.0
+
+  # num_cameras denotes the number of poses to be created for rendering. The value of this parameter is also 
+  # equal to the number of images that are rendered. Please refer to the function create_spherical_path in 
+  # nerf/core/pose_utils.py for information on how this parameter num_cameras is used.
   num_cameras: 30
+
+  # img_size denotes the size of each image that is to be rendered. This parameter should a list with 
+  # the first element of the list being the height and the second element of the list being the width.
   img_size: [800, 800] # [H, W]
+
+  # camera_model_name denotes the camera model to be used for rendering. Please refer to section 2.4 
+  # in docs/data_preparation.md for more information about the supported camera models.
   camera_model_name: "SIMPLE_PINHOLE"
+
+  # camera_model_params denotes the camera model parameters to be used for rendering. Please refer to 
+  # section 2.4 in docs/data_preparation.md for more information about how to set this parameter given 
+  # a particular setting of camera_model_name.
   camera_model_params: [1111.111, 400.0, 400.0]
-  bounds: null # If null, bounds are auto calcualted.
+
+  # bounds can either take a list or null. If null is provided, the bounds are automatically calculated 
+  # (please refer to nerf/main/render.py for information on how it is automatically calculated). If a list 
+  # is provided, then it should be a list of two elements, with the first element being the near bound and 
+  # the second element being the far bound.
+  bounds: null
+
+  # TODO
   manual_rotation: null
+
+  # save_dir mentions the path to the directory where rendered output should be saved.
   save_dir: "/content/output/render"
 
 ###############################################################################
@@ -32,14 +85,36 @@ render:
 ###############################################################################
 
 model:
+
+  # save contains paramters related to saving the model weights, optimizer weights and logs. 
+  # Do note that this codebase uses custom code to save and load the model weights and optimizer 
+  # weights (you may refer to nerf/core/model.py and nerf/core/ops.py).
   save:
+
+    # save_dir denotes the path where the model weights, optimizer weights and logs are saved.
     save_dir: "/content/drive/MyDrive/NerfExpts/save_dir/models" 
+    
+    # If save_optimizer_state is True, then the optimizer state is saved. If save_optimizer_state is False, 
+    # then the optimizer state is not saved.
     save_optimizer_state: True
   
+  # load contains paramters related to loading the model weights and the optimizer weights
   load:
+
+    # load_dir denotes the path where the model weights and optimizer weights are stored.
     load_dir: ""
+
+    # load_tag denotes the tag of the saved weights. For example, if the saved weights are 
+    # "015599_27.67_coarse.h5", "015599_27.67_fine.h5" and "015599_27.67_optimizer.npz", then 
+    # the tag is "015599_27.67"
     load_tag: ""
+
+    # If set_weights is True, then the saved weights are loaded and set appropriately. 
+    # If set_weights is False, then saved weights are ignored.
     set_weights: True
+
+    # If skip_optimizer is False, then the optimizer weights are loaded and set appropriately. 
+    # If skip_optimizer is True, then the optimizer weights are ignored.
     skip_optimizer: False
 
 ###############################################################################
@@ -48,7 +123,7 @@ model:
 
 data:
   reconfig:
-    # If save_dir is set to null, then the reconfig parameters will not be saved.
+    # If save_dir is set to null, then the reconfig parameters will not be saved. TODO: finish
     save_dir: "/content/drive/MyDrive/NerfExpts/save_dir/metadata"
 
   # scale_imgs can either be set to null or a float value. If scale_imgs 
@@ -56,48 +131,104 @@ data:
   # the images and the intrinsic matrices are scaled.
   scale_imgs: null
 
+  # TODO:finish
   scene_scale_mul: 0.85
   scene_scale_add: 0.0
-  
+
+  # batch_size denotes the number of rays to be used in one batch. Do note that number of 
+  # elements sent to the coarse model is (batch_size * N_coarse) and the number of elements 
+  # sent to the fine model is (batch_size * (N_coarse + N_fine)).
   batch_size: 4096
-  dataset_mode: "sample" # One among "iterate" or "sample"
+
+  # The dataset_mode takes a string which is one among "iterate" or "sample". In the iterate mode, 
+  # all the pixels of all the images in the training set are iterated over throughout the the 
+  # training process. In the sample mode, for every step, batch_size number of pixels are sampled 
+  # from an image from the training set and is used for that step.
+  dataset_mode: "sample"
 
   # Parameters specific to dataset_mode "sample"
   sample_mode:
+
+    # Please refer to the function create_tf_datasets_sample_mode in nerf/core/base_dataset.py to see 
+    # how shuffle_buffer_size, prefetch_buffer_size and repeat_count are being used.
     shuffle_buffer_size: 20
     prefetch_buffer_size: 20
     repeat_count: 5000
 
   # Parameters specific to dataset_mode "iterate"
   iterate_mode:
+
+    # Please refer to the function create_tf_datasets_iterate_mode in nerf/core/base_dataset.py to see 
+    # how repeat_count is being used.
     repeat_count: 36
     
-    ## TODO: Give this parameter a better name.
+    # TODO: finish
     train_shuffle:
       enable: True
       seed: 35 
 
+    # advance_train_tf_dataset contains parameters that can be used to skip a few initial batches in the 
+    # train TF dataset object for the iterate dataset mode.
     advance_train_tf_dataset:
+
+      # enable can be set to True or False. If set to False, batches are not skipped for the train TF dataset. 
+      # If set to True, skip_count number of batches are skipped.
       enable: False
-      skip_count: 0 # epochs * steps_per_epoch
+      
+      # skip_count determines the number of batches to be skipped. This parameter is only used if enable 
+      # is to True.
+      skip_count: 0
 
 ###############################################################################
 ## D1. Blender Dataset Parameters (Only required if using BlenderDataset)
 ###############################################################################
 
 blender_dataset:
+
+  # base_dir should contain the path to the blender dataset.
   base_dir: "../lego"
 
+  # TODO: finish
   shuffle:
     enable: ["train"]
     seed: 83
 
+  # val contains the parameters num and frac for controlling the size of the val split.
   val:
+
+    # NOTE: If both num and frac are null, then ALL the elements in the validation dataset are used 
+    # for validation. Moreover, only either num or either frac can be provided (both cannot contain 
+    # non-null values, only one them can contain a non-null value).
+
+    # num can take either an integer or null. If an integer is provided, then it determines 
+    # the number of elements to be used for validation. This would be useful if the user would 
+    # like to use lesser number of elements for validation than whats available in the 
+    # validation dataset.
     num: 3
+
+    # frac can take either a float value in the range (0, 1) or null. If a float value in the
+    # range (0, 1) is provided, then it determines the fraction of elements to be used for validation. 
+    # This would be useful if the user would like to use lesser number of elements for validation than 
+    # whats available in the validation dataset.
     frac: null
-  
+
+  # test contains the parameters num and frac for controlling the size of the test split.
   test:
+
+    # NOTE: If both num and frac are null, then ALL the elements in the test dataset are used 
+    # for testing. Moreover, only either num or either frac can be provided (both cannot contain 
+    # non-null values, only one them can contain a non-null value).
+
+    # num can take either an integer or null. If an integer is provided, then it determines 
+    # the number of elements to be used for testing. This would be useful if the user would 
+    # like to use lesser number of elements for testing than whats available in the 
+    # test dataset.
     num: 3
+
+    # frac can take either a float value in the range (0, 1) or null. If a float value in the
+    # range (0, 1) is provided, then it determines the fraction of elements to be used for testing. 
+    # This would be useful if the user would like to use lesser number of elements for testing than 
+    # whats available in the test dataset.
     frac: null
 
 ###############################################################################
@@ -105,38 +236,122 @@ blender_dataset:
 ###############################################################################
 
 custom_dataset:
+
+  # TODO: finish
   shuffle:
     enable: ["train"]
     seed: 83
 
+  # train contains the parameters for configuring the train split.
   train:
+
+    # Location of the directory with images for the train split.
     img_root_dir: "../data/train"
+
+    # Location of the CSV file with information stored in the Pose Info Format for the train split.
     pose_info_path: "../data/train_pose_info.csv"
 
+  # val contains the parameters for configuring the val split.
   val:
+
+    # Location of the directory with images for the val split.
     img_root_dir: "../data/val"
+
+    # Location of the CSV file with information stored in the Pose Info Format for the val split.
     pose_info_path: "../data/val_pose_info.csv"
+
+    # num and frac for controlling the size of the val split.
+
+    # NOTE: If both num and frac are null, then ALL the elements in the validation dataset are used 
+    # for validation. Moreover, only either num or either frac can be provided (both cannot contain 
+    # non-null values, only one them can contain a non-null value).
+
+    # num can take either an integer or null. If an integer is provided, then it determines 
+    # the number of elements to be used for validation. This would be useful if the user would 
+    # like to use lesser number of elements for validation than whats available in the 
+    # validation dataset.
     num: 3
+
+    # frac can take either a float value in the range (0, 1) or null. If a float value in the
+    # range (0, 1) is provided, then it determines the fraction of elements to be used for validation. 
+    # This would be useful if the user would like to use lesser number of elements for validation than 
+    # whats available in the validation dataset.
     frac: null
 
+  # test contains the parameters for configuring the test split.
   test:
+
+    # Location of the directory with images for the test split.
     img_root_dir: "../data/test"
+
+    # Location of the CSV file with information stored in the Pose Info Format for the test split.
     pose_info_path: "../data/test_pose_info.csv"
+
+    # num and frac for controlling the size of the test split.
+
+    # NOTE: If both num and frac are null, then ALL the elements in the test dataset are used 
+    # for testing. Moreover, only either num or either frac can be provided (both cannot contain 
+    # non-null values, only one them can contain a non-null value).
+
+    # num can take either an integer or null. If an integer is provided, then it determines 
+    # the number of elements to be used for testing. This would be useful if the user would 
+    # like to use lesser number of elements for testing than whats available in the 
+    # test dataset.
     num: 3
+
+    # frac can take either a float value in the range (0, 1) or null. If a float value in the
+    # range (0, 1) is provided, then it determines the fraction of elements to be used for testing. 
+    # This would be useful if the user would like to use lesser number of elements for testing than 
+    # whats available in the test dataset.
     frac: null
 
 ###############################################################################
 ## E. Miscellaneous Parameters
 ###############################################################################
 
+# preprocessing contains some parameters that configure some of the pre processing steps
 preprocessing:
+
+  # The method used to calculate the origin of the W2 coordinate system. Can take a
+  # string which is one among "average", "min_dist_solve" or "min_dist_opt". It is
+  # recommended to use "min_dist_solve". Please refer to the function compute_new_world_origin 
+  # in nerf/utils/pose_utils.py to see how this parameter is used.
   origin_method: "min_dist_solve"
+
+  # The method used to calculate the scale factor of the scene. Can take a
+  # string which is one among "central_ray" or "include_corners". Please refer to the 
+  # function calculate_scene_scale  in nerf/utils/pose_utils.py to see how this 
+  # parameter is used.
   bounds_method: "include_corners"
+
+  # The method used to calculate the orientation of the W2 coordinate system. Can take a string 
+  # among "identity", "compute" or "manual". Please refer to the function calculate_new_world_transform 
+  # in nerf/utils/pose_utils.py to see how this parameter is used.
   basis_method: "compute"
+
+  # manual_rotation can be null or a string. If basis_method is "manual", then this parameter must be 
+  # a string and this parameter must be a path that points to a NumPy file which contains a rotation matrix 
+  # of shape (3, 3). If basis_method is "identity" or "compute", then this parameter is not used and can 
+  # be left as null
   manual_rotation: null
 
+# sampling contains some parameters that configure the sampling methods used in the functions that prepare 
+# input data for the coarse and fine models.
 sampling:
+
+  # N_coarse is the The number of "t" values to be sampled for the coarse model.
   N_coarse: 64
+
+  # N_fine is the number of "t" values to be sampled using inverse transform sampling. 
+  # Do note that the fine model actually takes in (N_coarse + N_fine) "t" values (i.e. the 
+  # "t" values previously sampled for the coarse model AND the newly sampled "t" values 
+  # using inverse transform sampling)
   N_fine: 128
+
+  # Please check the function create_input_batch_coarse_model in nerf/utils/ray_utils.py 
+  # for information on how this parameter (perturb) is used.
   perturb: True
+
+  # Please check the function create_input_batch_coarse_model in nerf/utils/ray_utils.py 
+  # for information on how this parameter (lin_inv_depth) is used.
   lin_inv_depth: True

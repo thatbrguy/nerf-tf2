@@ -2,20 +2,23 @@
 ## A. General Parameters 
 ###############################################################################
 
-# system contains parameters that are used across many scripts, and also contains 
-# some parameters that are used only in nerf/main/train.py
+# system contains several parameters that are used in many scripts in this codebase. 
+# Moreover, system also contains some parameters that are only used in nerf/main/train.py
 system:
 
-  # TODO: explain
+  # This parameter is used to set the seed using tf.random.set_seed in various files in the folder nerf/main. 
+  # IMPORTANT: The codebase currently DOES NOT guarantee determinism, even if this seed is set! Please be 
+  # aware of this fact.
   tf_seed: 11
 
   # white_bg can be set to True only for the BlenderDataset. For the CustomDataset, only False can be set.
   white_bg: False
 
-  # The run_eagerly argument to be given to nerf.compile in the function setup_model in nerf/core/model.py.
+  # run_eagerly is a boolean which is given to nerf.compile in the function setup_model in nerf/core/model.py.
   run_eagerly: False
 
-  # TODO: explain
+  # If log_images is set to True, then the callback LogValImages (which is defined in nerf/core/ops.py) will 
+  # be used. log_images can only be set to True if run_eagerly is set to True.
   log_images: False
 
   # steps_per_epoch determines the number of batches to be processed per epoch during training.
@@ -74,7 +77,9 @@ render:
   # the second element being the far bound.
   bounds: null
 
-  # TODO
+  # manual_rotation can be either a null or a string denoting a path. Please refer to the docstring of the 
+  # function create_spherical_path in nerf/utils/pose_utils.py for more information on how this 
+  # parameter is used.
   manual_rotation: null
 
   # save_dir mentions the path to the directory where rendered output should be saved.
@@ -162,13 +167,15 @@ data:
     # how repeat_count is being used.
     repeat_count: 36
     
-    # TODO: finish
+    # Please refer to the function create_tf_datasets_iterate_mode in in nerf/core/base_dataset.py to 
+    # see how train_shuffle is being used and then set this parameter appropriately.
     train_shuffle:
       enable: True
       seed: 35 
 
     # advance_train_tf_dataset contains parameters that can be used to skip a few initial batches in the 
-    # train TF dataset object for the iterate dataset mode.
+    # train TF dataset object for the iterate dataset mode. Please refer to the function 
+    # get_tf_datasets_and_metadata_for_splits to see how these parameters are being used.
     advance_train_tf_dataset:
 
       # enable can be set to True or False. If set to False, batches are not skipped for the train TF dataset. 
@@ -188,7 +195,8 @@ blender_dataset:
   # base_dir should contain the path to the blender dataset.
   base_dir: "../lego"
 
-  # TODO: finish
+  # Please refer to the funciton _configure_dataset of BlenderDataset to see how the shuffle parameters 
+  # are used and then set these parameters accordingly.
   shuffle:
     enable: ["train"]
     seed: 83
@@ -237,7 +245,8 @@ blender_dataset:
 
 custom_dataset:
 
-  # TODO: finish
+  # Please refer to the funciton _configure_dataset of CustomDataset to see how the shuffle parameters 
+  # are used and then set these parameters accordingly.
   shuffle:
     enable: ["train"]
     seed: 83

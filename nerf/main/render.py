@@ -27,6 +27,7 @@ def launch(logger):
         tf.random.set_seed(params.system.tf_seed)
 
     rgb_dir = os.path.join(render_params.save_dir, "rgb")
+    acc_map_dir = os.path.join(render_params.save_dir, "acc_map")
     depth_type_1_dir = os.path.join(render_params.save_dir, "depth_type_1")
     depth_type_2_dir = os.path.join(render_params.save_dir, "depth_type_2")
 
@@ -38,6 +39,9 @@ def launch(logger):
 
     if not os.path.exists(depth_type_2_dir):
         os.makedirs(depth_type_2_dir, exist_ok=True)
+
+    if not os.path.exists(acc_map_dir):
+        os.makedirs(acc_map_dir, exist_ok=True)
     
     dataset_obj = get_dataset_obj(params = params)
     nerf = setup_model(params)
@@ -82,9 +86,11 @@ def launch(logger):
 
         # Getting the relevant info from the output of the fine model.
         fine_model_output = output[1]
+        name = f"render_{str(i).zfill(zfill)}"
+        
+        acc_map = fine_model_output["acc_map"]
         pred_rgb = fine_model_output["pred_rgb"]
         pred_depth = fine_model_output["pred_depth"]
-        name = f"render_{str(i).zfill(zfill)}"
 
         # Post-processing and saving the RGB information.
         pred_rgb = np.clip(pred_rgb * 255.0, 0.0, 255.0)
@@ -105,6 +111,10 @@ def launch(logger):
 
         np.save(os.path.join(depth_type_1_dir, f"{name}.npy"), depth_type_1)
         np.save(os.path.join(depth_type_2_dir, f"{name}.npy"), depth_type_2)
+
+        # Reshaping and saving the acc map information.
+        acc_map = acc_map.reshape(H, W)
+        np.save(os.path.join(acc_map_dir, f"{name}.npy"), acc_map)
 
 if __name__ == '__main__':
 

@@ -545,6 +545,7 @@ def post_process_model_output(sample_rgb, sigma, t_vals, white_bg = False):
         # TODO: Provide explanation for the below line of code.
         pred_rgb = pred_rgb + (1 - acc_map[:, None]) 
 
+    post_proc_model_outputs["acc_map"] = acc_map
     post_proc_model_outputs["weights"] = weights
     post_proc_model_outputs["pred_rgb"] = pred_rgb
     post_proc_model_outputs["pred_depth"] = pred_depth

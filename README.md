@@ -42,7 +42,13 @@ This codebase currently supports two types of datasets:
 For instructions on preparing your dataset, please refer to the document [data_preparation.md](docs/data_preparation.md).
 
 ## 5. Usage
-This section contains instructions on how to use various components of this codebase.
+The codebase offers 4 scripts which can be run to access various components of this codebase. A brief description of the scripts are given below:
+1. `train.py`: Used for launching a training session.
+2. `eval.py`: Used for evaluating a model that has already been trained.
+3. `render.py`: Used for rendering images using a model that has already been trained.
+4. `viz_scene.py`: Used for visualizing the ground truth poses and the inference poses (inference poses are the poses used for rendering in `render.py`).
+
+This section contains instructions on how to use various components of this codebase. 
 
 ### 5.1. Common Steps
 1. Ensure that the dependencies have been installed (section 4.1) and the data has been prepared (section 4.2)
@@ -72,14 +78,16 @@ Follow the below instructions to launch a rendering run:
 3. Run the training script by running the command `python -m nerf.main.render`
 
 ### 5.5. Visualization
-Follow the below instructions to visualize various elements of the scene:
+Follow the below instructions to visualize the ground truth poses and the inference poses in the scene:
 
 1. Follow the procedure mentioned in the common steps section (section 5.1).
 2. Modify the parameters in the configuration file `nerf/params/config.yaml` as per your requirements.
 3. Run the training script by running the command `python -m nerf.main.viz_scene`
 
-## 6. Acknowledgement
-TODO
+## 6. References
+I primarily used the official implementation ([bmild/nerf](https://github.com/bmild/nerf)) as a reference. Occasionally, I also referred to some other implementations ([yenchenlin/nerf-pytorch](https://github.com/yenchenlin/nerf-pytorch), [kwea123/nerf_pl](https://github.com/kwea123/nerf_pl), [google-research/jaxnerf](https://github.com/google-research/google-research/tree/master/jaxnerf), [krrish94/nerf-pytorch](https://github.com/krrish94/nerf-pytorch)) to get insights about certain details.
 
-## 7. Citation
-TODO
+I also referred to the COLMAP repository ([colmap/colmap](https://github.com/colmap/colmap)) and their [docs](https://colmap.github.io/) for the camera models and other information that was useful for various parts of this codebase.
+
+## 7. License and Citation
+This codebase is licensed under the MIT license. If you use this codebase (or parts of it) in your work, please consider citing this repository!

@@ -2,11 +2,19 @@
 
 An unofficial implementation of NeRF in TensorFlow 2 for 360-degree inward-facing scenes *(forward-facing scenes are currently not supported -- will add support sometime late Dec 2021 or early Jan 2022).*
 
+<p align="center">
+    <img src="media/lego_render.gif" alt="lego_render" />
+</p>
+
+<p align="center">
+    <img src="media/custom_dataset_render.gif" alt="custom_dataset_render" />
+</p>
+
 ## 1. Highlights
 - Contains an implementation of NeRF for 360-degree inward-facing scenes with both the coarse and fine models.
 - The NeRF model class in this codebase is implemented via subclassing the `Model` class from `tf.keras.models`. The object of the NeRF class in this codebase supports the `fit`, `evaluate` and `predict` methods.
 - This codebase uses `tf.data.Dataset` based data pipelines to interact with the NeRF model.
-- TODO mention the TF version(s)
+- Works with TensorFlow 2.6. Compatiblity with a few older versions will be tested and updated soon.
 
 ## 2. Important Notes
 
@@ -14,6 +22,9 @@ An unofficial implementation of NeRF in TensorFlow 2 for 360-degree inward-facin
 - Currently this codebase does not guarantee determinism. Please be aware of this limitation while conducting your experiments.
 - The raw depth estimated by the NeRF algorithm **should not** be used as is. The raw depth is **misleading** in some cases. Moreover, this codebase defines two "types" of depth estimates. For more information about the issues with depth, please refer to the document [depth_discussion.md](docs/depth_discussion.md).
 - Experimentation with this codebase was mostly conducted in Google Colab and on a laptop with Ubuntu 18.04. Compatiblity with other working environments and operating systems was not tested.
+- The `requirements.txt` in this repository does not exactly repesent the environment in which experiments were run. 
+	- This is because a lot of the experiments were run directly on a notebook in Google Colab (where I used the default python environment available in the notebook). Some experiments were run on my laptop but unfortunately I changed environments quite a few times and I did not keep track of them well.
+	- However, this `requirements.txt` can still be used to install all the required dependencies and to experiment with this codebase.
 
 ### 2.2. Major Differences
 - The camera coordinate system format used in this implementation and the official implementation is the camera coordinate system format.
@@ -26,13 +37,13 @@ An unofficial implementation of NeRF in TensorFlow 2 for 360-degree inward-facin
 - Forward-facing scenes are currently not supported. Support is planned to be added sometime late Dec 2021 or early Jan 2022.
 
 ## 3. Performance Analysis
-- On the lego test set, using the script `evaluate.py` an **Mean PSNR** of **33.0369** was obtained. Using a single V100 GPU on Google Colab, the evaluation took approximately **26.75 seconds per image** (as per the tqdm logs -- also this time including the time it takes to save each image to disk).
+- On the lego test set, using the script `evaluate.py` an **Mean PSNR** of **33.0369** was obtained. Using a single V100 GPU on Google Colab, the evaluation took approximately **26.75 seconds per image** (as per the tqdm logs -- also this time includes the time it takes to save each image to disk).
 - **However**, the user must be cautious while interpreting this result for many reasons:
 	- There are multiple ways of calculating the Mean PSNR metric (for example, calculating the mean PSNR per image and then averaging across images, versus calculating the mean PSNR per batch of pixels and then averaging across all batches etc.).
 	- During the training process, the validation PSNR obtained for the saved weights used for this analysis was around 27.67. However, this also should be taken with caution, since only 3 images were used for validation and also because the way PSNR is calculated in `evaluate.py` may be different from the way PSNR was calculated during validation.
 - In any case, the above information is provided to the user so that they can make a more careful interpretation of the results.
 - Further analysis is available in [performance_analysis.md](docs/performance_analysis.md).
-- The user can attempt to replicate the evaluation run by following the instructions in the replication section of [performance_analysis.md](docs/performance_analysis.md).
+- The user can attempt to replicate the evaluation run for the lego test set by following the instructions in section 1.1 of [performance_analysis.md](docs/performance_analysis.md).
 
 ## 4. Setup and Data Preparation
 This section instructions on how to setup the codebase for usage, and also on how to prepare the data for usage with this codebase.
@@ -75,7 +86,7 @@ Follow the below instructions to launch a training run:
 3. Run the training script by running the command `python -m nerf.main.train`
 
 ### 5.3. Evaluation
-Follow the below instructions to launch an evaluation run:
+Follow the below instructions to launch an evaluation run: (TODO mentioned need saved stuff)
 
 1. Follow the procedure mentioned in the common steps section (section 5.1).
 2. Modify the parameters in the configuration file `nerf/params/config.yaml` as per your requirements.

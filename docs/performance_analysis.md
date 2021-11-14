@@ -1,6 +1,15 @@
-TODO: intro
+# Performance Analysis
 
-## Replication
+## 1. Lego Dataset
+- On the lego test set, using the script `evaluate.py` an **Mean PSNR** of **33.0369** was obtained. Using a single V100 GPU on Google Colab, the evaluation took approximately **26.75 seconds per image** (as per the tqdm logs -- also this time includes the time it takes to save each image to disk).
+- **However**, the user must be cautious while interpreting this result for many reasons:
+	- There are multiple ways of calculating the Mean PSNR metric (for example, calculating the mean PSNR per image and then averaging across images, versus calculating the mean PSNR per batch of pixels and then averaging across all batches etc.).
+	- During the training process, the validation PSNR obtained for the saved weights used for this analysis was around 27.67. However, this also should be taken with caution, since only 3 images were used for validation and also because the way PSNR is calculated in `evaluate.py` may be different from the way PSNR was calculated during validation.
+- In any case, the above information is provided to the user so that they can make a more careful interpretation of the results.
+- Further analysis will be provided in the near future.
+- In the section 1.1 of this document, instructions are provided so that the user can attempt to replicate the evaluation experiment for the lego test set.
+
+## 1.1 Replication
 
 As mentioned in `README.md`, determinism is not guaranteed. But, it is highly likely that a "close enough" replication of the evaluation performance mentioned above should be possible.
 
@@ -19,3 +28,6 @@ If the user is interested in replicating the evaluation experiment, they are fol
 	- Do note that the steps related to setting up the environment etc. were already completed in step 1.
 
 Using a V100 GPU on Google Colab, it took approximately one and a half hours to finish the full evaluation run.
+
+## 2. Custom Dataset
+- The performance on the custom dataset will elaborated on in the near future.

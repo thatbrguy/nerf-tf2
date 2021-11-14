@@ -70,7 +70,7 @@ def launch(logger):
         diameter = 2 * render_params.radius 
         bounds = np.array([0.25 * diameter, 0.75 * diameter], dtype=np.float64)
     else:
-        bounds = np.array(render_params.bounds, dtype=np.float32)
+        bounds = np.array(render_params.bounds, dtype=np.float64)
 
     H, W = render_params.img_size
     zfill = int(np.log10(render_params.num_cameras) + 5)

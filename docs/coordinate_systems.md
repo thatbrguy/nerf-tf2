@@ -44,4 +44,4 @@ Given the newly setup W2 coordinate system, the codebase also setups another coo
 The scaling is necessary to satisfy a requirement of the positional encoding layer. Please refer to the docstring of the function `calculate_scene_scale` in `nerf/utils/pose_utils.py` for more information.
 
 ### 4. Camera Coordinate System (C)
-Every camera in the dataset has its own camera coordiante system.
+Every camera in the dataset has its own camera coordinate system.

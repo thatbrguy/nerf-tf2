@@ -12,13 +12,12 @@ from nerf.utils.params_utils import load_params
 
 os.environ["TF_MIN_CPP_LOG_LEVEL"] = "2"
 
-def launch(logger, split):
+def launch(logger, split, config_path):
     """
     Launches the evaluation run.
     """
     # Setting up params
-    path = "./nerf/params/config.yaml"
-    params = load_params(path)
+    params = load_params(config_path)
 
     if params.system.tf_seed is not None:
         tf.random.set_seed(params.system.tf_seed)
@@ -67,11 +66,28 @@ def launch(logger, split):
     mean_psnr = np.mean(psnr)
     logger.info(f"Mean PSNR: {mean_psnr}")
 
+def get_args():
+    """
+    Gets args from argparse.
+    """
+    parser = argparse.ArgumentParser()
+    parser.add_argument(
+        "--config", type=str, default = "./nerf/params/config.yaml",
+        help=(
+        "A string denoting the path to the config file. By default "
+        "it is ./nerf/params/config.yaml"
+    ))
+
+    args = parser.parse_args()
+    return args
+
 if __name__ ==  "__main__":
+
+    args = get_args()
 
     # Setting numpy print options for ease of debugging.
     np.set_printoptions(precision = 5, suppress = True)
-    
+
     # Setting up logger.
     logging.basicConfig(
         format='[%(asctime)s]:[%(levelname)s]:[%(name)s]: %(message)s', 
@@ -82,4 +98,4 @@ if __name__ ==  "__main__":
     PIL_logger = logging.getLogger("PIL")
     PIL_logger.setLevel(logging.WARNING)
 
-    launch(logger, split = "test")
+    launch(logger, split = "test", config_path = args.config)

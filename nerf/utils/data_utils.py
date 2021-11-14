@@ -96,13 +96,42 @@ def get_args():
     Gets args from argparse.
     """
     parser = argparse.ArgumentParser()
-    parser.add_argument("--imgs_dir", required=True, type=str)
-    parser.add_argument("--pose_info_path", required=True, type=str)
-    parser.add_argument("--out_path", required=True, type=str)
-    parser.add_argument("--val_frac", required=True, type=float)
-    parser.add_argument("--test_frac", required=True, type=float)
-    parser.add_argument("--shuffle", action="store_true")
-    parser.add_argument("--seed", type=int)
+    parser.add_argument(
+        "--imgs_dir", required=True, type=str, 
+        help="Path to the directory containing the images."
+    )
+    parser.add_argument(
+        "--pose_info_path", required=True, type=str, 
+        help = "Path to the pose info csv file."
+    )
+    parser.add_argument(
+        "--out_path", required=True, type=str,
+        help = "Path to the directory which would contain the output. "
+    )
+    parser.add_argument(
+        "--val_frac", required=True, type=float, 
+        help = (
+            "A float between 0 and 1 representing the fraction of the dataset "
+            "that is to be used for the validation split."
+    ))
+    parser.add_argument(
+        "--test_frac", required=True, type=float,
+        help = (
+            "A float between 0 and 1 representing the fraction of the dataset "
+            "that is to be used for the test split."
+    ))
+    parser.add_argument(
+        "--shuffle", action="store_true", 
+        help = (
+            "If the argument --shuffle is used, then the pose info DataFrame "
+            "is shuffled before splitting."
+    ))
+    parser.add_argument(
+        "--seed", type=int, 
+        help = (
+            "If --shufle is used, then an integer should be provided to be used as "
+            "the seed that is passed to the random_state argument of df.sample in the code."
+    ))
 
     args = parser.parse_args()
     return args

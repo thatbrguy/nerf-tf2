@@ -1,31 +1,38 @@
 # NeRF TF2
 
-An unofficial implementation of NeRF in TensorFlow 2 for 360-degree inward-facing scenes *(forward-facing scenes are currently not supported -- will add support sometime late December 2021).*
+An unofficial implementation of NeRF in TensorFlow 2 for 360-degree inward-facing scenes *(forward-facing scenes are currently not supported -- will add support sometime late Dec 2021 or early Jan 2022).*
 
 ## 1. Highlights
 - Contains an implementation of NeRF for 360-degree inward-facing scenes with both the coarse and fine models.
 - The NeRF model class in this codebase is implemented via subclassing the `Model` class from `tf.keras.models`. The object of the NeRF class in this codebase supports the `fit`, `evaluate` and `predict` methods.
-- This codebases uses `tf.data.Dataset` based data pipelines to interact with the NeRF model.
+- This codebase uses `tf.data.Dataset` based data pipelines to interact with the NeRF model.
 - TODO mention the TF version(s)
 
 ## 2. Important Notes
 
 ### 2.1 General Important Notes
 - Currently this codebase does not guarantee determinism. Please be aware of this limitation while conducting your experiments.
-- TODO mention the TF version(s)
+- The raw depth estimated by the NeRF algorithm **should not** be used as is. The raw depth is **misleading** in some cases. Moreover, this codebase defines two "types" of depth estimates. For more information about the issues with depth, please refer to the document [depth_discussion.md](docs/depth_discussion.md).
+- Experimentation with this codebase was mostly conducted in Google Colab and on a laptop with Ubuntu 18.04. Compatiblity with other working environments and operating systems was not tested.
 
-### 2.1. Major Differences
+### 2.2. Major Differences
 - The camera coordinate system format used in this implementation and the official implementation is the camera coordinate system format.
 	- This codebase mostly uses the Classic CV coordinate system format, whereas the official implementation mostly uses the OpenGL coordinate system format. For information about the various coordinate system formats mentioned in this codebase, please refer to [coordinate_systems.md](docs/coordinate_systems.md).
 	- The above choice was made since I thought that data preparation for custom real life data would be simpler this way. Moreover I believed that the codebase would be a bit easier to understand if the Classic CV format is used.
 - Inverse transform sampling has been implemented from scratch in a different way. A different strategy to handle edge cases is employed.
-- TODO: finish this section
+- Several pre-processing and post-processing methods were modified. The interested user is encouraged to explore the codebase to understand the workflow.
 
-### 2.2 Currently Unsupported Features
-- Forward-facing scenes are currently not supported. Support is planned to be added sometime late December 2021.
+### 2.3 Currently Unsupported Features
+- Forward-facing scenes are currently not supported. Support is planned to be added sometime late Dec 2021 or early Jan 2022.
 
 ## 3. Performance Analysis
-TODO
+- On the lego test set, using the script `evaluate.py` an **Mean PSNR** of **33.0369** was obtained. Using a single V100 GPU on Google Colab, the evaluation took approximately **26.75 seconds per image** (as per the tqdm logs -- also this time including the time it takes to save each image to disk).
+- **However**, the user must be cautious while interpreting this result for many reasons:
+	- There are multiple ways of calculating the Mean PSNR metric (for example, calculating the mean PSNR per image and then averaging across images, versus calculating the mean PSNR per batch of pixels and then averaging across all batches etc.).
+	- During the training process, the validation PSNR obtained for the saved weights used for this analysis was around 27.67. However, this also should be taken with caution, since only 3 images were used for validation and also because the way PSNR is calculated in `evaluate.py` may be different from the way PSNR was calculated during validation.
+- In any case, the above information is provided to the user so that they can make a more careful interpretation of the results.
+- Further analysis is available in [performance_analysis.md](docs/performance_analysis.md).
+- The user can attempt to replicate the evaluation run by following the instructions in the replication section of [performance_analysis.md](docs/performance_analysis.md).
 
 ## 4. Setup and Data Preparation
 This section instructions on how to setup the codebase for usage, and also on how to prepare the data for usage with this codebase.
@@ -72,21 +79,21 @@ Follow the below instructions to launch an evaluation run:
 
 1. Follow the procedure mentioned in the common steps section (section 5.1).
 2. Modify the parameters in the configuration file `nerf/params/config.yaml` as per your requirements.
-3. Run the training script by running the command `python -m nerf.main.eval`
+3. Run the evaluation script by running the command `python -m nerf.main.eval`
 
 ### 5.4. Rendering
 Follow the below instructions to launch a rendering run:
 
 1. Follow the procedure mentioned in the common steps section (section 5.1).
 2. Modify the parameters in the configuration file `nerf/params/config.yaml` as per your requirements.
-3. Run the training script by running the command `python -m nerf.main.render`
+3. Run the rendering script by running the command `python -m nerf.main.render`
 
 ### 5.5. Visualization
 Follow the below instructions to visualize the ground truth poses and the inference poses in the scene:
 
 1. Follow the procedure mentioned in the common steps section (section 5.1).
 2. Modify the parameters in the configuration file `nerf/params/config.yaml` as per your requirements.
-3. Run the training script by running the command `python -m nerf.main.viz_scene`
+3. Run the scene visualization script by running the command `python -m nerf.main.viz_scene`
 
 ## 6. References
 I primarily used the official implementation ([bmild/nerf](https://github.com/bmild/nerf)) as a reference. Occasionally, I also referred to some other implementations ([yenchenlin/nerf-pytorch](https://github.com/yenchenlin/nerf-pytorch), [kwea123/nerf_pl](https://github.com/kwea123/nerf_pl), [google-research/jaxnerf](https://github.com/google-research/google-research/tree/master/jaxnerf), [krrish94/nerf-pytorch](https://github.com/krrish94/nerf-pytorch)) to get insights about certain details.
@@ -94,4 +101,4 @@ I primarily used the official implementation ([bmild/nerf](https://github.com/bm
 I also referred to the COLMAP repository ([colmap/colmap](https://github.com/colmap/colmap)) and their [docs](https://colmap.github.io/) for the camera models and other information that was useful for various parts of this codebase.
 
 ## 7. License and Citation
-This codebase is licensed under the MIT license. If you use this codebase (or parts of it) in your work, please consider citing this repository!
+This repository is licensed under the MIT license. If you use this repository (or parts of it) in your work, please consider citing this repository!

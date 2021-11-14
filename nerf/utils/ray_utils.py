@@ -437,7 +437,7 @@ def compute_weights(sigma, t_vals, N_samples):
         3.  alpha[k, i] be the alpha value (computed using the 
             function sigma_to_alpha) of the "t" value i for ray k.
 
-    Then, weights[i, j] is the product of T[i, j] and alpha[i, j].
+    Then, weights[k, i] is the product of T[k, i] and alpha[k, i].
     Please refer to equation 3 of the NeRF paper for more information.
 
     This function can be used for both the coarse and fine models.
@@ -499,8 +499,7 @@ def post_process_model_output(sample_rgb, sigma, t_vals, white_bg = False):
     Do note that pred_depth is the depth as measured in the W3 coordinate system.
     The W3 coordinate system is a scaled version of the W2 coordinate system. 
     To get the depth as measured in the W2 coordinate system, the scale must 
-    be accounted for. This will be taken care of in render.py and eval.py 
-    (TODO: Add depth prediction for render.py and eval.py)
+    be accounted for. (TODO: rewrite this paragraph)
 
     TODO: Check consistent nomenclature usage across the codebase (Ex: when to 
     use "bin" and when to use "sample".)

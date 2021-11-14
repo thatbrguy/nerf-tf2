@@ -6,9 +6,13 @@ An unofficial implementation of NeRF in TensorFlow 2 for 360-degree inward-facin
     <img src="media/lego_render.gif" alt="lego_render" />
 </p>
 
+<p align="center"><i>Fig. 1: Rendered images (on the left) and custom colored depth maps (on the right) for the lego dataset. Note: In general, the depth information can be misleading or incorrect in some cases. Please refer to depth_discussion.md in the docs folder for more information.</i></p>
+
 <p align="center">
     <img src="media/custom_dataset_render.gif" alt="custom_dataset_render" />
 </p>
+
+<p align="center"><i>Fig. 2: Rendered images (on the left) and custom colored depth maps (on the right) for a custom dataset. Note: In general, the depth information can be misleading or incorrect. Please refer to depth_discussion.md in the docs folder for more information.</i></p>
 
 ## 1. Highlights
 - Contains an implementation of NeRF for 360-degree inward-facing scenes with both the coarse and fine models.
@@ -41,6 +45,7 @@ An unofficial implementation of NeRF in TensorFlow 2 for 360-degree inward-facin
 - **However**, the user must be cautious while interpreting this result for many reasons:
 	- There are multiple ways of calculating the Mean PSNR metric (for example, calculating the mean PSNR per image and then averaging across images, versus calculating the mean PSNR per batch of pixels and then averaging across all batches etc.).
 	- During the training process, the validation PSNR obtained for the saved weights used for this analysis was around 27.67. However, this also should be taken with caution, since only 3 images were used for validation and also because the way PSNR is calculated in `evaluate.py` may be different from the way PSNR was calculated during validation.
+	- Also, some configurations were different when compared to the original implementation (for example, here a batch size of 4096 was used).
 - In any case, the above information is provided to the user so that they can make a more careful interpretation of the results.
 - Further analysis is available in [performance_analysis.md](docs/performance_analysis.md).
 - The user can attempt to replicate the evaluation run for the lego test set by following the instructions in section 1.1 of [performance_analysis.md](docs/performance_analysis.md).
@@ -86,7 +91,9 @@ Follow the below instructions to launch a training run:
 3. Run the training script by running the command `python -m nerf.main.train`
 
 ### 5.3. Evaluation
-Follow the below instructions to launch an evaluation run: (TODO mentioned need saved stuff)
+Follow the below instructions to launch an evaluation run:
+
+> Note: To use this script, the user must have the saved metadata and model weights from a previous training run.
 
 1. Follow the procedure mentioned in the common steps section (section 5.1).
 2. Modify the parameters in the configuration file `nerf/params/config.yaml` as per your requirements.
@@ -95,12 +102,16 @@ Follow the below instructions to launch an evaluation run: (TODO mentioned need 
 ### 5.4. Rendering
 Follow the below instructions to launch a rendering run:
 
+> Note: To use this script, the user must have the saved metadata and model weights from a previous training run.
+
 1. Follow the procedure mentioned in the common steps section (section 5.1).
 2. Modify the parameters in the configuration file `nerf/params/config.yaml` as per your requirements.
 3. Run the rendering script by running the command `python -m nerf.main.render`
 
 ### 5.5. Visualization
 Follow the below instructions to visualize the ground truth poses and the inference poses in the scene:
+
+> Note: To use this script, the user must have the saved metadata. The saved metadata can be from a previous training run, or can be created using an alternative method. The alternative method will be elaborated in the future.
 
 1. Follow the procedure mentioned in the common steps section (section 5.1).
 2. Modify the parameters in the configuration file `nerf/params/config.yaml` as per your requirements.
@@ -112,4 +123,4 @@ I primarily used the official implementation ([bmild/nerf](https://github.com/bm
 I also referred to the COLMAP repository ([colmap/colmap](https://github.com/colmap/colmap)) and their [docs](https://colmap.github.io/) for the camera models and other information that was useful for various parts of this codebase.
 
 ## 7. License and Citation
-This repository is licensed under the MIT license. If you use this repository (or parts of it) in your work, please consider citing this repository!
+This repository is licensed under the MIT license. If you use this repository (or parts of it) in your work, please consider citing this repository.

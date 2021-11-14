@@ -28,11 +28,13 @@ The question now is, how do we discard the incorrect depth values ?
 
 One strategy that could be proposed is to make use of the `acc_map` parameter. In the official codebase, the `acc_map` is referred to as the "accumulated opacity along each ray" (please check the explanation [here](https://github.com/bmild/nerf/blob/20a91e764a28816ee2234fcadb73bd59a613a44c/run_nerf.py#L84)). In the official codebase, it is also mentioned that `acc_map` is a value in the range `[0, 1]` upto some numerical error (please refer to the comment [here](https://github.com/bmild/nerf/blob/20a91e764a28816ee2234fcadb73bd59a613a44c/run_nerf.py#L156)). The strategy is to only use the depth values of those rays whose `acc_map` value is very close to 1 and discard the the other depth values. 
 
-The GIFs in `README.md` were created using the above strategy.
+The depth maps of the GIFs in `README.md` were created using the above strategy. The black regions in the GIFs are the regions where the depth was deemed to be "unreliable" (i.e. those regions had rays whose `acc_map` value was not close to 1). The other regions were colored using the autumn colormap which is available in matplotlib.
 
-However, this strategy may not be always accurate as well. This is because we are relying on "accmulate opacity". What if the scene has transparent and translucent objects ? Will the depth values of the rays whose valus in `acc_map` are close to 1 be accurate in this case ?
+However, this strategy may not be always accurate as well. This is because we are relying on "accmulated opacity". What if the scene has transparent and translucent objects ? Will the depth values of the rays whose valus in `acc_map` are close to 1 be accurate in this case ? Also, what if the output of the network has artefacts? What would be the depth values of those artefacts?
 
-Hence, the user should be very careful while using the raw depth values due to these issues. The depth outputs are created by `render.py` for experimentation purposes.
+The above are questions for which I do not have a proper answer or a solution for. I would be glad to have a discussion with anyone who has more insight on these topics.
+
+In any case, the user should be very careful while using the raw depth values due to these issues. The depth outputs are created by `render.py` for experimentation purposes.
 
 ## Issue 2
 
@@ -44,4 +46,4 @@ The below diagram roughly shows the differences between the two types of depths.
 
 <img src="../media/depth_types.png" alt="depth_types" />
 
-The GIFs in `README.md` used the Type 2 depth representation.
+The depth maps of the GIFs in `README.md` used the Type 2 depth representation.

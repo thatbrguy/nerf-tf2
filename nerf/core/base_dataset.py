@@ -69,8 +69,6 @@ class Dataset(ABC):
         parameters in the config file. To let the code accurately know 
         about the exact number of images available for each split, this 
         variable needs to be configured.
-
-        TODO: Refactor, review terminology, finish.
         """
         pass
     
@@ -107,8 +105,6 @@ class Dataset(ABC):
         image of the dataset and img_HW[1] denotes the width of any processed 
         image of the dataset. The third variable is included to let the code
         accurately know about the height and width of any processed image.
-
-        TODO: Refactor, review terminology, finish.
         """
         pass
 

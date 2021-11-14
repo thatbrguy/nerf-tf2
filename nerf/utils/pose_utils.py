@@ -69,7 +69,6 @@ def normalize(vec):
         norm_vec = vec / (magnitude + EPS)
 
     elif len(vec.shape) == 2:
-        ## TODO: Verify calculation.
         magnitude = np.sqrt(np.sum(vec ** 2, axis = 1))
         norm_vec = vec / (magnitude[:, None] + EPS)
 
@@ -321,7 +320,8 @@ def calculate_scene_scale(
     scale factor to be careful. To adjust the calculated scale factor,
     some hyperparameters are available in the config file. This 
     function DOES NOT perform the adjustment. This adjustment is performed
-    in TODO function in TODO file.
+    in the function _reconfigure_scene_scale in the class Dataset in the file 
+    nerf/core/base_dataset.py.
 
     Please read through the code and comments in this function to understand 
     the exact methods used to calculate the scale factor. 

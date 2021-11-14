@@ -354,7 +354,6 @@ def create_input_batch_fine_model(params, rays_o, rays_d, bin_weights, bin_data,
     else:
         u_vals = tf.random.uniform(shape = (N_rays, params.sampling.N_fine))
 
-    ## TODO: Verify functionality.
     # Shape of u_vals: (N_rays, N_fine)
     # Shape of piece_idxs: (N_rays, N_fine)
     # Shape of agg[:, 1:-1]: (N_rays, N_fine - 1).

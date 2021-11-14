@@ -24,6 +24,11 @@ class LogValImages(Callback):
     """
     def __init__(self, params, height, width, num_val_imgs):
         super().__init__()
+        raise NotImplementedError((
+            "Temporarily dropping support for LogValImages until the "
+            "functionality is tested and verified again."
+        ))
+
         self.params = params
         self.img_width = width
         self.img_height = height

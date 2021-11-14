@@ -5,6 +5,7 @@
 - **However**, the user must be cautious while interpreting this result for many reasons:
 	- There are multiple ways of calculating the Mean PSNR metric (for example, calculating the mean PSNR per image and then averaging across images, versus calculating the mean PSNR per batch of pixels and then averaging across all batches etc.).
 	- During the training process, the validation PSNR obtained for the saved weights used for this analysis was around 27.67. However, this also should be taken with caution, since only 3 images were used for validation and also because the way PSNR is calculated in `evaluate.py` may be different from the way PSNR was calculated during validation.
+	- Also, some configurations were different when compared to the original implementation (for example, here a batch size of 4096 was used).
 - In any case, the above information is provided to the user so that they can make a more careful interpretation of the results.
 - Further analysis will be provided in the near future.
 - In the section 1.1 of this document, instructions are provided so that the user can attempt to replicate the evaluation experiment for the lego test set.

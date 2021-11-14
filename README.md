@@ -1,6 +1,6 @@
 # NeRF TF2
 
-An unofficial implementation of NeRF in TensorFlow 2 for 360-degree inward-facing scenes *(forward-facing scenes are currently not supported -- will add support sometime late Dec 2021 or early Jan 2022).*
+An unofficial implementation of [NeRF](https://arxiv.org/abs/2003.08934) in TensorFlow 2 for 360-degree inward-facing scenes *(forward-facing scenes are currently not supported -- will add support sometime late Dec 2021 or early Jan 2022).*
 
 <p align="center">
     <img src="media/lego_render.gif" alt="lego_render" />
@@ -118,7 +118,7 @@ Follow the below instructions to visualize the ground truth poses and the infere
 3. Run the scene visualization script by running the command `python -m nerf.main.viz_scene`
 
 ## 6. References
-I primarily used the official implementation ([bmild/nerf](https://github.com/bmild/nerf)) as a reference. Occasionally, I also referred to some other implementations ([yenchenlin/nerf-pytorch](https://github.com/yenchenlin/nerf-pytorch), [kwea123/nerf_pl](https://github.com/kwea123/nerf_pl), [google-research/jaxnerf](https://github.com/google-research/google-research/tree/master/jaxnerf), [krrish94/nerf-pytorch](https://github.com/krrish94/nerf-pytorch)) to get insights about certain details.
+I primarily used the official implementation ([bmild/nerf](https://github.com/bmild/nerf)) and the NeRF [paper](https://arxiv.org/abs/2003.08934) as a reference. Occasionally, I also referred to some other implementations ([yenchenlin/nerf-pytorch](https://github.com/yenchenlin/nerf-pytorch), [kwea123/nerf_pl](https://github.com/kwea123/nerf_pl), [google-research/jaxnerf](https://github.com/google-research/google-research/tree/master/jaxnerf), [krrish94/nerf-pytorch](https://github.com/krrish94/nerf-pytorch)) to get insights about certain details.
 
 I also referred to the COLMAP repository ([colmap/colmap](https://github.com/colmap/colmap)) and their [docs](https://colmap.github.io/) for the camera models and other information that was useful for various parts of this codebase.
 

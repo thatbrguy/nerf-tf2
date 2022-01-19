@@ -44,6 +44,8 @@ Two types of depth are estimated by this codebase. They are:
 
 The below diagram roughly shows the differences between the two types of depths. The user should choose the representation that they desire.
 
-<img src="../media/depth_types.png" alt="depth_types" />
+<p align="center">
+  <img src="../media/depth_types.png" alt="depth_types" width="60%" height="60%" />
+</p>
 
 The depth maps of the GIFs in `README.md` used the Type 2 depth representation.

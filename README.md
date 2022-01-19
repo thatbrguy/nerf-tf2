@@ -1,6 +1,6 @@
 # NeRF TF2
 
-An unofficial implementation of [NeRF](https://arxiv.org/abs/2003.08934) in TensorFlow 2 for 360-degree inward-facing scenes *(forward-facing scenes are currently not supported -- will add support sometime late Dec 2021 or early Jan 2022).*
+An unofficial implementation of [NeRF](https://arxiv.org/abs/2003.08934) in TensorFlow 2 for 360-degree inward-facing scenes *(forward-facing scenes are currently not supported -- will add support sometime late Feb 2022).*
 
 <p align="center">
     <img src="media/lego_render.gif" alt="lego_render" />
@@ -31,14 +31,14 @@ An unofficial implementation of [NeRF](https://arxiv.org/abs/2003.08934) in Tens
 	- However, this `requirements.txt` can still be used to install all the required dependencies and to experiment with this codebase.
 
 ### 2.2. Major Differences
-- The camera coordinate system format used in this implementation and the official implementation is the camera coordinate system format.
+- The camera coordinate system format used in this implementation and the official implementation is different.
 	- This codebase mostly uses the Classic CV coordinate system format, whereas the official implementation mostly uses the OpenGL coordinate system format. For information about the various coordinate system formats mentioned in this codebase, please refer to [coordinate_systems.md](docs/coordinate_systems.md).
 	- The above choice was made since I thought that data preparation for custom real life data would be simpler this way. Moreover I believed that the codebase would be a bit easier to understand if the Classic CV format is used.
 - Inverse transform sampling has been implemented from scratch in a different way. A different strategy to handle edge cases is employed.
 - Several pre-processing and post-processing methods were modified. The interested user is encouraged to explore the codebase to understand the workflow.
 
 ### 2.3 Currently Unsupported Features
-- Forward-facing scenes are currently not supported. Support is planned to be added sometime late Dec 2021 or early Jan 2022.
+- Forward-facing scenes are currently not supported. Support is planned to be added sometime late Feb 2022.
 
 ## 3. Performance Analysis
 - On the lego test set, using the script `evaluate.py` an **Mean PSNR** of **33.0369** was obtained. Using a single V100 GPU on Google Colab, the evaluation took approximately **26.75 seconds per image** (as per the tqdm logs -- also this time includes the time it takes to save each image to disk).

@@ -12,7 +12,9 @@ In this codebase, we would like define two camera coordinate system formats. The
 
 A diagramatic represtation of both formats is shown in Fig. 1. below:
 
-<img src="../media/camera_coordinate_system_formats.png" alt="camera_coordinate_system_formats" />
+<p align="center">
+  <img src="../media/camera_coordinate_system_formats.png" alt="camera_coordinate_system_formats" width="65%" height="65%" />
+</p>
 
 <p align="center"><i>Fig. 1: On the left, the Classic CV coordinate system format is shown. On the right, the OpenGL coordinate system format is shown.</i></p>
 

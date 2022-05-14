@@ -1,6 +1,6 @@
 # NeRF TF2
 
-An unofficial implementation of [NeRF](https://arxiv.org/abs/2003.08934) in TensorFlow 2 for 360-degree inward-facing scenes *(forward-facing scenes are currently not supported -- will add support sometime late Feb 2022).*
+An unofficial implementation of [NeRF](https://arxiv.org/abs/2003.08934) in TensorFlow 2 for 360-degree inward-facing scenes *(forward-facing scenes are currently not supported).*
 
 <p align="center">
     <img src="media/lego_render.gif" alt="lego_render" />
@@ -38,7 +38,7 @@ An unofficial implementation of [NeRF](https://arxiv.org/abs/2003.08934) in Tens
 - Several pre-processing and post-processing methods were modified. The interested user is encouraged to explore the codebase to understand the workflow.
 
 ### 2.3 Currently Unsupported Features
-- Forward-facing scenes are currently not supported. Support is planned to be added sometime late Feb 2022.
+- Forward-facing scenes are currently not supported.
 
 ## 3. Performance Analysis
 - On the lego test set, using the script `evaluate.py` an **Mean PSNR** of **33.0369** was obtained. Using a single V100 GPU on Google Colab, the evaluation took approximately **26.75 seconds per image** (as per the tqdm logs -- also this time includes the time it takes to save each image to disk).
